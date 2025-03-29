@@ -1,0 +1,22 @@
+default: &default
+  adapter: mysql2
+  encoding: utf8mb4
+  pool: 5
+  username: root
+  password: password
+  host: db
+
+development:
+  <<: *default
+  database: making_flower_development
+
+test:
+  <<: *default
+  database: making_flower_test
+
+production:
+  <<: *default
+  database: making_flower_production
+  username: <%= ENV['MYSQL_USERNAME'] %>
+  password: <%= ENV['MYSQL_PASSWORD'] %>
+  host: <%= ENV['MYSQL_HOST'] %>
