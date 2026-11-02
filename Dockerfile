@@ -1,5 +1,5 @@
 # 使用するベースイメージ
-FROM ruby:3.0.2
+FROM ruby:3.2.4
 
 # 必要なパッケージのインストール
 RUN apt-get update -qq && apt-get install -y \
