@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import { Canvas, Textbox, Gradient, Shadow, FabricImage } from "fabric"
 import { STYLES, STYLE_DEFAULTS } from "text_styles"
+import { saveImage, listImages, getImageUrl, deleteImage } from "image_store"
 
 // 選べる比率とキャンバスの実寸
 const RATIOS = {
@@ -16,6 +17,15 @@ const GRADIENT_COORDS = {
   diagonal:   { x1: 0, y1: 0, x2: 1, y2: 1 }
 }
 
+// 元に戻す／やり直すで覚えておく最大の回数
+const HISTORY_LIMIT = 30
+
+// 保存するときに、Fabric.js の標準の項目に加えて残しておく項目
+const EXTRA_PROPS = [
+  "locked", "imageId", "editable", "hasControls", "hoverCursor",
+  "lockMovementX", "lockMovementY", "lockScalingX", "lockScalingY", "lockRotation"
+]
+
 export default class extends Controller {
   static targets = [
     "frame", "canvas", "textPanel",
@@ -30,7 +40,9 @@ export default class extends Controller {
     "bgDirectionInput", "bgGradientOnly",
     "partsPanel", "partPanel", "partOpacityInput", "partOpacityValue",
     "lockButton",
-    "ratioPicker", "ratioClose", "sizeBadge"
+    "ratioPicker", "ratioClose", "sizeBadge",
+    "partFileInput", "bgFileInput", "myPartList", "myBgList",
+    "undoButton", "redoButton"
   ]
   static values = { width: Number, height: Number }
 
@@ -65,13 +77,143 @@ export default class extends Controller {
 
     this.fit()
 
+    // ===== 元に戻す／やり直すの記録 =====
+    this.undoStack = []
+    this.redoStack = []
+    this.restoring = false
+    this.lastState = this.serialize()
+    this.updateHistoryButtons()
+
+    // キャンバスの中で何か変わったら記録する
+    const schedule = () => this.scheduleSnapshot()
+    ;["object:added", "object:removed", "object:modified", "text:editing:exited"]
+      .forEach(name => this.canvas.on(name, schedule))
+
+    // パネルのボタン・色・スライダーなどを触ったときも記録する
+    // （スライダーを動かしている間は何度も呼ばれるが、止まってから1回だけ記録する）
+    this.onUiChange = () => this.scheduleSnapshot()
+    ;["input", "change", "click"].forEach(name => this.element.addEventListener(name, this.onUiChange))
+
     this.resizeObserver = new ResizeObserver(() => this.fit())
     this.resizeObserver.observe(this.frameTarget)
   }
 
   disconnect() {
+    clearTimeout(this.snapshotTimer)
+    ;["input", "change", "click"].forEach(name => this.element.removeEventListener(name, this.onUiChange))
     this.resizeObserver?.disconnect()
     this.canvas?.dispose()
+  }
+
+  // ===== 元に戻す・やり直す・リセット =====
+
+  // 今の状態を文字列にする（比率も一緒に覚えておく）
+  serialize() {
+    return JSON.stringify({
+      width: this.widthValue,
+      height: this.heightValue,
+      canvas: this.canvas.toObject(EXTRA_PROPS)
+    })
+  }
+
+  // 少し待ってから記録する。待っている間にまた変わったら、待ち直す
+  scheduleSnapshot() {
+    if (this.restoring) return
+    clearTimeout(this.snapshotTimer)
+    this.snapshotTimer = setTimeout(() => this.takeSnapshot(), 350)
+  }
+
+  takeSnapshot() {
+    if (this.restoring) return
+
+    // 文字を打ち替えている最中は、打ち終わってから記録する
+    if (this.canvas.getActiveObject()?.isEditing) return
+
+    const state = this.serialize()
+    if (state === this.lastState) return  // 何も変わっていなければ記録しない
+
+    this.undoStack.push(this.lastState)
+    if (this.undoStack.length > HISTORY_LIMIT) this.undoStack.shift()
+    this.redoStack = []
+    this.lastState = state
+    this.updateHistoryButtons()
+  }
+
+  async undo() {
+    // 記録待ちの変更があれば、先に記録してから戻す
+    clearTimeout(this.snapshotTimer)
+    this.takeSnapshot()
+
+    const prev = this.undoStack.pop()
+    if (!prev) return
+
+    this.redoStack.push(this.lastState)
+    await this.restore(prev)
+  }
+
+  async redo() {
+    clearTimeout(this.snapshotTimer)
+
+    const next = this.redoStack.pop()
+    if (!next) return
+
+    this.undoStack.push(this.lastState)
+    await this.restore(next)
+  }
+
+  // 覚えておいた状態に戻す
+  async restore(state) {
+    this.restoring = true
+    try {
+      const data = JSON.parse(state)
+
+      this.canvas.discardActiveObject()
+      await this.canvas.loadFromJSON(data.canvas)
+
+      // 比率も戻す
+      this.widthValue = data.width
+      this.heightValue = data.height
+      this.element.style.setProperty("--ratio", data.width / data.height)
+      this.sizeBadgeTarget.textContent = `${data.width} × ${data.height} ▾`
+
+      this.fit()
+      this.canvas.requestRenderAll()
+      this.lastState = state
+    } finally {
+      this.restoring = false
+    }
+
+    this.textPanelTarget.hidden = true
+    this.partPanelTarget.hidden = true
+    this.updateHistoryButtons()
+  }
+
+  // 全部消して、まっさらに戻す（比率はそのまま）
+  resetCanvas() {
+    if (!window.confirm("キャンバスの中身を全部消して、まっさらに戻しますか？\n（「↩️ 元に戻す」で取り消せます）")) return
+
+    clearTimeout(this.snapshotTimer)
+    this.takeSnapshot()
+
+    this.restoring = true
+    this.canvas.discardActiveObject()
+    this.canvas.remove(...this.canvas.getObjects())
+    this.canvas.backgroundColor = "#ffffff"
+    this.canvas.backgroundImage = null
+    this.canvas.requestRenderAll()
+    this.restoring = false
+
+    this.textPanelTarget.hidden = true
+    this.partPanelTarget.hidden = true
+    this.bgPanelTarget.hidden = true
+    this.partsPanelTarget.hidden = true
+
+    this.takeSnapshot()
+  }
+
+  updateHistoryButtons() {
+    if (this.hasUndoButtonTarget) this.undoButtonTarget.disabled = this.undoStack.length === 0
+    if (this.hasRedoButtonTarget) this.redoButtonTarget.disabled = this.redoStack.length === 0
   }
 
   // ===== 比率（16:9 / 9:16 / 1:1） =====
@@ -211,6 +353,7 @@ export default class extends Controller {
       this.closeBackgroundPanel()
       return
     }
+    this.renderMyImages("background")
 
     // 選んでいるテキストがあれば選択を外して、テキストパネルを閉じる
     this.canvas.discardActiveObject()
@@ -235,6 +378,7 @@ export default class extends Controller {
       this.closePartsPanel()
       return
     }
+    this.renderMyImages("part")
 
     this.canvas.discardActiveObject()
     this.canvas.requestRenderAll()
@@ -250,7 +394,12 @@ export default class extends Controller {
 
   // 部品をキャンバスの真ん中に置く
   async addPart(event) {
-    const img = await FabricImage.fromURL(event.params.src)
+    await this.placePart(event.params.src)
+  }
+
+  // 部品（URL）をキャンバスの真ん中に置く。imageId は自分の画像のときだけ入る
+  async placePart(src, imageId = null) {
+    const img = await FabricImage.fromURL(src)
 
     // キャンバスより大きい部品（枠など）はキャンバスに収まる大きさ、それ以外は高さの4割くらいにする
     const fitScale = Math.min(this.widthValue / img.width, this.heightValue / img.height)
@@ -264,6 +413,7 @@ export default class extends Controller {
       scaleX: scale,
       scaleY: scale
     })
+    if (imageId) img.set("imageId", imageId)
 
     this.canvas.add(img)
     this.canvas.setActiveObject(img)
@@ -384,7 +534,11 @@ export default class extends Controller {
 
   // 背景画像を敷く（キャンバスいっぱいに広げる。縦横比が違うときは、はみ出す方を切る）
   async setBackgroundImage(event) {
-    const src = event.params.src
+    await this.placeBackground(event.params.src)
+  }
+
+  // 背景画像（URL）を敷く。imageId は自分の画像のときだけ入る
+  async placeBackground(src, imageId = null) {
     const img = await FabricImage.fromURL(src)
 
     const scale = Math.max(this.widthValue / img.width, this.heightValue / img.height)
@@ -396,6 +550,7 @@ export default class extends Controller {
       scaleX: scale,
       scaleY: scale
     })
+    if (imageId) img.set("imageId", imageId)
 
     this.canvas.backgroundImage = img
     this.canvas.requestRenderAll()
@@ -404,6 +559,69 @@ export default class extends Controller {
   clearBackgroundImage() {
     this.canvas.backgroundImage = null
     this.canvas.requestRenderAll()
+  }
+
+  // ===== 自分の画像（部品・背景） =====
+  // 保存と読み込みは image_store（画像の保管係）にまかせる
+
+  // 「📷 自分の画像」ボタン：ファイル選択を開く（スマホならカメラロール）
+  pickMyImage(event) {
+    const input = event.params.kind === "background" ? this.bgFileInputTarget : this.partFileInputTarget
+    input.value = ""
+    input.click()
+  }
+
+  async onMyImageSelected(event) {
+    const input = event.target
+    const file = input.files?.[0]
+    if (!file) return
+
+    const kind = input.dataset.kind
+    try {
+      const id = await saveImage(file, kind)
+      const url = await getImageUrl(id)
+      if (kind === "background") {
+        await this.placeBackground(url, id)
+      } else {
+        await this.placePart(url, id)
+      }
+      await this.renderMyImages(kind)
+    } catch (e) {
+      console.error(e)
+      alert("画像を読み込めませんでした。別の画像で試してみてね")
+    }
+  }
+
+  // 保存してある自分の画像を、一覧に並べる
+  async renderMyImages(kind) {
+    const list = kind === "background" ? this.myBgListTarget : this.myPartListTarget
+    const records = await listImages(kind)
+
+    list.replaceChildren()
+    for (const record of records) {
+      const url = await getImageUrl(record.id)
+      const button = document.createElement("button")
+      button.type = "button"
+      button.className = kind === "background" ? "studio-bg-thumb studio-my-thumb" : "studio-part-thumb studio-my-thumb"
+      button.title = record.name
+      button.innerHTML = `<img alt=""><span class="studio-my-delete" title="一覧から消す">×</span>`
+      button.querySelector("img").src = url
+
+      button.addEventListener("click", async (e) => {
+        if (e.target.classList.contains("studio-my-delete")) {
+          if (!confirm("この画像を一覧から消す？（置いてある画像は消えません）")) return
+          await deleteImage(record.id)
+          await this.renderMyImages(kind)
+          return
+        }
+        if (kind === "background") {
+          await this.placeBackground(url, record.id)
+        } else {
+          await this.placePart(url, record.id)
+        }
+      })
+      list.appendChild(button)
+    }
   }
 
   // 背景用のグラデーション。キャンバス全体（1280×720）の座標で作る
@@ -704,6 +922,19 @@ export default class extends Controller {
 
   // PC用：Delete / Backspace キーで削除する
   onKeydown(event) {
+    // PC用：Ctrl+Z で元に戻す、Ctrl+Shift+Z / Ctrl+Y でやり直す（Mac は ⌘）
+    const mod = event.ctrlKey || event.metaKey
+    if (mod && ["z", "Z", "y", "Y"].includes(event.key)) {
+      const tag = document.activeElement?.tagName
+      const editing = this.canvas.getActiveObject()?.isEditing
+      if (tag === "INPUT" || tag === "TEXTAREA" || editing) return  // 文字入力中は、入力欄の取り消しを優先
+
+      event.preventDefault()
+      const isRedo = event.key === "y" || event.key === "Y" || event.shiftKey
+      isRedo ? this.redo() : this.undo()
+      return
+    }
+
     if (event.key !== "Delete" && event.key !== "Backspace") return
 
     // カラーピッカーやスライダーなどの入力欄を触っているときは無視する
