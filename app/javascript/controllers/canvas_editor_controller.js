@@ -22,7 +22,7 @@ const HISTORY_LIMIT = 30
 
 // 保存するときに、Fabric.js の標準の項目に加えて残しておく項目
 const EXTRA_PROPS = [
-  "locked", "imageId", "sourceName", "sourceUrl", "placeholder", "effect", "effectKey", "effectStrength", "effectColor", "selectable", "evented", "editable", "hasControls", "hoverCursor",
+  "locked", "imageId", "materialKey", "materialId", "ratioSrcs", "sourceName", "sourceUrl", "placeholder", "effect", "effectKey", "effectStrength", "effectColor", "selectable", "evented", "editable", "hasControls", "hoverCursor",
   "lockMovementX", "lockMovementY", "lockScalingX", "lockScalingY", "lockRotation"
 ]
 
@@ -44,9 +44,10 @@ export default class extends Controller {
     "partFileInput", "bgFileInput", "myPartList", "myBgList",
     "undoButton", "redoButton", "credit",
     "effectsPanel", "effectTab", "effectPage", "effectToggle", "effectStrength", "tintInput", "frameButton",
-    "templatesPanel", "templateList", "replaceButton", "replaceHint"
+    "templatesPanel", "templateList", "replaceButton", "replaceHint",
+    "saveDialog", "saveName", "saveIcon", "saveOverwrite", "saveNote", "saveStatus"
   ]
-  static values = { width: Number, height: Number, materials: Object }
+  static values = { width: Number, height: Number, materials: Object, editTemplate: Object }
 
   connect() {
     this.canvas = new Canvas(this.canvasTarget, {
@@ -112,6 +113,23 @@ export default class extends Controller {
 
     this.resizeObserver = new ResizeObserver(() => this.fit())
     this.resizeObserver.observe(this.frameTarget)
+
+    // 管理画面の「🎨 編集画面で開く」から来たときは、そのテンプレを読み込んでおく
+    if (this.editTemplateValue?.id) {
+      this.ratioPickerTarget.hidden = true
+      this.ratioChosen = true
+      this.openTemplateForEdit(this.editTemplateValue)
+    }
+  }
+
+  async openTemplateForEdit(t) {
+    await this.applyTemplate(t, { confirm: false })
+    this.editingTemplate = { id: t.id, name: t.label, icon: t.icon }
+    // 読み込んだ状態を「最初の状態」にする（戻すで空っぽに戻らないように）
+    this.undoStack = []
+    this.redoStack = []
+    this.lastState = this.serialize()
+    this.updateHistoryButtons()
   }
 
   disconnect() {
@@ -143,7 +161,7 @@ export default class extends Controller {
   // テンプレの一覧は、最初の1回だけ読み込む
   loadTemplates() {
     if (!this.templatesPromise) {
-      this.templatesPromise = fetch("/design_templates/templates.json", { cache: "no-cache" })
+      this.templatesPromise = fetch("/design_templates.json", { cache: "no-cache", headers: { Accept: "application/json" } })
         .then(response => {
           if (!response.ok) throw new Error(`テンプレの読み込みに失敗しました（${response.status}）`)
           return response.json()
@@ -181,9 +199,15 @@ export default class extends Controller {
         button.style.setProperty("--tpl-a", t.preview?.[0] || "#9b7bff")
         button.style.setProperty("--tpl-b", t.preview?.[1] || "#3fd6d0")
         button.style.aspectRatio = `${t.width} / ${t.height}`
+        // 保存したときのサムネがあれば、それを見せる
+        if (t.thumb) {
+          button.classList.add("has-thumb")
+          button.style.backgroundImage = `url("${encodeURI(t.thumb)}")`
+        }
+        if (t.visible === false) button.classList.add("is-hidden-template")
         button.innerHTML = '<span class="studio-template-icon"></span><span class="studio-template-label"></span>'
         button.querySelector(".studio-template-icon").textContent = t.icon || "📋"
-        button.querySelector(".studio-template-label").textContent = t.label
+        button.querySelector(".studio-template-label").textContent = t.visible === false ? `🙈 ${t.label}` : t.label
         button.addEventListener("click", () => this.applyTemplate(t))
         list.appendChild(button)
       })
@@ -194,9 +218,9 @@ export default class extends Controller {
   }
 
   // テンプレを読み込む（今の中身は置き換える。「戻す」で取り消せる）
-  async applyTemplate(t) {
+  async applyTemplate(t, { confirm = true } = {}) {
     const hasContent = this.canvas.getObjects().length > 0 || this.canvas.backgroundImage
-    if (hasContent && !window.confirm(`今の中身を「${t.label}」に置き換えますか？\n（「↩️ 戻す」で元に戻せます）`)) return
+    if (confirm && hasContent && !window.confirm(`今の中身を「${t.label}」に置き換えますか？\n（「↩️ 戻す」で元に戻せます）`)) return
 
     clearTimeout(this.snapshotTimer)
     this.takeSnapshot()
@@ -224,11 +248,13 @@ export default class extends Controller {
         this.canvas.backgroundColor = bg.color
       }
       // 背景の画像は、素材のキー（material）で探す。見つからなければ背景画像なしで続ける
+      // 比率ごとの画像があれば、今の比率の画像を使う
       const bgMaterial = this.findMaterial(bg.material)
       if (bgMaterial) {
-        await this.placeBackground(bgMaterial.src)
-        const bgImg = this.canvas.backgroundImage
-        if (bgImg && bgMaterial.sourceName) bgImg.set({ sourceName: bgMaterial.sourceName, sourceUrl: bgMaterial.sourceUrl })
+        await this.placeBackground(bgMaterial.src, null, {
+          key: bg.material, srcs: bgMaterial.srcs,
+          sourceName: bgMaterial.sourceName, sourceUrl: bgMaterial.sourceUrl
+        })
       }
 
       // 文字・部品・「ここに画像」（書いてある順に下から重ねる）
@@ -277,7 +303,7 @@ export default class extends Controller {
       originX: "center",
       originY: "center",
       width: (item.w || 0.8) * W,
-      textAlign: "center"
+      textAlign: props.textAlign || "center"
     })
     this.canvas.add(text)
   }
@@ -290,6 +316,7 @@ export default class extends Controller {
 
     const img = await FabricImage.fromURL(material.src)
     if (material.sourceName) img.set({ sourceName: material.sourceName, sourceUrl: material.sourceUrl })
+    img.set({ materialKey: item.material })
 
     const scale = ((item.h || 0.2) * H) / img.height
     img.set({
@@ -297,10 +324,11 @@ export default class extends Controller {
       originY: "center",
       left: item.x * W,
       top: item.y * H,
-      scaleX: scale,
+      scaleX: scale * (item.stretch || 1),   // stretch：横だけ伸ばしたとき（横の倍率 ÷ 縦の倍率）
       scaleY: scale,
       angle: item.angle || 0,
       flipX: !!item.flipX,
+      flipY: !!item.flipY,
       opacity: item.opacity ?? 1
     })
     this.canvas.add(img)
@@ -348,6 +376,243 @@ export default class extends Controller {
     this.togglePartsPanel()   // 部品パネル（自分の画像の一覧）を開く
     this.replaceTarget = ph
     if (this.hasReplaceHintTarget) this.replaceHintTarget.hidden = false
+  }
+
+  // ===== テンプレとして保存（管理者だけ） =====
+  // 今のキャンバスを、テンプレの形（位置や大きさはキャンバスに対する割合）に直して保存する。
+  // 素材は「キー」で覚える。自分の画像（マイ素材）は、ほかの人に見えないので「ここに画像」の枠にする。
+
+  openSaveDialog() {
+    if (!this.hasSaveDialogTarget) return
+    this.element.querySelector(".studio-user-menu")?.removeAttribute("open")
+    const editing = this.editingTemplate
+    this.saveNameTarget.value = editing?.name || ""
+    this.saveIconTarget.value = editing?.icon || "📋"
+    this.saveOverwriteTarget.hidden = !editing
+    if (editing) this.saveOverwriteTarget.textContent = `📋 「${editing.name}」に上書き保存`
+    const mine = this.countMyImages()
+    this.saveNoteTarget.textContent = mine > 0
+      ? `📷 自分の画像が${mine}つ入っています。テンプレでは「ここに画像」の枠になります（背景の自分の画像は外れます）`
+      : ""
+    this.saveNoteTarget.hidden = mine === 0
+    this.saveStatusTarget.textContent = ""
+    this.saveDialogTarget.showModal()
+    this.saveNameTarget.focus()
+  }
+
+  closeSaveDialog() {
+    if (this.hasSaveDialogTarget) this.saveDialogTarget.close()
+  }
+
+  countMyImages() {
+    const objs = this.canvas.getObjects().filter(o => !o.effect && !(o instanceof Textbox) && !o.placeholder && this.isMyImage(o))
+    return objs.length + (this.canvas.backgroundImage && this.isMyImage(this.canvas.backgroundImage) ? 1 : 0)
+  }
+
+  // 自分の画像（マイ素材）か、素材かわからない画像か
+  isMyImage(obj) {
+    return !!obj.imageId || !this.materialRefOf(obj)
+  }
+
+  // 画像が、どの素材か（{ material: キー } か { materialId: 番号 }）。わからなければ null
+  materialRefOf(obj) {
+    if (obj.imageId) return null
+    if (obj.materialKey) return { material: obj.materialKey }
+    if (obj.materialId) return { materialId: obj.materialId }
+    // 前に置いた部品など、覚えていないときは画像の場所から探す
+    const path = (() => {
+      try { return new URL(obj.getSrc?.() || "", window.location.href).pathname } catch { return "" }
+    })()
+    if (!path) return null
+    for (const [key, m] of Object.entries(this.materialsValue || {})) {
+      const paths = [m.src, ...Object.values(m.srcs || {})]
+        .map(s => { try { return new URL(s, window.location.href).pathname } catch { return "" } })
+      if (paths.includes(path)) return { material: key }
+    }
+    return null
+  }
+
+  round(n, digits = 4) {
+    const p = 10 ** digits
+    return Math.round(n * p) / p
+  }
+
+  // 今のキャンバスを、テンプレの中身（JSON）にする
+  buildTemplateData() {
+    const W = this.widthValue
+    const H = this.heightValue
+    const data = { background: {}, items: [], filters: [], frame: null }
+
+    // 背景の色
+    const color = this.canvas.backgroundColor
+    if (color instanceof Gradient) {
+      const stops = color.colorStops
+      data.background.gradient = [stops[0]?.color || "#ffffff", stops[stops.length - 1]?.color || "#ffffff", this.directionOf(color)]
+    } else if (typeof color === "string" && color) {
+      data.background.color = color
+    }
+    // 背景の画像（素材だけ。自分の画像は外す）
+    const bgImg = this.canvas.backgroundImage
+    if (bgImg) {
+      const ref = this.materialRefOf(bgImg)
+      if (ref) Object.assign(data.background, ref)
+    }
+
+    for (const obj of this.canvas.getObjects()) {
+      if (obj.effect) continue
+      const c = obj.getCenterPoint()
+      const x = this.round(c.x / W)
+      const y = this.round(c.y / H)
+      const angle = this.round(obj.angle || 0, 1)
+
+      if (obj instanceof Textbox) {
+        data.items.push({ type: "text", text: obj.text, x, y, w: this.round((obj.width * obj.scaleX) / W),
+          size: Math.round(obj.fontSize * obj.scaleY), angle, props: this.textPropsOf(obj) })
+        continue
+      }
+
+      const w = this.round((obj.width * obj.scaleX) / W)
+      const h = this.round((obj.height * obj.scaleY) / H)
+      const ref = obj.placeholder ? null : this.materialRefOf(obj)
+      if (ref) {
+        const item = { type: "part", ...ref, x, y, h, angle }
+        if (obj.flipX) item.flipX = true
+        if (obj.flipY) item.flipY = true
+        if ((obj.opacity ?? 1) !== 1) item.opacity = this.round(obj.opacity, 2)
+        const stretch = obj.scaleY ? obj.scaleX / obj.scaleY : 1
+        if (Math.abs(stretch - 1) > 0.01) item.stretch = this.round(stretch, 3)
+        data.items.push(item)
+      } else {
+        // 「ここに画像」の枠・自分の画像・どの素材かわからない画像は、「ここに画像」の枠にする
+        data.items.push({ type: "placeholder", x, y, w, h })
+      }
+    }
+
+    for (const o of this.effectObjects("filter")) {
+      const f = { key: o.effectKey, strength: this.round(o.effectStrength ?? 0.5, 2) }
+      if (o.effectColor) f.color = o.effectColor
+      data.filters.push(f)
+    }
+    data.frame = this.effectObjects("frame")[0]?.effectKey || null
+    if (!data.frame) delete data.frame
+
+    // テンプレ一覧のカードの色（サムネがないときに使う）
+    const g = data.background.gradient
+    data.preview = g ? [g[0], g[1]] : [data.background.color || "#9b7bff", "#3fd6d0"]
+    return data
+  }
+
+  // 文字の見た目を、テンプレの props の形にする
+  textPropsOf(text) {
+    const props = {
+      fontFamily: text.fontFamily,
+      fontWeight: text.fontWeight,
+      fontStyle: text.fontStyle,
+      stroke: text.stroke || null,
+      strokeWidth: text.strokeWidth || 0,
+      paintFirst: text.paintFirst,
+      strokeLineJoin: text.strokeLineJoin,
+      backgroundColor: text.backgroundColor || "",
+      skewX: text.skewX || 0,
+      charSpacing: text.charSpacing || 0,
+      lineHeight: text.lineHeight,
+      textAlign: text.textAlign,
+      opacity: text.opacity ?? 1
+    }
+    if (text.fill instanceof Gradient) {
+      const stops = text.fill.colorStops
+      props.fill = { gradient: [stops[0]?.color, stops[stops.length - 1]?.color], direction: this.directionOf(text.fill) }
+    } else {
+      props.fill = text.fill
+    }
+    if (text.shadow) {
+      const s = text.shadow
+      props.shadow = { color: s.color, blur: s.blur, offsetX: s.offsetX, offsetY: s.offsetY }
+    }
+    return props
+  }
+
+  // テンプレ一覧用の小さい画像（自分の画像と「ここに画像」の枠は写さない）
+  makeTemplateThumbnail() {
+    this.canvas.discardActiveObject()
+    const hide = this.canvas.getObjects().filter(o => !o.effect && o.visible !== false &&
+      (o.placeholder || (!(o instanceof Textbox) && this.isMyImage(o))))
+    hide.forEach(o => o.set("visible", false))
+    const bg = this.canvas.backgroundImage
+    const hideBg = bg && this.isMyImage(bg)
+    if (hideBg) this.canvas.backgroundImage = null
+    this.canvas.renderAll()
+    try {
+      const zoom = this.canvas.getZoom()
+      const longSide = Math.max(this.widthValue, this.heightValue)
+      return this.canvas.toDataURL({
+        format: "jpeg",
+        quality: 0.82,
+        multiplier: 480 / longSide / zoom,
+        enableRetinaScaling: false
+      })
+    } catch (error) {
+      console.warn("サムネを作れませんでした", error)
+      return null
+    } finally {
+      hide.forEach(o => o.set("visible", true))
+      if (hideBg) this.canvas.backgroundImage = bg
+      this.canvas.requestRenderAll()
+    }
+  }
+
+  // 「新しいテンプレとして保存」（mode: new）／「上書き保存」（mode: overwrite）
+  async saveTemplate(event) {
+    event?.preventDefault()
+    if (this.savingTemplate) return
+    const overwrite = event?.params?.mode === "overwrite" && this.editingTemplate
+    const name = this.saveNameTarget.value.trim()
+    if (!name) {
+      this.saveStatusTarget.textContent = "名前を入れてね"
+      this.saveNameTarget.focus()
+      return
+    }
+
+    this.savingTemplate = true
+    this.saveStatusTarget.textContent = "保存しています…"
+    try {
+      const body = this.buildTemplateData()
+      const thumbnail = this.makeTemplateThumbnail()
+      const url = overwrite ? `/admin/design_templates/${this.editingTemplate.id}.json` : "/admin/design_templates.json"
+      const response = await fetch(url, {
+        method: overwrite ? "PATCH" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')?.content || ""
+        },
+        body: JSON.stringify({
+          design_template: {
+            name,
+            icon: this.saveIconTarget.value.trim() || "📋",
+            ratio: this.ratioKey(),
+            body: JSON.stringify(body),
+            thumbnail
+          }
+        })
+      })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(result.error || `保存できませんでした（${response.status}）`)
+
+      const t = result.template
+      this.editingTemplate = { id: t.id, name: t.label, icon: t.icon }
+      // キーを付けた素材があれば、テンプレから探せるように表に足す
+      if (result.materials) this.materialsValue = { ...(this.materialsValue || {}), ...result.materials }
+      this.templatesPromise = null   // 次にテンプレを開いたとき、読み込み直す
+      this.saveStatusTarget.textContent = ""
+      this.closeSaveDialog()
+      window.alert(`📋 「${t.label}」を${overwrite ? "上書き保存" : "テンプレに保存"}しました！（みんなのテンプレ一覧に出ています）`)
+    } catch (error) {
+      console.error(error)
+      this.saveStatusTarget.textContent = error.message || "保存できませんでした"
+    } finally {
+      this.savingTemplate = false
+    }
   }
 
   // ===== エフェクト（フィルター・フレーム） =====
@@ -555,6 +820,48 @@ export default class extends Controller {
       case "tint":
         return head +
           `<rect width="${W}" height="${H}" fill="${color || "#7b5cff"}" fill-opacity="${(0.45 * s).toFixed(3)}"/></svg>`
+
+      case "noise": {
+        // ザラザラしたフィルムっぽいノイズ
+        return head +
+          `<filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4"/>` +
+          `<feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1.4 -0.4"/></filter>` +
+          `<rect width="${W}" height="${H}" filter="url(#n)" opacity="${(0.55 * s).toFixed(3)}"/></svg>`
+      }
+
+      case "glitch": {
+        // 横にずれた色の帯（グリッチ）。いつも同じ位置になるよう固定シード
+        const rand = this.seededRandom(1104)
+        let bars = ""
+        const count = Math.round(6 + 14 * s)
+        for (let i = 0; i < count; i++) {
+          const y = (rand() * H).toFixed(0)
+          const h = (2 + rand() * 18 * (H / 720)).toFixed(1)
+          const x = (rand() * W * 0.3).toFixed(0)
+          const w = (W * (0.3 + rand() * 0.7)).toFixed(0)
+          const c = ["#ff2bd6", "#00f0ff", "#ffffff"][i % 3]
+          bars += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${c}" fill-opacity="${(0.15 + 0.35 * s).toFixed(2)}"/>`
+        }
+        return head + bars + `</svg>`
+      }
+
+      case "retro": {
+        // 色あせた写真っぽく：セピア寄りの色＋ふちを少し焼く
+        return head +
+          `<defs><radialGradient id="r" cx="50%" cy="50%" r="75%">` +
+          `<stop offset="0.6" stop-color="#5a3a1a" stop-opacity="0"/>` +
+          `<stop offset="1" stop-color="#5a3a1a" stop-opacity="${(0.55 * s).toFixed(3)}"/></radialGradient></defs>` +
+          `<rect width="${W}" height="${H}" fill="#f2c27a" fill-opacity="${(0.28 * s).toFixed(3)}"/>` +
+          `<rect width="${W}" height="${H}" fill="url(#r)"/></svg>`
+      }
+
+      case "light-leak": {
+        // 角から光がもれたような、やわらかい虹色
+        return head +
+          `<defs><radialGradient id="a" cx="0%" cy="0%" r="70%"><stop offset="0" stop-color="#ff8ccf" stop-opacity="${(0.7 * s).toFixed(3)}"/><stop offset="1" stop-color="#ff8ccf" stop-opacity="0"/></radialGradient>` +
+          `<radialGradient id="b" cx="100%" cy="100%" r="70%"><stop offset="0" stop-color="#ffd34d" stop-opacity="${(0.6 * s).toFixed(3)}"/><stop offset="1" stop-color="#ffd34d" stop-opacity="0"/></radialGradient></defs>` +
+          `<rect width="${W}" height="${H}" fill="url(#a)"/><rect width="${W}" height="${H}" fill="url(#b)"/></svg>`
+      }
     }
     return head + `</svg>`
   }
@@ -630,6 +937,60 @@ export default class extends Controller {
           `<rect x="${t}" y="${t}" width="${W - t * 2}" height="${H - t * 2}" rx="${rad}" fill="none" ` +
           `stroke="#3fd6d0" stroke-opacity="0.8" stroke-width="${(m * 0.006).toFixed(1)}"/>` +
           `<circle cx="${W - t * 0.5}" cy="${H - t * 0.5}" r="${t * 0.12}" fill="#3fd6d0"/></svg>`
+      }
+
+      case "hearts": {
+        // フチにハートをぐるっと並べる
+        const pad = m * 0.045
+        const gap = m * 0.1
+        const hs = m * 0.022
+        const heart = (x, y, s) =>
+          `<path d="M${x},${y + s * 0.9} C${x - s * 1.3},${y} ${x - s * 0.9},${y - s * 0.9} ${x},${y - s * 0.35} ` +
+          `C${x + s * 0.9},${y - s * 0.9} ${x + s * 1.3},${y} ${x},${y + s * 0.9} Z"/>`
+        let d = ""
+        for (let x = pad; x <= W - pad; x += gap) { d += heart(x, pad, hs) + heart(x, H - pad, hs) }
+        for (let y = pad + gap; y < H - pad; y += gap) { d += heart(pad, y, hs) + heart(W - pad, y, hs) }
+        return head +
+          `<rect x="${pad * 0.4}" y="${pad * 0.4}" width="${W - pad * 0.8}" height="${H - pad * 0.8}" rx="${m * 0.03}" ` +
+          `fill="none" stroke="#ffffff" stroke-width="${(m * 0.006).toFixed(1)}"/>` +
+          `<g fill="#ff8ccf" stroke="#ffffff" stroke-width="${(m * 0.004).toFixed(1)}">${d}</g></svg>`
+      }
+
+      case "stars": {
+        // フチに星をぐるっと並べる（黄色と白を交互に）
+        const pad = m * 0.045
+        const gap = m * 0.11
+        let d = ""
+        let i = 0
+        const add = (x, y) => {
+          const r = m * (i % 2 ? 0.02 : 0.03)
+          d += `<path d="${this.starPath(x, y, r)}" fill="${i++ % 2 ? "#ffffff" : "#ffd34d"}"/>`
+        }
+        for (let x = pad; x <= W - pad; x += gap) { add(x, pad); add(x, H - pad) }
+        for (let y = pad + gap; y < H - pad; y += gap) { add(pad, y); add(W - pad, y) }
+        return head + d + `</svg>`
+      }
+
+      case "polaroid": {
+        // ポラロイド写真っぽく、白いフチ（下だけ太め）
+        const t = m * 0.05
+        const b = m * 0.16
+        return head +
+          `<path fill-rule="evenodd" fill="#ffffff" d="M0,0H${W}V${H}H0Z M${t},${t}H${W - t}V${H - b}H${t}Z"/>` +
+          `<rect x="${t}" y="${t}" width="${W - t * 2}" height="${H - b - t}" fill="none" stroke="#000" stroke-opacity="0.08" stroke-width="2"/></svg>`
+      }
+
+      case "tape": {
+        // 四すみをマスキングテープで留めたような感じ
+        const tw = m * 0.22
+        const th = m * 0.07
+        const tape = (x, y, a, c) =>
+          `<rect x="${-tw / 2}" y="${-th / 2}" width="${tw}" height="${th}" rx="${th * 0.15}" fill="${c}" fill-opacity="0.8" ` +
+          `transform="translate(${x} ${y}) rotate(${a})"/>`
+        const o = m * 0.06
+        return head +
+          tape(o, o, -40, "#ffc6dc") + tape(W - o, o, 40, "#bfe6ff") +
+          tape(o, H - o, 40, "#c9f2d8") + tape(W - o, H - o, -40, "#fff1a8") + `</svg>`
       }
     }
     return head + `</svg>`
@@ -801,11 +1162,12 @@ export default class extends Controller {
     this.element.style.setProperty("--ratio", newW / newH)
     this.sizeBadgeTarget.textContent = `${newW} × ${newH} ▾`
 
-    // 背景画像：新しいキャンバスいっぱいに敷き直す
+    // 背景画像：新しいキャンバスいっぱいに敷き直す（比率ごとの画像があれば、あとで差し替える）
     const img = this.canvas.backgroundImage
     if (img) {
       const scale = Math.max(newW / img.width, newH / img.height)
       img.set({ left: newW / 2, top: newH / 2, scaleX: scale, scaleY: scale })
+      if (img.ratioSrcs) this.swapBackgroundForRatio()
     }
 
     // 背景のグラデーション：新しい大きさで作り直す
@@ -1006,9 +1368,11 @@ export default class extends Controller {
 
   // 部品をキャンバスの真ん中に置く
   async addPart(event) {
-    const { source, sourceUrl } = event.params
+    const { source, sourceUrl, key, materialId } = event.params
     const img = await this.placePart(event.params.src)
     if (img && source) img.set({ sourceName: source, sourceUrl: sourceUrl || "" })
+    // テンプレとして保存するときに、どの素材かわかるように覚えておく
+    if (img) img.set({ materialKey: key || null, materialId: materialId || null })
     this.showCredit(source, sourceUrl)
   }
 
@@ -1160,10 +1524,10 @@ export default class extends Controller {
 
   // 背景画像を敷く（キャンバスいっぱいに広げる。縦横比が違うときは、はみ出す方を切る）
   async setBackgroundImage(event) {
-    const { source, sourceUrl } = event.params
-    await this.placeBackground(event.params.src)
-    const bg = this.canvas.backgroundImage
-    if (bg && source) bg.set({ sourceName: source, sourceUrl: sourceUrl || "" })
+    const { source, sourceUrl, key, materialId, srcs } = event.params
+    await this.placeBackground(event.params.src, null, {
+      key, materialId, srcs, sourceName: source, sourceUrl: sourceUrl || ""
+    })
     this.showCredit(source, sourceUrl)
   }
 
@@ -1188,8 +1552,11 @@ export default class extends Controller {
   }
 
   // 背景画像（URL）を敷く。imageId は自分の画像のときだけ入る
-  async placeBackground(src, imageId = null) {
-    const img = await FabricImage.fromURL(src)
+  // meta.srcs に比率ごとの画像があれば、今の比率の画像を使う（比率を変えたときも差し替える）
+  async placeBackground(src, imageId = null, meta = {}) {
+    const srcs = meta.srcs && typeof meta.srcs === "object" ? meta.srcs : null
+    const chosen = srcs?.[this.ratioKey()] || src
+    const img = await FabricImage.fromURL(chosen)
 
     const scale = Math.max(this.widthValue / img.width, this.heightValue / img.height)
     img.set({
@@ -1201,9 +1568,40 @@ export default class extends Controller {
       scaleY: scale
     })
     if (imageId) img.set("imageId", imageId)
+    img.set({
+      materialKey: meta.key || null,
+      materialId: meta.materialId || null,
+      ratioSrcs: srcs ? { ...srcs, base: src } : null
+    })
+    if (meta.sourceName) img.set({ sourceName: meta.sourceName, sourceUrl: meta.sourceUrl || "" })
 
     this.canvas.backgroundImage = img
     this.canvas.requestRenderAll()
+  }
+
+  // 比率を変えたとき：比率ごとの画像がある背景なら、その比率の画像に敷き直す
+  async swapBackgroundForRatio() {
+    const bg = this.canvas.backgroundImage
+    const srcs = bg?.ratioSrcs
+    if (!srcs) return
+    const want = srcs[this.ratioKey()] || srcs.base
+    const now = new URL(bg.getSrc(), window.location.href).pathname
+    if (!want || new URL(want, window.location.href).pathname === now) return
+
+    const seq = this.bgSwapSeq = (this.bgSwapSeq || 0) + 1
+    const { base, ...ratioSrcs } = srcs
+    const meta = {
+      key: bg.materialKey, materialId: bg.materialId, srcs: ratioSrcs,
+      sourceName: bg.sourceName, sourceUrl: bg.sourceUrl
+    }
+    try {
+      await FabricImage.fromURL(want)   // 先に読み込んでおく（2回目はすぐ終わる）
+      if (seq !== this.bgSwapSeq || this.canvas.backgroundImage !== bg) return  // そのあいだに背景が変わった
+      await this.placeBackground(base, null, meta)
+      this.scheduleSnapshot()
+    } catch (error) {
+      console.warn("比率に合わせた背景を読み込めませんでした", error)
+    }
   }
 
   clearBackgroundImage() {

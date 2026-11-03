@@ -23,7 +23,8 @@ module Admin
       @total = scope.count
       @pages = [(@total.to_f / @per).ceil, 1].max
       @page = params[:page].to_i.clamp(1, @pages)
-      @materials = scope.order(SORTS[@sort]).limit(@per).offset((@page - 1) * @per).with_attached_image
+      @materials = scope.order(SORTS[@sort]).limit(@per).offset((@page - 1) * @per)
+                         .with_attached_image.with_attached_image_portrait.with_attached_image_square
       @usage = Material.template_usage
     end
 
@@ -87,7 +88,8 @@ module Admin
     end
 
     def material_params
-      params.require(:material).permit(:name, :key, :kind, :image, :source_name, :source_url, :license_note, :visible, :position, tag_list: [])
+      params.require(:material).permit(:name, :key, :kind, :image, :image_portrait, :image_square,
+                                       :remove_image_portrait, :remove_image_square, :source_name, :source_url, :license_note, :visible, :position, tag_list: [])
     end
   end
 end
