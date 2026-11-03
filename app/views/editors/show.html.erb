@@ -348,7 +348,7 @@
     <!-- 部品パネル（部品を追加する） -->
     <div class="studio-panel" data-canvas-editor-target="partsPanel" hidden>
       <div class="studio-panel-header">
-        <span>部品を追加</span>
+        <span>部品を追加 <em class="studio-replace-hint" data-canvas-editor-target="replaceHint" hidden>📷 の画像を選ぶと「ここに画像」と入れ替わります</em></span>
         <div class="studio-panel-actions">
           <button type="button" class="studio-panel-close"
             data-action="click->canvas-editor#closePartsPanel">閉じる</button>
@@ -409,6 +409,9 @@
         </label>
         <button type="button" class="studio-panel-close"
           data-action="click->canvas-editor#flipPart">左右反転</button>
+        <button type="button" class="studio-panel-close studio-replace-button"
+          data-canvas-editor-target="replaceButton" hidden
+          data-action="click->canvas-editor#replacePlaceholder">📷 自分の画像に差し替え</button>
       </div>
     </div>
 
@@ -481,6 +484,19 @@
       </div>
     </div>
 
+    <!-- テンプレパネル -->
+    <div class="studio-panel" data-canvas-editor-target="templatesPanel" hidden>
+      <div class="studio-panel-header">
+        <span>テンプレート</span>
+        <div class="studio-panel-actions">
+          <button type="button" class="studio-panel-close"
+            data-action="click->canvas-editor#closeTemplatesPanel">閉じる</button>
+        </div>
+      </div>
+      <div class="studio-template-list" data-canvas-editor-target="templateList"></div>
+      <p class="studio-tab-note">今のサイズに合うテンプレを表示しています。読み込んだあとは自由に編集できます</p>
+    </div>
+
     <nav class="studio-toolbar">
       <button type="button" data-action="click->canvas-editor#addText">
         <span class="studio-toolbar-icon">✏️</span><span class="studio-toolbar-label">テキスト</span>
@@ -494,7 +510,7 @@
       <button type="button" data-action="click->canvas-editor#toggleEffectsPanel">
         <span class="studio-toolbar-icon">✨</span><span class="studio-toolbar-label">エフェクト</span>
       </button>
-      <button type="button" class="is-soon" title="次の段階で追加">
+      <button type="button" data-action="click->canvas-editor#toggleTemplatesPanel">
         <span class="studio-toolbar-icon">📋</span><span class="studio-toolbar-label">テンプレ</span>
       </button>
       <button type="button" class="is-soon" title="次の段階で追加">

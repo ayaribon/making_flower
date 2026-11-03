@@ -22,7 +22,7 @@ const HISTORY_LIMIT = 30
 
 // 保存するときに、Fabric.js の標準の項目に加えて残しておく項目
 const EXTRA_PROPS = [
-  "locked", "imageId", "effect", "effectKey", "effectStrength", "effectColor", "selectable", "evented", "editable", "hasControls", "hoverCursor",
+  "locked", "imageId", "placeholder", "effect", "effectKey", "effectStrength", "effectColor", "selectable", "evented", "editable", "hasControls", "hoverCursor",
   "lockMovementX", "lockMovementY", "lockScalingX", "lockScalingY", "lockRotation"
 ]
 
@@ -43,7 +43,8 @@ export default class extends Controller {
     "ratioPicker", "ratioClose", "sizeBadge",
     "partFileInput", "bgFileInput", "myPartList", "myBgList",
     "undoButton", "redoButton",
-    "effectsPanel", "effectTab", "effectPage", "effectToggle", "effectStrength", "tintInput", "frameButton"
+    "effectsPanel", "effectTab", "effectPage", "effectToggle", "effectStrength", "tintInput", "frameButton",
+    "templatesPanel", "templateList", "replaceButton", "replaceHint"
   ]
   static values = { width: Number, height: Number }
 
@@ -113,6 +114,215 @@ export default class extends Controller {
     this.canvas?.dispose()
   }
 
+  // ===== テンプレート =====
+
+  async toggleTemplatesPanel() {
+    if (!this.templatesPanelTarget.hidden) {
+      this.closeTemplatesPanel()
+      return
+    }
+    this.canvas.discardActiveObject()
+    this.canvas.requestRenderAll()
+    ;[this.textPanelTarget, this.partPanelTarget, this.bgPanelTarget, this.partsPanelTarget, this.effectsPanelTarget]
+      .forEach(panel => { panel.hidden = true })
+    this.templatesPanelTarget.hidden = false
+    await this.renderTemplates()
+  }
+
+  closeTemplatesPanel() {
+    this.templatesPanelTarget.hidden = true
+  }
+
+  // テンプレの一覧は、最初の1回だけ読み込む
+  loadTemplates() {
+    if (!this.templatesPromise) {
+      this.templatesPromise = fetch("/design_templates/templates.json", { cache: "no-cache" })
+        .then(response => {
+          if (!response.ok) throw new Error(`テンプレの読み込みに失敗しました（${response.status}）`)
+          return response.json()
+        })
+        .catch(error => {
+          this.templatesPromise = null
+          throw error
+        })
+    }
+    return this.templatesPromise
+  }
+
+  // 今の比率の名前（"16:9" など）
+  ratioKey() {
+    const entry = Object.entries(RATIOS)
+      .find(([, size]) => size.width === this.widthValue && size.height === this.heightValue)
+    return entry ? entry[0] : "16:9"
+  }
+
+  async renderTemplates() {
+    const list = this.templateListTarget
+    list.innerHTML = '<p class="studio-tab-note">読み込み中…</p>'
+    try {
+      const data = await this.loadTemplates()
+      const items = data.templates.filter(t => t.ratio === this.ratioKey())
+      list.innerHTML = ""
+      if (items.length === 0) {
+        list.innerHTML = '<p class="studio-tab-note">この比率のテンプレはまだありません</p>'
+        return
+      }
+      items.forEach(t => {
+        const button = document.createElement("button")
+        button.type = "button"
+        button.className = "studio-template-card"
+        button.style.setProperty("--tpl-a", t.preview?.[0] || "#9b7bff")
+        button.style.setProperty("--tpl-b", t.preview?.[1] || "#3fd6d0")
+        button.style.aspectRatio = `${t.width} / ${t.height}`
+        button.innerHTML = '<span class="studio-template-icon"></span><span class="studio-template-label"></span>'
+        button.querySelector(".studio-template-icon").textContent = t.icon || "📋"
+        button.querySelector(".studio-template-label").textContent = t.label
+        button.addEventListener("click", () => this.applyTemplate(t))
+        list.appendChild(button)
+      })
+    } catch (error) {
+      console.error(error)
+      list.innerHTML = '<p class="studio-tab-note">テンプレを読み込めませんでした</p>'
+    }
+  }
+
+  // テンプレを読み込む（今の中身は置き換える。「戻す」で取り消せる）
+  async applyTemplate(t) {
+    const hasContent = this.canvas.getObjects().length > 0 || this.canvas.backgroundImage
+    if (hasContent && !window.confirm(`今の中身を「${t.label}」に置き換えますか？\n（「↩️ 戻す」で元に戻せます）`)) return
+
+    clearTimeout(this.snapshotTimer)
+    this.takeSnapshot()
+
+    this.restoring = true
+    try {
+      this.canvas.discardActiveObject()
+      this.canvas.remove(...this.canvas.getObjects())
+      this.canvas.backgroundImage = null
+      this.canvas.backgroundColor = "#ffffff"
+      this.replaceTarget = null
+
+      if (t.width !== this.widthValue || t.height !== this.heightValue) {
+        this.resizeCanvas(t.width, t.height)
+        this.ratioChosen = true
+      }
+      const W = this.widthValue
+      const H = this.heightValue
+
+      const bg = t.background || {}
+      if (bg.gradient) {
+        const [c1, c2, direction] = bg.gradient
+        this.canvas.backgroundColor = this.buildCanvasGradient(c1, c2, direction || "vertical")
+      } else if (bg.color) {
+        this.canvas.backgroundColor = bg.color
+      }
+      if (bg.image) await this.placeBackground(bg.image)
+
+      // 文字・部品・「ここに画像」（書いてある順に下から重ねる）
+      for (const item of t.items || []) {
+        if (item.type === "text") await this.addTemplateText(item, W, H)
+        else if (item.type === "part") await this.addTemplatePart(item, W, H)
+        else if (item.type === "placeholder") await this.addPlaceholder(item, W, H)
+      }
+
+      for (const f of t.filters || []) await this.setFilter(f.key, f.strength, f.color || null)
+      if (t.frame) await this.applyFrame(t.frame)
+
+      this.raiseEffects()
+      this.canvas.requestRenderAll()
+    } catch (error) {
+      console.error(error)
+      window.alert("テンプレの読み込み中にエラーが出ました。「↩️ 戻す」で元に戻せます")
+    } finally {
+      this.restoring = false
+    }
+
+    this.closeTemplatesPanel()
+    this.syncEffectInputs()
+    this.takeSnapshot()
+  }
+
+  // 位置（x, y）と幅（w）は、キャンバスに対する割合（0〜1）で書いてある
+  async addTemplateText(item, W, H) {
+    const { label, ...styleProps } = (item.style && STYLES[item.style]) || {}
+    const props = {
+      ...STYLE_DEFAULTS,
+      ...this.toFabricProps(styleProps),
+      ...this.toFabricProps(item.props || {})
+    }
+    if (item.size) props.fontSize = item.size
+    if (item.angle !== undefined) props.angle = item.angle
+
+    if (props.fontFamily) {
+      await document.fonts.load(`${props.fontWeight || "normal"} 40px "${props.fontFamily}"`, item.text)
+    }
+
+    const text = new Textbox(item.text, {
+      ...props,
+      left: item.x * W,
+      top: item.y * H,
+      originX: "center",
+      originY: "center",
+      width: (item.w || 0.8) * W,
+      textAlign: "center"
+    })
+    this.canvas.add(text)
+  }
+
+  // 部品の大きさ（h）は、キャンバスの高さに対する割合
+  async addTemplatePart(item, W, H) {
+    const img = await FabricImage.fromURL(item.src)
+    const scale = ((item.h || 0.2) * H) / img.height
+    img.set({
+      originX: "center",
+      originY: "center",
+      left: item.x * W,
+      top: item.y * H,
+      scaleX: scale,
+      scaleY: scale,
+      angle: item.angle || 0,
+      flipX: !!item.flipX,
+      opacity: item.opacity ?? 1
+    })
+    this.canvas.add(img)
+  }
+
+  // 立ち絵などを入れる「ここに画像」の仮の枠
+  async addPlaceholder(item, W, H) {
+    const w = Math.round((item.w || 0.4) * W)
+    const h = Math.round((item.h || 0.8) * H)
+    const r = Math.round(Math.min(w, h) * 0.06)
+    const fs = Math.round(Math.min(w, h) * 0.09)
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">` +
+      `<rect x="4" y="4" width="${w - 8}" height="${h - 8}" rx="${r}" fill="#ffffff" fill-opacity="0.3" ` +
+      `stroke="#ffffff" stroke-width="6" stroke-dasharray="24 14"/>` +
+      `<text x="50%" y="46%" text-anchor="middle" font-family="sans-serif" font-weight="bold" ` +
+      `font-size="${fs}" fill="#ffffff">📷 ここに画像</text>` +
+      `<text x="50%" y="58%" text-anchor="middle" font-family="sans-serif" ` +
+      `font-size="${Math.round(fs * 0.55)}" fill="#ffffff">タップして差し替え</text></svg>`
+
+    const img = await FabricImage.fromURL("data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg))
+    img.set({
+      originX: "center",
+      originY: "center",
+      left: item.x * W,
+      top: item.y * H,
+      placeholder: true
+    })
+    this.canvas.add(img)
+  }
+
+  // 「ここに画像」を選んで「📷 自分の画像に差し替え」を押したとき
+  replacePlaceholder() {
+    const ph = this.canvas.getActiveObject()
+    if (!ph?.placeholder) return
+
+    this.togglePartsPanel()   // 部品パネル（自分の画像の一覧）を開く
+    this.replaceTarget = ph
+    if (this.hasReplaceHintTarget) this.replaceHintTarget.hidden = false
+  }
+
   // ===== エフェクト（フィルター・フレーム） =====
   // どちらも「触れない画像」として、キャンバスのいちばん上に重ねる
 
@@ -123,7 +333,7 @@ export default class extends Controller {
     }
     this.canvas.discardActiveObject()
     this.canvas.requestRenderAll()
-    ;[this.textPanelTarget, this.partPanelTarget, this.bgPanelTarget, this.partsPanelTarget]
+    ;[this.textPanelTarget, this.partPanelTarget, this.bgPanelTarget, this.partsPanelTarget, this.templatesPanelTarget]
       .forEach(panel => { panel.hidden = true })
     this.syncEffectInputs()
     this.effectsPanelTarget.hidden = false
@@ -502,6 +712,7 @@ export default class extends Controller {
     this.bgPanelTarget.hidden = true
     this.partsPanelTarget.hidden = true
     this.effectsPanelTarget.hidden = true
+    this.templatesPanelTarget.hidden = true
     this.syncEffectInputs()
 
     this.takeSnapshot()
@@ -628,6 +839,8 @@ export default class extends Controller {
       this.partsPanelTarget.hidden = true
     }
     if (isText || isPart) this.effectsPanelTarget.hidden = true
+    if (isText || isPart) this.templatesPanelTarget.hidden = true
+    if (this.hasReplaceButtonTarget) this.replaceButtonTarget.hidden = !(isPart && active.placeholder)
     if (isText || isPart) this.updateLockButtons(active)
     if (isText) this.syncInputs()
     if (isPart) {
@@ -663,6 +876,7 @@ export default class extends Controller {
 
     this.syncBackgroundInputs()
     this.effectsPanelTarget.hidden = true
+    this.templatesPanelTarget.hidden = true
     this.bgPanelTarget.hidden = false
   }
 
@@ -686,11 +900,16 @@ export default class extends Controller {
     this.partPanelTarget.hidden = true
     this.bgPanelTarget.hidden = true
     this.effectsPanelTarget.hidden = true
+    this.templatesPanelTarget.hidden = true
+    this.replaceTarget = null
+    if (this.hasReplaceHintTarget) this.replaceHintTarget.hidden = true
     this.partsPanelTarget.hidden = false
   }
 
   closePartsPanel() {
     this.partsPanelTarget.hidden = true
+    this.replaceTarget = null
+    if (this.hasReplaceHintTarget) this.replaceHintTarget.hidden = true
   }
 
   // 部品をキャンバスの真ん中に置く
@@ -715,6 +934,16 @@ export default class extends Controller {
       scaleY: scale
     })
     if (imageId) img.set("imageId", imageId)
+
+    // テンプレの「ここに画像」を、自分の画像に差し替えるとき
+    const ph = this.replaceTarget
+    if (imageId && ph && this.canvas.getObjects().includes(ph)) {
+      const c = ph.getCenterPoint()
+      const fit = Math.min((ph.width * ph.scaleX) / img.width, (ph.height * ph.scaleY) / img.height)
+      img.set({ left: c.x, top: c.y, scaleX: fit, scaleY: fit, angle: ph.angle || 0 })
+      this.canvas.remove(ph)
+      this.closePartsPanel()
+    }
 
     this.canvas.add(img)
     this.canvas.setActiveObject(img)
