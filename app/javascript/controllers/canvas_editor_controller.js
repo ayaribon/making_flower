@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import { Canvas, Textbox, Gradient, Shadow } from "fabric"
+import { Canvas, Textbox, Gradient, Shadow, FabricImage } from "fabric"
 import { STYLES, STYLE_DEFAULTS } from "text_styles"
 
 // グラデーションの向きごとの座標（0〜1 の割合で指定）
@@ -18,7 +18,11 @@ export default class extends Controller {
     "strokeColorInput", "strokeWidthInput", "strokeWidthValue",
     "shadowColorInput",
     "shadowOpacityInput", "shadowOpacityValue", "shadowBlurInput", "shadowBlurValue",
-    "shadowXInput", "shadowXValue", "shadowYInput", "shadowYValue"
+    "shadowXInput", "shadowXValue", "shadowYInput", "shadowYValue",
+    "bgPanel", "bgModeButton", "bgColorLabel", "bgColorInput", "bgColor2Input",
+    "bgDirectionInput", "bgGradientOnly",
+    "partsPanel", "partPanel", "partOpacityInput", "partOpacityValue",
+    "lockButton"
   ]
   static values = { width: Number, height: Number }
 
@@ -36,6 +40,13 @@ export default class extends Controller {
     // ハンドルで拡大縮小したら、サイズの表示を合わせる
     this.canvas.on("object:scaling", () => this.syncInputs())
     this.canvas.on("object:modified", () => this.syncInputs())
+
+    // 触ったものをいちばん上に持ってくる（ロック中のものは動かさない）
+    this.canvas.on("mouse:down", ({ target }) => {
+      if (!target || target.locked) return
+      this.canvas.bringObjectToFront(target)
+      this.canvas.requestRenderAll()
+    })
 
     this.fit()
 
@@ -86,8 +97,23 @@ export default class extends Controller {
   updatePanel() {
     const active = this.canvas.getActiveObject()
     const isText = active instanceof Textbox
+    const isPart = active instanceof FabricImage
+
     this.textPanelTarget.hidden = !isText
+    this.partPanelTarget.hidden = !isPart
+
+    if (isText || isPart) {
+      // 何かを選んだら、背景パネルと部品の追加パネルは閉じる
+      this.bgPanelTarget.hidden = true
+      this.partsPanelTarget.hidden = true
+    }
+    if (isText || isPart) this.updateLockButtons(active)
     if (isText) this.syncInputs()
+    if (isPart) {
+      const opacity = Math.round((active.opacity ?? 1) * 100)
+      this.partOpacityInputTarget.value = opacity
+      this.partOpacityValueTarget.textContent = opacity
+    }
   }
 
   // 選択をやめる（パネルの「閉じる」ボタン）
@@ -95,6 +121,228 @@ export default class extends Controller {
     this.canvas.discardActiveObject()
     this.canvas.requestRenderAll()
     this.updatePanel()
+  }
+
+  // ===== 背景 =====
+
+  // ツールバーの「背景」ボタン：背景パネルを開く／閉じる
+  toggleBackgroundPanel() {
+    if (!this.bgPanelTarget.hidden) {
+      this.closeBackgroundPanel()
+      return
+    }
+
+    // 選んでいるテキストがあれば選択を外して、テキストパネルを閉じる
+    this.canvas.discardActiveObject()
+    this.canvas.requestRenderAll()
+    this.textPanelTarget.hidden = true
+    this.partPanelTarget.hidden = true
+    this.partsPanelTarget.hidden = true
+
+    this.syncBackgroundInputs()
+    this.bgPanelTarget.hidden = false
+  }
+
+  closeBackgroundPanel() {
+    this.bgPanelTarget.hidden = true
+  }
+
+  // ===== 部品 =====
+
+  // ツールバーの「部品」ボタン：部品の一覧を開く／閉じる
+  togglePartsPanel() {
+    if (!this.partsPanelTarget.hidden) {
+      this.closePartsPanel()
+      return
+    }
+
+    this.canvas.discardActiveObject()
+    this.canvas.requestRenderAll()
+    this.textPanelTarget.hidden = true
+    this.partPanelTarget.hidden = true
+    this.bgPanelTarget.hidden = true
+    this.partsPanelTarget.hidden = false
+  }
+
+  closePartsPanel() {
+    this.partsPanelTarget.hidden = true
+  }
+
+  // 部品をキャンバスの真ん中に置く
+  async addPart(event) {
+    const img = await FabricImage.fromURL(event.params.src)
+
+    // キャンバスより大きい部品（枠など）はキャンバスに収まる大きさ、それ以外は高さの4割くらいにする
+    const fitScale = Math.min(this.widthValue / img.width, this.heightValue / img.height)
+    const scale = fitScale <= 1 ? fitScale : Math.min(1, (this.heightValue * 0.4) / img.height)
+
+    img.set({
+      originX: "center",
+      originY: "center",
+      left: this.widthValue / 2,
+      top: this.heightValue / 2,
+      scaleX: scale,
+      scaleY: scale
+    })
+
+    this.canvas.add(img)
+    this.canvas.setActiveObject(img)
+    this.canvas.requestRenderAll()
+  }
+
+  changePartOpacity(event) {
+    const part = this.canvas.getActiveObject()
+    if (!(part instanceof FabricImage)) return
+
+    const value = Number(event.target.value)
+    part.set("opacity", value / 100)
+    this.partOpacityValueTarget.textContent = value
+    this.canvas.requestRenderAll()
+  }
+
+  flipPart() {
+    const part = this.canvas.getActiveObject()
+    if (!(part instanceof FabricImage)) return
+
+    part.set("flipX", !part.flipX)
+    this.canvas.requestRenderAll()
+  }
+
+  // ===== ロック =====
+  // ロックしたものは、触っても動かない・上に来ない。タップでパネルは開けるので、そこで解除できる
+  toggleLock() {
+    const active = this.canvas.getActiveObject()
+    if (!active) return
+
+    this.setLocked(active, !active.locked)
+    this.canvas.requestRenderAll()
+    this.updateLockButtons(active)
+  }
+
+  setLocked(obj, locked) {
+    obj.set({
+      locked,
+      lockMovementX: locked,
+      lockMovementY: locked,
+      lockScalingX: locked,
+      lockScalingY: locked,
+      lockRotation: locked,
+      hasControls: !locked,
+      hoverCursor: locked ? "default" : "move"
+    })
+    // ロック中のテキストは、ダブルタップしても文字編集に入らない
+    if (obj instanceof Textbox) obj.set("editable", !locked)
+  }
+
+  updateLockButtons(obj) {
+    const label = obj?.locked ? "🔒 ロック中" : "🔓 ロック"
+    this.lockButtonTargets.forEach(button => {
+      button.textContent = label
+      button.classList.toggle("is-locked", !!obj?.locked)
+    })
+  }
+
+  // 今の背景を、入力欄に映す
+  syncBackgroundInputs() {
+    const bg = this.canvas.backgroundColor
+
+    if (bg instanceof Gradient) {
+      const stops = bg.colorStops
+      this.bgColorInputTarget.value = this.toHex(stops[0]?.color)
+      this.bgColor2InputTarget.value = this.toHex(stops[stops.length - 1]?.color)
+      this.bgDirectionInputTarget.value = this.directionOf(bg)
+      this.showBgMode("gradient")
+    } else {
+      this.bgColorInputTarget.value = this.toHex(bg, "#ffffff")
+      this.showBgMode("solid")
+    }
+  }
+
+  // 「単色／グラデーション」の表示を切り替える（見た目だけ）
+  showBgMode(mode) {
+    this.bgMode = mode
+    const isGradient = mode === "gradient"
+
+    this.bgModeButtonTargets.forEach(button => {
+      button.classList.toggle("is-active", button.dataset.mode === mode)
+    })
+    this.bgGradientOnlyTargets.forEach(el => {
+      el.hidden = !isGradient
+    })
+    this.bgColorLabelTarget.textContent = isGradient ? "色1" : "背景色"
+  }
+
+  changeBgMode(event) {
+    const mode = event.params.mode
+
+    // 初めてグラデーションにするときは、色2を少し違う色にしておく
+    if (mode === "gradient" && this.bgColor2InputTarget.value === this.bgColorInputTarget.value) {
+      this.bgColor2InputTarget.value = "#2b2d42"
+    }
+
+    this.showBgMode(mode)
+    this.applyBackground()
+  }
+
+  changeBackground() {
+    this.applyBackground()
+  }
+
+  // 今の入力欄の値で、背景をかけ直す
+  applyBackground() {
+    if (this.bgMode === "gradient") {
+      this.canvas.backgroundColor = this.buildCanvasGradient(
+        this.bgColorInputTarget.value,
+        this.bgColor2InputTarget.value,
+        this.bgDirectionInputTarget.value
+      )
+    } else {
+      this.canvas.backgroundColor = this.bgColorInputTarget.value
+    }
+    this.canvas.requestRenderAll()
+  }
+
+  // 背景画像を敷く（キャンバスいっぱいに広げる。縦横比が違うときは、はみ出す方を切る）
+  async setBackgroundImage(event) {
+    const src = event.params.src
+    const img = await FabricImage.fromURL(src)
+
+    const scale = Math.max(this.widthValue / img.width, this.heightValue / img.height)
+    img.set({
+      originX: "center",
+      originY: "center",
+      left: this.widthValue / 2,
+      top: this.heightValue / 2,
+      scaleX: scale,
+      scaleY: scale
+    })
+
+    this.canvas.backgroundImage = img
+    this.canvas.requestRenderAll()
+  }
+
+  clearBackgroundImage() {
+    this.canvas.backgroundImage = null
+    this.canvas.requestRenderAll()
+  }
+
+  // 背景用のグラデーション。キャンバス全体（1280×720）の座標で作る
+  buildCanvasGradient(color1, color2, direction) {
+    const c = GRADIENT_COORDS[direction] || GRADIENT_COORDS.vertical
+    return new Gradient({
+      type: "linear",
+      gradientUnits: "pixels",
+      coords: {
+        x1: c.x1 * this.widthValue,
+        y1: c.y1 * this.heightValue,
+        x2: c.x2 * this.widthValue,
+        y2: c.y2 * this.heightValue
+      },
+      colorStops: [
+        { offset: 0, color: color1 },
+        { offset: 1, color: color2 }
+      ]
+    })
   }
 
   // パネルのタブを切り替える
@@ -365,8 +613,8 @@ export default class extends Controller {
     const active = this.canvas.getActiveObject()
     if (!active) return
 
-    // 文字を打ち替えている最中は消さない
-    if (active.isEditing) return
+    // 文字を打ち替えている最中・ロック中は消さない
+    if (active.isEditing || active.locked) return
 
     this.canvas.remove(active)
     this.canvas.discardActiveObject()
@@ -383,7 +631,7 @@ export default class extends Controller {
     if (tag === "INPUT" || tag === "TEXTAREA") return
 
     const active = this.canvas.getActiveObject()
-    if (!active || active.isEditing) return
+    if (!active || active.isEditing || active.locked) return
 
     // Backspace でブラウザが「前のページに戻る」のを防ぐ
     event.preventDefault()

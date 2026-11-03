@@ -30,6 +30,11 @@
         <div class="studio-panel-actions">
           <button
             type="button"
+            class="studio-panel-lock"
+            data-canvas-editor-target="lockButton"
+            data-action="click->canvas-editor#toggleLock">🔓 ロック</button>
+          <button
+            type="button"
             class="studio-panel-delete"
             data-action="click->canvas-editor#deleteSelected">
             削除
@@ -211,10 +216,144 @@
       </div>
     </div>
 
+    <!-- 背景パネル -->
+    <div class="studio-panel" data-canvas-editor-target="bgPanel" hidden>
+      <div class="studio-panel-header">
+        <span>背景</span>
+        <div class="studio-panel-actions">
+          <button
+            type="button"
+            class="studio-panel-close"
+            data-action="click->canvas-editor#closeBackgroundPanel">
+            閉じる
+          </button>
+        </div>
+      </div>
+
+      <div class="studio-segment">
+        <button type="button" class="studio-segment-button is-active"
+          data-canvas-editor-target="bgModeButton" data-mode="solid"
+          data-action="click->canvas-editor#changeBgMode"
+          data-canvas-editor-mode-param="solid">単色</button>
+        <button type="button" class="studio-segment-button"
+          data-canvas-editor-target="bgModeButton" data-mode="gradient"
+          data-action="click->canvas-editor#changeBgMode"
+          data-canvas-editor-mode-param="gradient">グラデーション</button>
+      </div>
+
+      <div class="studio-settings">
+        <label class="studio-setting">
+          <span data-canvas-editor-target="bgColorLabel">背景色</span>
+          <input
+            type="color"
+            data-canvas-editor-target="bgColorInput"
+            data-action="input->canvas-editor#changeBackground">
+        </label>
+
+        <label class="studio-setting" data-canvas-editor-target="bgGradientOnly" hidden>
+          <span>色2</span>
+          <input
+            type="color"
+            data-canvas-editor-target="bgColor2Input"
+            data-action="input->canvas-editor#changeBackground">
+        </label>
+
+        <label class="studio-setting" data-canvas-editor-target="bgGradientOnly" hidden>
+          <span>向き</span>
+          <select
+            data-canvas-editor-target="bgDirectionInput"
+            data-action="change->canvas-editor#changeBackground">
+            <option value="vertical">縦（上→下）</option>
+            <option value="horizontal">横（左→右）</option>
+            <option value="diagonal">ななめ</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="studio-bg-images">
+        <span class="studio-bg-images-label">背景画像</span>
+        <div class="studio-bg-image-list">
+          <button type="button" class="studio-bg-thumb studio-bg-thumb-none"
+            data-action="click->canvas-editor#clearBackgroundImage">なし</button>
+          <% [
+            ["burst", "集中線"],
+            ["neon-grid", "ネオングリッド"],
+            ["pastel-dots", "パステル水玉"]
+          ].each do |key, label| %>
+            <button type="button" class="studio-bg-thumb"
+              title="<%= label %>"
+              data-action="click->canvas-editor#setBackgroundImage"
+              data-canvas-editor-src-param="/backgrounds/<%= key %>.svg">
+              <img src="/backgrounds/<%= key %>.svg" alt="<%= label %>">
+            </button>
+          <% end %>
+        </div>
+        <p class="studio-tab-note">背景画像を選ぶと、背景色の上に重なります</p>
+      </div>
+    </div>
+
+    <!-- 部品パネル（部品を追加する） -->
+    <div class="studio-panel" data-canvas-editor-target="partsPanel" hidden>
+      <div class="studio-panel-header">
+        <span>部品を追加</span>
+        <div class="studio-panel-actions">
+          <button type="button" class="studio-panel-close"
+            data-action="click->canvas-editor#closePartsPanel">閉じる</button>
+        </div>
+      </div>
+
+      <div class="studio-bg-image-list">
+        <% [
+          ["bubble", "吹き出し"],
+          ["star", "星"],
+          ["heart", "ハート"],
+          ["arrow", "矢印"],
+          ["burst-label", "ギザギザ"],
+          ["frame", "枠"]
+        ].each do |key, label| %>
+          <button type="button" class="studio-part-thumb"
+            title="<%= label %>"
+            data-action="click->canvas-editor#addPart"
+            data-canvas-editor-src-param="/parts/<%= key %>.svg">
+            <img src="/parts/<%= key %>.svg" alt="<%= label %>">
+          </button>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- 部品を選んでいるときのパネル -->
+    <div class="studio-panel" data-canvas-editor-target="partPanel" hidden>
+      <div class="studio-panel-header">
+        <span>部品を選択中</span>
+        <div class="studio-panel-actions">
+          <button
+            type="button"
+            class="studio-panel-lock"
+            data-canvas-editor-target="lockButton"
+            data-action="click->canvas-editor#toggleLock">🔓 ロック</button>
+          <button type="button" class="studio-panel-delete"
+            data-action="click->canvas-editor#deleteSelected">削除</button>
+          <button type="button" class="studio-panel-close"
+            data-action="click->canvas-editor#deselect">閉じる</button>
+        </div>
+      </div>
+
+      <div class="studio-settings">
+        <label class="studio-setting studio-setting-size">
+          <span>透明度 <strong data-canvas-editor-target="partOpacityValue">100</strong>%</span>
+          <input type="range" min="10" max="100" step="1"
+            data-canvas-editor-target="partOpacityInput"
+            data-action="input->canvas-editor#changePartOpacity">
+        </label>
+        <button type="button" class="studio-panel-close"
+          data-action="click->canvas-editor#flipPart">左右反転</button>
+      </div>
+    </div>
+
     <nav class="studio-toolbar">
       <button type="button" data-action="click->canvas-editor#addText">テキスト</button>
-      <button type="button">部品</button>
-      <button type="button">背景</button>
+      <button type="button" data-action="click->canvas-editor#togglePartsPanel">部品</button>
+      <button type="button" data-action="click->canvas-editor#toggleBackgroundPanel">背景</button>
       <button type="button">レイヤー</button>
       <button type="button">書き出し</button>
     </nav>
