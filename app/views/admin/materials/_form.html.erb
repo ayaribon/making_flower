@@ -1,0 +1,53 @@
+<%= form_with model: [:admin, material], local: true, class: "admin-form" do |f| %>
+  <% if material.errors.any? %>
+    <div class="auth-alert">
+      <% material.errors.full_messages.each do |msg| %><div><%= msg %></div><% end %>
+    </div>
+  <% end %>
+
+  <label>名前
+    <%= f.text_field :name, required: true, maxlength: 40, placeholder: "一覧に出す名前" %>
+  </label>
+
+  <label>キー（テンプレで使うときだけ。英小文字・数字・ハイフン）
+    <%= f.text_field :key, maxlength: 40, placeholder: "空欄でOK",
+          autocapitalize: "none", autocorrect: "off", spellcheck: false,
+          readonly: material.persisted? && material.used_in_templates? %>
+  </label>
+
+  <label>種類
+    <%= f.select :kind, Material::KINDS.map { |k, v| [v, k] } %>
+  </label>
+
+  <label>画像<%= "（変えるときだけ選ぶ）" if material.persisted? %>
+    <% if material.persisted? && material.image.attached? %>
+      <%= image_tag url_for(material.image), class: "admin-material-thumb is-large", alt: material.name %>
+    <% end %>
+    <%= f.file_field :image, accept: Material::CONTENT_TYPES.join(","), required: !material.persisted? %>
+  </label>
+
+  <label>引用元の名前
+    <%= f.text_field :source_name, placeholder: "素材サイトや作者の名前" %>
+  </label>
+
+  <label>引用元のURL
+    <%= f.url_field :source_url, placeholder: "https://" %>
+  </label>
+
+  <label>ライセンスのメモ（管理画面だけに出ます）
+    <%= f.text_area :license_note, rows: 3, placeholder: "商用OK／クレジット表記不要 など" %>
+  </label>
+
+  <label>並び順（小さいほど前）
+    <%= f.number_field :position, min: 0 %>
+  </label>
+
+  <label class="admin-check">
+    <%= f.check_box :visible %> エディタに表示する
+  </label>
+
+  <div class="admin-row-actions">
+    <%= f.submit (material.persisted? ? "保存する" : "追加する"), class: "admin-button is-main" %>
+    <%= link_to "もどる", admin_materials_path, class: "admin-button" %>
+  </div>
+<% end %>

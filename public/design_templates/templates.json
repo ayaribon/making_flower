@@ -22,7 +22,7 @@
       "items": [
         {
           "type": "part",
-          "src": "/parts/star.svg",
+          "material": "star",
           "x": 0.08,
           "y": 0.16,
           "h": 0.16,
@@ -30,7 +30,7 @@
         },
         {
           "type": "part",
-          "src": "/parts/heart.svg",
+          "material": "heart",
           "x": 0.06,
           "y": 0.84,
           "h": 0.18,
@@ -38,7 +38,7 @@
         },
         {
           "type": "part",
-          "src": "/parts/star.svg",
+          "material": "star",
           "x": 0.6,
           "y": 0.12,
           "h": 0.1,
@@ -116,12 +116,12 @@
         "#bde8ff"
       ],
       "background": {
-        "image": "/backgrounds/pastel-dots.svg"
+        "material": "pastel-dots"
       },
       "items": [
         {
           "type": "part",
-          "src": "/parts/bubble.svg",
+          "material": "bubble",
           "x": 0.32,
           "y": 0.46,
           "h": 0.62
@@ -156,7 +156,7 @@
         },
         {
           "type": "part",
-          "src": "/parts/heart.svg",
+          "material": "heart",
           "x": 0.09,
           "y": 0.16,
           "h": 0.14,
@@ -164,7 +164,7 @@
         },
         {
           "type": "part",
-          "src": "/parts/heart.svg",
+          "material": "heart",
           "x": 0.55,
           "y": 0.86,
           "h": 0.1,
@@ -191,7 +191,7 @@
         "#3ad1ff"
       ],
       "background": {
-        "image": "/backgrounds/neon-grid.svg"
+        "material": "neon-grid"
       },
       "items": [
         {
@@ -221,7 +221,7 @@
         },
         {
           "type": "part",
-          "src": "/parts/arrow.svg",
+          "material": "arrow",
           "x": 0.12,
           "y": 0.82,
           "h": 0.13
@@ -260,12 +260,12 @@
         "#fff59d"
       ],
       "background": {
-        "image": "/backgrounds/burst.svg"
+        "material": "burst"
       },
       "items": [
         {
           "type": "part",
-          "src": "/parts/burst-label.svg",
+          "material": "burst-label",
           "x": 0.18,
           "y": 0.22,
           "h": 0.36,
@@ -372,7 +372,7 @@
         },
         {
           "type": "part",
-          "src": "/parts/star.svg",
+          "material": "star",
           "x": 0.12,
           "y": 0.06,
           "h": 0.06,
@@ -380,7 +380,7 @@
         },
         {
           "type": "part",
-          "src": "/parts/heart.svg",
+          "material": "heart",
           "x": 0.88,
           "y": 0.36,
           "h": 0.06,
@@ -411,7 +411,7 @@
         "#bde8ff"
       ],
       "background": {
-        "image": "/backgrounds/pastel-dots.svg"
+        "material": "pastel-dots"
       },
       "items": [
         {
@@ -423,7 +423,7 @@
         },
         {
           "type": "part",
-          "src": "/parts/bubble.svg",
+          "material": "bubble",
           "x": 0.5,
           "y": 0.17,
           "h": 0.24
@@ -470,12 +470,12 @@
         "#fff59d"
       ],
       "background": {
-        "image": "/backgrounds/burst.svg"
+        "material": "burst"
       },
       "items": [
         {
           "type": "part",
-          "src": "/parts/burst-label.svg",
+          "material": "burst-label",
           "x": 0.24,
           "y": 0.2,
           "h": 0.3,
@@ -539,7 +539,7 @@
       "items": [
         {
           "type": "part",
-          "src": "/parts/star.svg",
+          "material": "star",
           "x": 0.15,
           "y": 0.15,
           "h": 0.16,
@@ -547,7 +547,7 @@
         },
         {
           "type": "part",
-          "src": "/parts/star.svg",
+          "material": "star",
           "x": 0.86,
           "y": 0.2,
           "h": 0.12,
@@ -555,7 +555,7 @@
         },
         {
           "type": "part",
-          "src": "/parts/heart.svg",
+          "material": "heart",
           "x": 0.82,
           "y": 0.84,
           "h": 0.16,

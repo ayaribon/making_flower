@@ -11,7 +11,8 @@
   data-controller="canvas-editor"
   data-action="keydown@window->canvas-editor#onKeydown"
   data-canvas-editor-width-value="<%= @width %>"
-  data-canvas-editor-height-value="<%= @height %>">
+  data-canvas-editor-height-value="<%= @height %>"
+  data-canvas-editor-materials-value="<%= @material_map.to_json %>">
   <!-- 比率を選ぶ画面（最初に出す。ヘッダーのサイズを押すと、また開く） -->
   <div class="studio-ratio-picker" data-canvas-editor-target="ratioPicker">
     <div class="studio-ratio-card">
@@ -335,16 +336,14 @@
             data-action="change->canvas-editor#onMyImageSelected"
             data-kind="background">
           <span class="studio-my-list" data-canvas-editor-target="myBgList"></span>
-          <% [
-            ["burst", "集中線"],
-            ["neon-grid", "ネオングリッド"],
-            ["pastel-dots", "パステル水玉"]
-          ].each do |key, label| %>
+          <% @background_materials.each do |m| %>
             <button type="button" class="studio-bg-thumb"
-              title="<%= label %>"
+              title="<%= m.name %>"
               data-action="click->canvas-editor#setBackgroundImage"
-              data-canvas-editor-src-param="/backgrounds/<%= key %>.svg">
-              <img src="/backgrounds/<%= key %>.svg" alt="<%= label %>">
+              data-canvas-editor-src-param="<%= url_for(m.image) %>"
+              data-canvas-editor-source-param="<%= m.source_name %>"
+              data-canvas-editor-source-url-param="<%= m.source_url %>">
+              <img src="<%= url_for(m.image) %>" alt="<%= m.name %>" loading="lazy">
             </button>
           <% end %>
         </div>
@@ -371,26 +370,18 @@
           data-action="change->canvas-editor#onMyImageSelected"
           data-kind="part">
         <span class="studio-my-list" data-canvas-editor-target="myPartList"></span>
-        <% [
-          ["bubble", "吹き出し"],
-          ["star", "星"],
-          ["heart", "ハート"],
-          ["arrow", "矢印"],
-          ["burst-label", "ギザギザ"],
-          ["frame", "枠"],
-          ["siva-circle.png", "SiVA ロゴ（丸）"],
-          ["siva-banner.png", "SiVA バナー"]
-        ].each do |key, label| %>
-          <% file = key.include?(".") ? key : "#{key}.svg" %>
+        <% @part_materials.each do |m| %>
           <button type="button" class="studio-part-thumb"
-            title="<%= label %>"
+            title="<%= m.name %>"
             data-action="click->canvas-editor#addPart"
-            data-canvas-editor-src-param="/parts/<%= file %>">
-            <img src="/parts/<%= file %>" alt="<%= label %>">
+            data-canvas-editor-src-param="<%= url_for(m.image) %>"
+            data-canvas-editor-source-param="<%= m.source_name %>"
+            data-canvas-editor-source-url-param="<%= m.source_url %>">
+            <img src="<%= url_for(m.image) %>" alt="<%= m.name %>" loading="lazy">
           </button>
         <% end %>
       </div>
-      <p class="studio-tab-note">自分の画像はこの端末のブラウザの中だけに保存されます（サーバーには送りません）。長押し・右クリックの「×」で一覧から消せます</p>
+      <p class="studio-tab-note">自分の画像はあなたのアカウントにだけ保存されます（ほかの人には見えません）。長押し・右クリックの「×」で一覧から消せます</p>
     </div>
 
     <!-- 部品を選んでいるときのパネル -->
@@ -528,4 +519,7 @@
       </button>
     </nav>
   </footer>
+
+  <!-- 引用元の表示（右下に数秒だけ出す） -->
+  <a class="studio-credit" data-canvas-editor-target="credit" target="_blank" rel="noopener noreferrer" hidden></a>
 </main>

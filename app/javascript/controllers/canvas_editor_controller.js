@@ -22,7 +22,7 @@ const HISTORY_LIMIT = 30
 
 // 保存するときに、Fabric.js の標準の項目に加えて残しておく項目
 const EXTRA_PROPS = [
-  "locked", "imageId", "placeholder", "effect", "effectKey", "effectStrength", "effectColor", "selectable", "evented", "editable", "hasControls", "hoverCursor",
+  "locked", "imageId", "sourceName", "sourceUrl", "placeholder", "effect", "effectKey", "effectStrength", "effectColor", "selectable", "evented", "editable", "hasControls", "hoverCursor",
   "lockMovementX", "lockMovementY", "lockScalingX", "lockScalingY", "lockRotation"
 ]
 
@@ -42,11 +42,11 @@ export default class extends Controller {
     "lockButton",
     "ratioPicker", "ratioClose", "sizeBadge",
     "partFileInput", "bgFileInput", "myPartList", "myBgList",
-    "undoButton", "redoButton",
+    "undoButton", "redoButton", "credit",
     "effectsPanel", "effectTab", "effectPage", "effectToggle", "effectStrength", "tintInput", "frameButton",
     "templatesPanel", "templateList", "replaceButton", "replaceHint"
   ]
-  static values = { width: Number, height: Number }
+  static values = { width: Number, height: Number, materials: Object }
 
   connect() {
     this.canvas = new Canvas(this.canvasTarget, {
@@ -56,6 +56,13 @@ export default class extends Controller {
 
         // 選択の変化を見張る
     this.canvas.on("selection:created", () => this.updatePanel())
+    // 引用元のある素材を選んだら、右下に引用元を出す
+    const credit = () => {
+      const a = this.canvas.getActiveObject()
+      if (a?.sourceName) this.showCredit(a.sourceName, a.sourceUrl)
+    }
+    this.canvas.on("selection:created", credit)
+    this.canvas.on("selection:updated", credit)
     this.canvas.on("selection:updated", () => this.updatePanel())
     this.canvas.on("selection:cleared", () => this.updatePanel())
 
@@ -216,7 +223,13 @@ export default class extends Controller {
       } else if (bg.color) {
         this.canvas.backgroundColor = bg.color
       }
-      if (bg.image) await this.placeBackground(bg.image)
+      // 背景の画像は、素材のキー（material）で探す。見つからなければ背景画像なしで続ける
+      const bgMaterial = this.findMaterial(bg.material)
+      if (bgMaterial) {
+        await this.placeBackground(bgMaterial.src)
+        const bgImg = this.canvas.backgroundImage
+        if (bgImg && bgMaterial.sourceName) bgImg.set({ sourceName: bgMaterial.sourceName, sourceUrl: bgMaterial.sourceUrl })
+      }
 
       // 文字・部品・「ここに画像」（書いてある順に下から重ねる）
       for (const item of t.items || []) {
@@ -271,7 +284,13 @@ export default class extends Controller {
 
   // 部品の大きさ（h）は、キャンバスの高さに対する割合
   async addTemplatePart(item, W, H) {
-    const img = await FabricImage.fromURL(item.src)
+    // 部品は、素材のキー（material）で探す。見つからない部品は飛ばして、ほかは読み込む
+    const material = this.findMaterial(item.material)
+    if (!material) return
+
+    const img = await FabricImage.fromURL(material.src)
+    if (material.sourceName) img.set({ sourceName: material.sourceName, sourceUrl: material.sourceUrl })
+
     const scale = ((item.h || 0.2) * H) / img.height
     img.set({
       originX: "center",
@@ -285,6 +304,14 @@ export default class extends Controller {
       opacity: item.opacity ?? 1
     })
     this.canvas.add(img)
+  }
+
+  // テンプレが使う素材を、キーから探す（管理画面の素材から作った表）
+  findMaterial(key) {
+    if (!key) return null
+    const material = this.materialsValue?.[key]
+    if (!material) console.warn(`テンプレの素材「${key}」が見つかりません（管理画面の素材にキーがあるか確認してね）`)
+    return material || null
   }
 
   // 立ち絵などを入れる「ここに画像」の仮の枠
@@ -975,7 +1002,10 @@ export default class extends Controller {
 
   // 部品をキャンバスの真ん中に置く
   async addPart(event) {
-    await this.placePart(event.params.src)
+    const { source, sourceUrl } = event.params
+    const img = await this.placePart(event.params.src)
+    if (img && source) img.set({ sourceName: source, sourceUrl: sourceUrl || "" })
+    this.showCredit(source, sourceUrl)
   }
 
   // 部品（URL）をキャンバスの真ん中に置く。imageId は自分の画像のときだけ入る
@@ -1009,6 +1039,7 @@ export default class extends Controller {
     this.canvas.add(img)
     this.canvas.setActiveObject(img)
     this.canvas.requestRenderAll()
+    return img
   }
 
   changePartOpacity(event) {
@@ -1125,7 +1156,31 @@ export default class extends Controller {
 
   // 背景画像を敷く（キャンバスいっぱいに広げる。縦横比が違うときは、はみ出す方を切る）
   async setBackgroundImage(event) {
+    const { source, sourceUrl } = event.params
     await this.placeBackground(event.params.src)
+    const bg = this.canvas.backgroundImage
+    if (bg && source) bg.set({ sourceName: source, sourceUrl: sourceUrl || "" })
+    this.showCredit(source, sourceUrl)
+  }
+
+  // ===== 引用元（右下に数秒だけ出す） =====
+  showCredit(name, url) {
+    if (!this.hasCreditTarget || !name) return
+    const el = this.creditTarget
+    el.textContent = `引用元：${name}`
+    if (url) {
+      el.href = url
+      el.classList.add("is-link")
+    } else {
+      el.removeAttribute("href")
+      el.classList.remove("is-link")
+    }
+    el.hidden = false
+    el.classList.remove("is-show")
+    void el.offsetWidth          // アニメーションをやり直すため
+    el.classList.add("is-show")
+    clearTimeout(this.creditTimer)
+    this.creditTimer = setTimeout(() => { el.hidden = true }, 4000)
   }
 
   // 背景画像（URL）を敷く。imageId は自分の画像のときだけ入る
@@ -1179,7 +1234,7 @@ export default class extends Controller {
       await this.renderMyImages(kind)
     } catch (e) {
       console.error(e)
-      alert("画像を読み込めませんでした。別の画像で試してみてね")
+      alert(e.message || "画像を読み込めませんでした。別の画像で試してみてね")
     }
   }
 
@@ -1200,7 +1255,7 @@ export default class extends Controller {
 
       button.addEventListener("click", async (e) => {
         if (e.target.classList.contains("studio-my-delete")) {
-          if (!confirm("この画像を一覧から消す？（置いてある画像は消えません）")) return
+          if (!confirm("この画像を消す？\nサーバーからも消えるので、キャンバスに置いてある分も、次に開いたときには表示されなくなります")) return
           await deleteImage(record.id)
           await this.renderMyImages(kind)
           return
