@@ -4,6 +4,7 @@ module Admin
 
     def index
       @materials = Material.ordered.with_attached_image
+      @usage = Material.template_usage
     end
 
     def new
@@ -30,14 +31,18 @@ module Admin
     end
 
     def toggle
+      # テンプレで使っている素材は、隠すと一覧から選べなくなるだけ（テンプレからは使える）
       @material.update!(visible: !@material.visible)
       redirect_to admin_materials_path, notice: "「#{@material.name}」を#{@material.visible ? '表示' : '非表示'}にしました"
     end
 
     def destroy
       name = @material.name
-      @material.destroy
-      redirect_to admin_materials_path, notice: "「#{name}」を削除しました"
+      if @material.destroy
+        redirect_to admin_materials_path, notice: "「#{name}」を削除しました"
+      else
+        redirect_to admin_materials_path, alert: @material.errors.full_messages.join("／")
+      end
     end
 
     private
@@ -47,7 +52,7 @@ module Admin
     end
 
     def material_params
-      params.require(:material).permit(:name, :kind, :image, :source_name, :source_url, :license_note, :visible, :position)
+      params.require(:material).permit(:name, :key, :kind, :image, :source_name, :source_url, :license_note, :visible, :position)
     end
   end
 end

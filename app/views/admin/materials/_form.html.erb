@@ -9,6 +9,12 @@
     <%= f.text_field :name, required: true, maxlength: 40, placeholder: "一覧に出す名前" %>
   </label>
 
+  <label>キー（テンプレで使うときだけ。英小文字・数字・ハイフン）
+    <%= f.text_field :key, maxlength: 40, placeholder: "空欄でOK",
+          autocapitalize: "none", autocorrect: "off", spellcheck: false,
+          readonly: material.persisted? && material.used_in_templates? %>
+  </label>
+
   <label>種類
     <%= f.select :kind, Material::KINDS.map { |k, v| [v, k] } %>
   </label>

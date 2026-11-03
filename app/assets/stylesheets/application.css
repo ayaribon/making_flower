@@ -1600,6 +1600,10 @@ ul.auth-alert { padding-left: 28px; }
 
 .admin-form .admin-check { flex-direction: row; align-items: center; }
 
+.admin-badge.is-key { background: #eef3ff; color: #4a5fb5; font-family: monospace; }
+.admin-source.is-used { color: #1d8a84; }
+.admin-button.is-disabled { opacity: 0.5; cursor: not-allowed; }
+
 /* ===== 引用元の表示（エディタ右下） ===== */
 
 .studio-credit {

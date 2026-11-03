@@ -46,7 +46,7 @@ export default class extends Controller {
     "effectsPanel", "effectTab", "effectPage", "effectToggle", "effectStrength", "tintInput", "frameButton",
     "templatesPanel", "templateList", "replaceButton", "replaceHint"
   ]
-  static values = { width: Number, height: Number }
+  static values = { width: Number, height: Number, materials: Object }
 
   connect() {
     this.canvas = new Canvas(this.canvasTarget, {
@@ -223,7 +223,13 @@ export default class extends Controller {
       } else if (bg.color) {
         this.canvas.backgroundColor = bg.color
       }
-      if (bg.image) await this.placeBackground(bg.image)
+      // 背景の画像は、素材のキー（material）で探す。見つからなければ背景画像なしで続ける
+      const bgMaterial = this.findMaterial(bg.material)
+      if (bgMaterial) {
+        await this.placeBackground(bgMaterial.src)
+        const bgImg = this.canvas.backgroundImage
+        if (bgImg && bgMaterial.sourceName) bgImg.set({ sourceName: bgMaterial.sourceName, sourceUrl: bgMaterial.sourceUrl })
+      }
 
       // 文字・部品・「ここに画像」（書いてある順に下から重ねる）
       for (const item of t.items || []) {
@@ -278,7 +284,13 @@ export default class extends Controller {
 
   // 部品の大きさ（h）は、キャンバスの高さに対する割合
   async addTemplatePart(item, W, H) {
-    const img = await FabricImage.fromURL(item.src)
+    // 部品は、素材のキー（material）で探す。見つからない部品は飛ばして、ほかは読み込む
+    const material = this.findMaterial(item.material)
+    if (!material) return
+
+    const img = await FabricImage.fromURL(material.src)
+    if (material.sourceName) img.set({ sourceName: material.sourceName, sourceUrl: material.sourceUrl })
+
     const scale = ((item.h || 0.2) * H) / img.height
     img.set({
       originX: "center",
@@ -292,6 +304,14 @@ export default class extends Controller {
       opacity: item.opacity ?? 1
     })
     this.canvas.add(img)
+  }
+
+  // テンプレが使う素材を、キーから探す（管理画面の素材から作った表）
+  findMaterial(key) {
+    if (!key) return null
+    const material = this.materialsValue?.[key]
+    if (!material) console.warn(`テンプレの素材「${key}」が見つかりません（管理画面の素材にキーがあるか確認してね）`)
+    return material || null
   }
 
   // 立ち絵などを入れる「ここに画像」の仮の枠

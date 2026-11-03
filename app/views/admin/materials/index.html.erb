@@ -13,6 +13,7 @@
 
   <ul class="admin-list">
     <% @materials.each do |m| %>
+      <% used = m.key.present? ? (@usage[m.key] || []) : [] %>
       <li class="admin-row<%= ' is-hidden' unless m.visible %>">
         <div class="admin-material">
           <% if m.image.attached? %>
@@ -22,18 +23,26 @@
             <strong><%= m.name %></strong>
             <span class="admin-badge"><%= m.kind_label %></span>
             <% unless m.visible %><span class="admin-badge is-off">非表示</span><% end %>
+            <% if m.key.present? %><span class="admin-badge is-key"><%= m.key %></span><% end %>
             <small class="admin-source">
               引用元：<%= m.source_name.presence || "（未入力）" %>
             </small>
+            <% if used.any? %>
+              <small class="admin-source is-used">📋 テンプレで使用中：<%= used.join("・") %></small>
+            <% end %>
           </div>
         </div>
         <div class="admin-row-actions">
           <%= link_to "✏️ 編集", edit_admin_material_path(m), class: "admin-button" %>
           <%= button_to (m.visible ? "🙈 隠す" : "👀 表示"), toggle_admin_material_path(m), method: :patch,
                 form_class: "admin-inline", class: "admin-button" %>
-          <%= button_to "🗑️ 削除", admin_material_path(m), method: :delete,
-                form_class: "admin-inline", class: "admin-button is-danger",
-                data: { turbo_confirm: "「#{m.name}」を削除しますか？" } %>
+          <% if used.any? %>
+            <span class="admin-button is-disabled" title="テンプレで使っているので削除できません">🔒 削除できない</span>
+          <% else %>
+            <%= button_to "🗑️ 削除", admin_material_path(m), method: :delete,
+                  form_class: "admin-inline", class: "admin-button is-danger",
+                  data: { turbo_confirm: "「#{m.name}」を削除しますか？" } %>
+          <% end %>
         </div>
       </li>
     <% end %>

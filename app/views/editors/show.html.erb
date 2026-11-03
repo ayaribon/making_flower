@@ -11,7 +11,8 @@
   data-controller="canvas-editor"
   data-action="keydown@window->canvas-editor#onKeydown"
   data-canvas-editor-width-value="<%= @width %>"
-  data-canvas-editor-height-value="<%= @height %>">
+  data-canvas-editor-height-value="<%= @height %>"
+  data-canvas-editor-materials-value="<%= @material_map.to_json %>">
   <!-- 比率を選ぶ画面（最初に出す。ヘッダーのサイズを押すと、また開く） -->
   <div class="studio-ratio-picker" data-canvas-editor-target="ratioPicker">
     <div class="studio-ratio-card">
