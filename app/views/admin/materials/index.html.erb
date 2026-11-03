@@ -43,6 +43,8 @@
             <span class="admin-badge"><%= m.kind_label %></span>
             <% unless m.visible %><span class="admin-badge is-off">非表示</span><% end %>
             <% if m.key.present? %><span class="admin-badge is-key"><%= m.key %></span><% end %>
+            <% ratios = Material::RATIO_IMAGES.select { |_, name| m.public_send(name).attached? }.keys %>
+            <% if ratios.any? %><span class="admin-badge is-tag">📐 <%= ratios.join("・") %> あり</span><% end %>
           </div>
           <% if m.tag_labels.any? %>
             <div class="admin-mrow-tags">

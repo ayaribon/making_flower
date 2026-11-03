@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
+  <!-- KotoBouquet オリジナル素材：パステル水玉（ゆるかわ）（1:1用） -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff3f6"/>
+      <stop offset="1" stop-color="#e8f4ff"/>
+    </linearGradient>
+    <pattern id="dots" width="80" height="80" patternUnits="userSpaceOnUse">
+      <circle cx="20" cy="20" r="10" fill="#f9c5d5"/>
+      <circle cx="60" cy="60" r="10" fill="#c5e3f9"/>
+    </pattern>
+  </defs>
+  <rect width="1080" height="1080" fill="url(#bg)"/>
+  <rect width="1080" height="1080" fill="url(#dots)"/>
+</svg>

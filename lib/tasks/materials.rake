@@ -90,6 +90,25 @@ namespace :materials do
       puts "登録した：#{name}（#{key}）"
     end
 
+    # 背景の「比率ごとの画像」（9:16・1:1）を付ける。もう付いているものはそのまま
+    # ファイル名は 元の名前-9x16.svg / 元の名前-1x1.svg
+    BUILTIN.each do |(key, name, kind, file, _source)|
+      next unless kind == "background"
+      material = Material.find_by(key: key)
+      next unless material
+
+      { "9x16" => :image_portrait, "1x1" => :image_square }.each do |suffix, attachment_name|
+        attachment = material.public_send(attachment_name)
+        next if attachment.attached?
+
+        path = Rails.root.join("public", file.sub(/\.svg\z/, "-#{suffix}.svg"))
+        next unless File.exist?(path)
+
+        attachment.attach(io: File.open(path), filename: File.basename(path), content_type: "image/svg+xml")
+        puts "比率の画像を付けた：#{name}（#{suffix.tr('x', ':')}）"
+      end
+    end
+
     # テンプレで使っているのに、素材が見つからないキーを知らせる
     missing = Material.template_usage.keys - Material.where.not(key: nil).pluck(:key)
     if missing.any?

@@ -599,6 +599,724 @@
         }
       ],
       "frame": "sparkle"
+    },
+    {
+      "id": "retro-game-16x9",
+      "label": "レトロゲーム",
+      "icon": "👾",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#120a2a",
+        "#3ad1ff"
+      ],
+      "background": {
+        "material": "pixel-grid"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.76,
+          "y": 0.55,
+          "w": 0.38,
+          "h": 0.86
+        },
+        {
+          "type": "text",
+          "text": "GAME START",
+          "style": "pixel",
+          "x": 0.33,
+          "y": 0.38,
+          "w": 0.6,
+          "size": 120
+        },
+        {
+          "type": "text",
+          "text": "今日もまったりプレイ",
+          "style": "pixel",
+          "x": 0.33,
+          "y": 0.6,
+          "w": 0.6,
+          "size": 52
+        },
+        {
+          "type": "part",
+          "material": "pixel-heart",
+          "x": 0.1,
+          "y": 0.15,
+          "h": 0.13
+        },
+        {
+          "type": "part",
+          "material": "pixel-heart",
+          "x": 0.18,
+          "y": 0.82,
+          "h": 0.09
+        },
+        {
+          "type": "part",
+          "material": "pixel-cursor",
+          "x": 0.56,
+          "y": 0.75,
+          "h": 0.16,
+          "angle": -10
+        }
+      ],
+      "filters": [
+        {
+          "key": "scanline",
+          "strength": 0.5
+        },
+        {
+          "key": "glitch",
+          "strength": 0.35
+        }
+      ],
+      "frame": "monitor"
+    },
+    {
+      "id": "yumekawa-16x9",
+      "label": "ゆめかわ配信",
+      "icon": "🦄",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#fff0fa",
+        "#c9b8ff"
+      ],
+      "background": {
+        "material": "clouds"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.76,
+          "y": 0.55,
+          "w": 0.38,
+          "h": 0.86
+        },
+        {
+          "type": "text",
+          "text": "ゆめかわ配信",
+          "style": "yumekawa",
+          "x": 0.33,
+          "y": 0.4,
+          "w": 0.6,
+          "size": 120
+        },
+        {
+          "type": "text",
+          "text": "ふわふわ雑談",
+          "style": "puffy",
+          "x": 0.33,
+          "y": 0.62,
+          "w": 0.5,
+          "size": 60
+        },
+        {
+          "type": "part",
+          "material": "sparkle4",
+          "x": 0.1,
+          "y": 0.16,
+          "h": 0.14
+        },
+        {
+          "type": "part",
+          "material": "heart-dots",
+          "x": 0.33,
+          "y": 0.86,
+          "h": 0.2
+        },
+        {
+          "type": "part",
+          "material": "crown",
+          "x": 0.33,
+          "y": 0.18,
+          "h": 0.12,
+          "angle": -6
+        }
+      ],
+      "filters": [
+        {
+          "key": "light-leak",
+          "strength": 0.5
+        }
+      ],
+      "frame": "hearts"
+    },
+    {
+      "id": "marine-16x9",
+      "label": "マリン雑談",
+      "icon": "🌊",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#7fe0e8",
+        "#1e8fd8"
+      ],
+      "background": {
+        "material": "water-ripple"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.76,
+          "y": 0.55,
+          "w": 0.38,
+          "h": 0.86
+        },
+        {
+          "type": "text",
+          "text": "マリン雑談",
+          "style": "marine",
+          "x": 0.33,
+          "y": 0.42,
+          "w": 0.6,
+          "size": 120
+        },
+        {
+          "type": "part",
+          "material": "moko-bubble",
+          "x": 0.33,
+          "y": 0.42,
+          "h": 0.6
+        },
+        {
+          "type": "part",
+          "material": "light-dots",
+          "x": 0.33,
+          "y": 0.82,
+          "h": 0.22
+        }
+      ],
+      "filters": [
+        {
+          "key": "dots",
+          "strength": 0.2
+        }
+      ],
+      "frame": "stars"
+    },
+    {
+      "id": "battle-16x9",
+      "label": "バトル実況",
+      "icon": "⚔️",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#2a0a0a",
+        "#ff6a00"
+      ],
+      "background": {
+        "gradient": [
+          "#2a0a0a",
+          "#7a1e00",
+          "diagonal"
+        ]
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.76,
+          "y": 0.55,
+          "w": 0.38,
+          "h": 0.86
+        },
+        {
+          "type": "text",
+          "text": "ガチ勝負！",
+          "style": "battle",
+          "x": 0.34,
+          "y": 0.4,
+          "w": 0.62,
+          "size": 140
+        },
+        {
+          "type": "part",
+          "material": "telop-band",
+          "x": 0.34,
+          "y": 0.66,
+          "h": 0.13
+        },
+        {
+          "type": "text",
+          "text": "負けたら罰ゲーム",
+          "style": "impact",
+          "x": 0.34,
+          "y": 0.66,
+          "w": 0.6,
+          "size": 48
+        },
+        {
+          "type": "part",
+          "material": "burst-label",
+          "x": 0.1,
+          "y": 0.16,
+          "h": 0.18,
+          "angle": -12
+        }
+      ],
+      "filters": [
+        {
+          "key": "noise",
+          "strength": 0.35
+        },
+        {
+          "key": "vignette",
+          "strength": 0.6
+        }
+      ]
+    },
+    {
+      "id": "night-9x16",
+      "label": "夜の歌枠",
+      "icon": "🌙",
+      "ratio": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "preview": [
+        "#05061a",
+        "#2a2f7a"
+      ],
+      "background": {
+        "material": "starry-sky"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.5,
+          "y": 0.62,
+          "w": 0.86,
+          "h": 0.5
+        },
+        {
+          "type": "text",
+          "text": "夜の歌枠",
+          "style": "neon",
+          "x": 0.5,
+          "y": 0.16,
+          "w": 0.86,
+          "size": 150
+        },
+        {
+          "type": "text",
+          "text": "今夜もゆっくり",
+          "style": "marine",
+          "x": 0.5,
+          "y": 0.27,
+          "w": 0.8,
+          "size": 70
+        },
+        {
+          "type": "part",
+          "material": "sparkle4",
+          "x": 0.15,
+          "y": 0.08,
+          "h": 0.06
+        },
+        {
+          "type": "part",
+          "material": "sparkle4",
+          "x": 0.86,
+          "y": 0.33,
+          "h": 0.05
+        }
+      ],
+      "filters": [
+        {
+          "key": "sparkle",
+          "strength": 0.5
+        }
+      ],
+      "frame": "polaroid"
+    },
+    {
+      "id": "pixel-1x1",
+      "label": "ピクセル告知",
+      "icon": "📢",
+      "ratio": "1:1",
+      "width": 1080,
+      "height": 1080,
+      "preview": [
+        "#120a2a",
+        "#ff4fd8"
+      ],
+      "background": {
+        "material": "monitor-screen"
+      },
+      "items": [
+        {
+          "type": "text",
+          "text": "お知らせ",
+          "style": "pixel",
+          "x": 0.5,
+          "y": 0.3,
+          "w": 0.84,
+          "size": 140
+        },
+        {
+          "type": "part",
+          "material": "name-tag",
+          "x": 0.5,
+          "y": 0.62,
+          "h": 0.22
+        },
+        {
+          "type": "text",
+          "text": "○月○日 21:00〜",
+          "style": "pixel",
+          "x": 0.5,
+          "y": 0.62,
+          "w": 0.7,
+          "size": 56
+        },
+        {
+          "type": "part",
+          "material": "pixel-cursor",
+          "x": 0.8,
+          "y": 0.82,
+          "h": 0.14,
+          "angle": -10
+        },
+        {
+          "type": "part",
+          "material": "pixel-hourglass",
+          "x": 0.18,
+          "y": 0.82,
+          "h": 0.12
+        }
+      ],
+      "filters": [
+        {
+          "key": "scanline",
+          "strength": 0.4
+        }
+      ]
+    },
+    {
+      "id": "spring-16x9",
+      "label": "春の配信",
+      "icon": "🌸",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#ffeef5",
+        "#ffc6dc"
+      ],
+      "background": {
+        "material": "sakura-fubuki"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.76,
+          "y": 0.55,
+          "w": 0.38,
+          "h": 0.86
+        },
+        {
+          "type": "text",
+          "text": "お花見雑談",
+          "style": "yurukawa",
+          "x": 0.33,
+          "y": 0.42,
+          "w": 0.6,
+          "size": 120
+        },
+        {
+          "type": "part",
+          "material": "sakura",
+          "x": 0.1,
+          "y": 0.16,
+          "h": 0.14,
+          "angle": -10
+        },
+        {
+          "type": "part",
+          "material": "sakura",
+          "x": 0.55,
+          "y": 0.85,
+          "h": 0.1,
+          "angle": 20
+        }
+      ],
+      "filters": [
+        {
+          "key": "light-leak",
+          "strength": 0.35
+        }
+      ],
+      "frame": "tape"
+    },
+    {
+      "id": "summer-16x9",
+      "label": "夏の配信",
+      "icon": "🌻",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#1f8fff",
+        "#bde8ff"
+      ],
+      "background": {
+        "material": "summer-sky"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.76,
+          "y": 0.55,
+          "w": 0.38,
+          "h": 0.86
+        },
+        {
+          "type": "text",
+          "text": "夏休み特別配信",
+          "style": "impact",
+          "x": 0.33,
+          "y": 0.4,
+          "w": 0.62,
+          "size": 110
+        },
+        {
+          "type": "part",
+          "material": "sunflower",
+          "x": 0.1,
+          "y": 0.18,
+          "h": 0.16
+        },
+        {
+          "type": "part",
+          "material": "telop-band",
+          "x": 0.33,
+          "y": 0.64,
+          "h": 0.12
+        },
+        {
+          "type": "text",
+          "text": "みんなで盛り上がろう！",
+          "style": "marine",
+          "x": 0.33,
+          "y": 0.64,
+          "w": 0.6,
+          "size": 46
+        }
+      ],
+      "frame": "stars"
+    },
+    {
+      "id": "autumn-16x9",
+      "label": "秋の配信",
+      "icon": "🍁",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#ffd59a",
+        "#e8743a"
+      ],
+      "background": {
+        "material": "autumn-leaves"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.76,
+          "y": 0.55,
+          "w": 0.38,
+          "h": 0.86
+        },
+        {
+          "type": "text",
+          "text": "秋の夜長に",
+          "style": "puffy",
+          "x": 0.33,
+          "y": 0.42,
+          "w": 0.6,
+          "size": 110
+        },
+        {
+          "type": "part",
+          "material": "momiji",
+          "x": 0.1,
+          "y": 0.16,
+          "h": 0.14,
+          "angle": -12
+        },
+        {
+          "type": "part",
+          "material": "momiji",
+          "x": 0.55,
+          "y": 0.85,
+          "h": 0.1,
+          "angle": 18
+        }
+      ],
+      "filters": [
+        {
+          "key": "retro",
+          "strength": 0.5
+        }
+      ],
+      "frame": "polaroid"
+    },
+    {
+      "id": "winter-16x9",
+      "label": "冬の配信",
+      "icon": "❄️",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#0c1a3e",
+        "#3a5a9a"
+      ],
+      "background": {
+        "material": "snow-night"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.76,
+          "y": 0.55,
+          "w": 0.38,
+          "h": 0.86
+        },
+        {
+          "type": "text",
+          "text": "冬のぬくぬく配信",
+          "style": "marine",
+          "x": 0.33,
+          "y": 0.42,
+          "w": 0.62,
+          "size": 104
+        },
+        {
+          "type": "part",
+          "material": "snowflake",
+          "x": 0.1,
+          "y": 0.16,
+          "h": 0.14
+        },
+        {
+          "type": "part",
+          "material": "snowflake",
+          "x": 0.56,
+          "y": 0.84,
+          "h": 0.1,
+          "angle": 20
+        }
+      ],
+      "filters": [
+        {
+          "key": "sparkle",
+          "strength": 0.4
+        }
+      ],
+      "frame": "stars"
+    },
+    {
+      "id": "spring-9x16",
+      "label": "春の歌枠",
+      "icon": "🌸",
+      "ratio": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "preview": [
+        "#ffeef5",
+        "#e8f4ff"
+      ],
+      "background": {
+        "material": "sakura-fubuki"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.5,
+          "y": 0.62,
+          "w": 0.86,
+          "h": 0.5
+        },
+        {
+          "type": "text",
+          "text": "春の歌枠",
+          "style": "yumekawa",
+          "x": 0.5,
+          "y": 0.16,
+          "w": 0.86,
+          "size": 140
+        },
+        {
+          "type": "part",
+          "material": "sakura",
+          "x": 0.15,
+          "y": 0.3,
+          "h": 0.06
+        }
+      ],
+      "frame": "tape"
+    },
+    {
+      "id": "winter-1x1",
+      "label": "冬のお知らせ",
+      "icon": "❄️",
+      "ratio": "1:1",
+      "width": 1080,
+      "height": 1080,
+      "preview": [
+        "#0c1a3e",
+        "#bfe6ff"
+      ],
+      "background": {
+        "material": "snow-night"
+      },
+      "items": [
+        {
+          "type": "text",
+          "text": "年末特番",
+          "style": "neon",
+          "x": 0.5,
+          "y": 0.32,
+          "w": 0.84,
+          "size": 140
+        },
+        {
+          "type": "text",
+          "text": "12月31日 23:00〜",
+          "style": "marine",
+          "x": 0.5,
+          "y": 0.55,
+          "w": 0.8,
+          "size": 60
+        },
+        {
+          "type": "part",
+          "material": "snowflake",
+          "x": 0.16,
+          "y": 0.14,
+          "h": 0.12
+        },
+        {
+          "type": "part",
+          "material": "snowflake",
+          "x": 0.84,
+          "y": 0.82,
+          "h": 0.1
+        }
+      ],
+      "filters": [
+        {
+          "key": "sparkle",
+          "strength": 0.4
+        }
+      ],
+      "frame": "stars"
     }
   ]
 }

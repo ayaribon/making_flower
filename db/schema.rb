@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_11_04_041500) do
+ActiveRecord::Schema[7.1].define(version: 2026_11_04_050000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -37,6 +37,22 @@ ActiveRecord::Schema[7.1].define(version: 2026_11_04_041500) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "design_templates", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "icon", default: "?", null: false
+    t.string "ratio", default: "16:9", null: false
+    t.integer "width", default: 1280, null: false
+    t.integer "height", default: 720, null: false
+    t.text "body", size: :medium, null: false
+    t.boolean "visible", default: true, null: false
+    t.integer "position", default: 0, null: false
+    t.string "slug"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ratio", "position"], name: "index_design_templates_on_ratio_and_position"
+    t.index ["slug"], name: "index_design_templates_on_slug", unique: true
   end
 
   create_table "materials", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|

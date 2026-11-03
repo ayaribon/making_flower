@@ -1,0 +1,35 @@
+<section class="admin-card">
+  <h2>✏️ テンプレの名前など</h2>
+
+  <%= form_with model: [:admin, @template], local: true, class: "admin-form" do |f| %>
+    <% if @template.errors.any? %>
+      <div class="auth-alert">
+        <% @template.errors.full_messages.each do |msg| %><div><%= msg %></div><% end %>
+      </div>
+    <% end %>
+
+    <label>名前
+      <%= f.text_field :name, required: true, maxlength: 40 %>
+    </label>
+
+    <label>アイコン（絵文字1つ）
+      <%= f.text_field :icon, maxlength: 8 %>
+    </label>
+
+    <label>並び順（小さいほど前）
+      <%= f.number_field :position, min: 0 %>
+    </label>
+
+    <label class="admin-check">
+      <%= f.check_box :visible %> みんなのテンプレ一覧に出す（公開）
+    </label>
+
+    <p class="auth-note">比率：<%= @template.ratio %>（比率と中身は、編集画面で直してね）</p>
+
+    <div class="admin-row-actions">
+      <%= f.submit "保存する", class: "admin-button is-main" %>
+      <%= link_to "🎨 編集画面で開く", editor_path(template_id: @template.id), class: "admin-button", data: { turbo: false } %>
+      <%= link_to "もどる", admin_design_templates_path, class: "admin-button" %>
+    </div>
+  <% end %>
+</section>

@@ -1939,3 +1939,84 @@ ul.auth-alert { padding-left: 28px; }
   background: linear-gradient(135deg, #1e8fd8, #3fd6d0);
   color: #ffffff;
 }
+
+
+/* ==========================
+   テンプレの保存（管理者だけ）・サムネ付きテンプレ・テンプレ管理
+========================== */
+
+.studio-template-card.has-thumb {
+  background-size: cover;
+  background-position: center;
+  justify-content: flex-end;
+}
+.studio-template-card.has-thumb .studio-template-icon { display: none; }
+.studio-template-card.has-thumb .studio-template-label {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+}
+.studio-template-card.is-hidden-template { opacity: 0.55; border-style: dashed; }
+
+.studio-save-dialog {
+  width: min(92vw, 420px);
+  padding: 20px;
+  border: none;
+  border-radius: 20px;
+  box-shadow: 0 16px 48px rgba(30, 143, 216, 0.3);
+  color: #333333;
+}
+.studio-save-dialog::backdrop { background: rgba(10, 40, 70, 0.45); backdrop-filter: blur(3px); }
+.studio-save-dialog h2 { margin: 0 0 12px; font-size: 18px; color: #1e8fd8; }
+.studio-save-dialog label { display: block; margin-bottom: 10px; font-size: 13px; font-weight: bold; }
+.studio-save-dialog input[type="text"] {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px 12px;
+  border: 2px solid #cfe9fb;
+  border-radius: 12px;
+  font-size: 16px;   /* スマホで勝手に拡大しないように16px */
+}
+.studio-save-dialog input[type="text"]:focus { outline: none; border-color: #3fd6d0; }
+.studio-save-note {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #fff6db;
+  font-size: 12px;
+}
+.studio-save-status { min-height: 1em; margin: 6px 0; color: #e0457b; font-size: 12px; }
+.studio-save-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.studio-save-button {
+  flex: 1 1 auto;
+  padding: 10px 14px;
+  border: 2px solid #1e8fd8;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #1e8fd8;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.studio-save-button.is-main {
+  border-color: transparent;
+  background: linear-gradient(135deg, #1e8fd8, #3fd6d0);
+  color: #ffffff;
+}
+.studio-save-button.is-cancel { flex: 0 0 auto; border-color: #cccccc; color: #777777; }
+.studio-save-button:active { transform: scale(0.96); }
+
+.admin-template-thumb {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: 72px;
+  max-width: 128px;
+  border: 1px solid #cfe9fb;
+  border-radius: 10px;
+  object-fit: cover;
+  font-size: 24px;
+}

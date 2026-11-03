@@ -17,7 +17,8 @@
   data-action="keydown@window->canvas-editor#onKeydown"
   data-canvas-editor-width-value="<%= @width %>"
   data-canvas-editor-height-value="<%= @height %>"
-  data-canvas-editor-materials-value="<%= @material_map.to_json %>">
+  data-canvas-editor-materials-value="<%= @material_map.to_json %>"
+  <% if @edit_template %>data-canvas-editor-edit-template-value="<%= @edit_template.to_json %>"<% end %>>
   <!-- 比率を選ぶ画面（最初に出す。ヘッダーのサイズを押すと、また開く） -->
   <div class="studio-ratio-picker" data-canvas-editor-target="ratioPicker">
     <div class="studio-ratio-card">
@@ -72,6 +73,9 @@
         <div class="studio-user-menu-list">
           <p class="studio-user-menu-name">👤 <%= current_user.name %></p>
           <% if current_user.admin? %>
+            <button type="button" class="studio-user-menu-item"
+              data-action="click->canvas-editor#openSaveDialog">📋 テンプレとして保存</button>
+            <%= link_to "📋 テンプレの管理", admin_design_templates_path, class: "studio-user-menu-item", data: { turbo: false } %>
             <%= link_to "⚙️ 管理画面", admin_users_path, class: "studio-user-menu-item", data: { turbo: false } %>
           <% end %>
           <%= button_to "🚪 ログアウト", logout_path, method: :delete,
@@ -371,6 +375,9 @@
               data-tag-filter-target="item" data-tags="<%= m.tag_list.join(",") %>"
               data-action="click->canvas-editor#setBackgroundImage"
               data-canvas-editor-src-param="<%= rails_storage_proxy_path(m.image) %>"
+              data-canvas-editor-srcs-param="<%= material_srcs(m).to_json %>"
+              data-canvas-editor-key-param="<%= m.key %>"
+              data-canvas-editor-material-id-param="<%= m.id %>"
               data-canvas-editor-source-param="<%= m.source_name %>"
               data-canvas-editor-source-url-param="<%= m.source_url %>">
               <img src="<%= rails_storage_proxy_path(m.image) %>" alt="<%= m.name %>" loading="lazy">
@@ -408,6 +415,8 @@
             data-tag-filter-target="item" data-tags="<%= m.tag_list.join(",") %>"
             data-action="click->canvas-editor#addPart"
             data-canvas-editor-src-param="<%= rails_storage_proxy_path(m.image) %>"
+            data-canvas-editor-key-param="<%= m.key %>"
+            data-canvas-editor-material-id-param="<%= m.id %>"
             data-canvas-editor-source-param="<%= m.source_name %>"
             data-canvas-editor-source-url-param="<%= m.source_url %>">
             <img src="<%= rails_storage_proxy_path(m.image) %>" alt="<%= m.name %>" loading="lazy">
@@ -477,7 +486,11 @@
           ["dots", "🔵", "ドット", 40],
           ["sparkle", "✨", "キラキラ", 60],
           ["vignette", "🌑", "周りを暗く", 50],
-          ["tint", "🎨", "色かぶり", 40]
+          ["tint", "🎨", "色かぶり", 40],
+          ["noise", "📼", "ノイズ", 40],
+          ["glitch", "⚡", "グリッチ", 50],
+          ["retro", "🎞️", "レトロ", 60],
+          ["light-leak", "🌈", "光もれ", 60]
         ].each do |key, icon, label, default| %>
           <div class="studio-effect-row">
             <button type="button" class="studio-effect-toggle"
@@ -505,7 +518,11 @@
             ["pixel", "👾", "ピクセル"],
             ["ribbon", "🎀", "リボン"],
             ["sparkle", "💫", "キラキラ"],
-            ["monitor", "🖥️", "モニター"]
+            ["monitor", "🖥️", "モニター"],
+            ["hearts", "💗", "ハート"],
+            ["stars", "⭐", "星"],
+            ["polaroid", "📸", "ポラロイド"],
+            ["tape", "🩹", "テープ"]
           ].each do |key, icon, label| %>
             <button type="button" class="studio-frame-button<%= " is-active" if key == "none" %>"
               data-canvas-editor-target="frameButton" data-key="<%= key %>"
@@ -553,6 +570,33 @@
       </button>
     </nav>
   </footer>
+
+  <% if current_user.admin? %>
+    <!-- テンプレとして保存（管理者だけ） -->
+    <dialog class="studio-save-dialog" data-canvas-editor-target="saveDialog">
+      <h2>📋 テンプレとして保存</h2>
+      <label>名前
+        <input type="text" maxlength="40" placeholder="例：春の歌枠" data-canvas-editor-target="saveName">
+      </label>
+      <label>アイコン（絵文字1つ）
+        <input type="text" maxlength="8" value="📋" data-canvas-editor-target="saveIcon">
+      </label>
+      <p class="studio-tab-note">今のサイズ（比率）のテンプレになります。保存すると、すぐみんなのテンプレ一覧に出ます</p>
+      <p class="studio-save-note" data-canvas-editor-target="saveNote" hidden></p>
+      <p class="studio-save-status" data-canvas-editor-target="saveStatus"></p>
+      <div class="studio-save-actions">
+        <button type="button" class="studio-save-button is-main" hidden
+          data-canvas-editor-target="saveOverwrite"
+          data-action="click->canvas-editor#saveTemplate"
+          data-canvas-editor-mode-param="overwrite">📋 上書き保存</button>
+        <button type="button" class="studio-save-button"
+          data-action="click->canvas-editor#saveTemplate"
+          data-canvas-editor-mode-param="new">＋ 新しいテンプレとして保存</button>
+        <button type="button" class="studio-save-button is-cancel"
+          data-action="click->canvas-editor#closeSaveDialog">やめる</button>
+      </div>
+    </dialog>
+  <% end %>
 
   <!-- 引用元の表示（右下に数秒だけ出す） -->
   <a class="studio-credit" data-canvas-editor-target="credit" target="_blank" rel="noopener noreferrer" hidden></a>

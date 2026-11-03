@@ -4,7 +4,8 @@ class Material < ApplicationRecord
   KINDS = { "part" => "部品", "background" => "背景" }.freeze
   CONTENT_TYPES = %w[image/png image/jpeg image/webp image/gif image/svg+xml].freeze
   MAX_SIZE = 10.megabytes
-  TEMPLATES_PATH = Rails.root.join("public/design_templates/templates.json")
+  # 背景は、比率ごとの画像も持てる（なければ 16:9 用の画像を切り抜いて使う）
+  RATIO_IMAGES = { "9:16" => :image_portrait, "1:1" => :image_square }.freeze
 
   # パネルの上に並べるタグ（この順番で出る）。キー => [アイコン, 名前]
   # 管理画面では、このキーを「,」区切りで入れる（例：stamp,sparkle）
@@ -43,6 +44,19 @@ class Material < ApplicationRecord
   end
 
   has_one_attached :image
+  has_one_attached :image_portrait   # 9:16 用（背景だけ）
+  has_one_attached :image_square     # 1:1 用（背景だけ）
+
+  # 管理画面の「この比率の画像を外す」
+  attr_accessor :remove_image_portrait, :remove_image_square
+  before_save :purge_removed_ratio_images
+
+  # その比率で使う画像（比率ごとの画像がなければ、ふつうの画像）
+  def image_for(ratio)
+    name = RATIO_IMAGES[ratio]
+    attachment = name && public_send(name)
+    attachment&.attached? ? attachment : image
+  end
 
   validates :name, presence: true, length: { maximum: 40 }
   validates :kind, inclusion: { in: KINDS.keys }
@@ -62,21 +76,10 @@ class Material < ApplicationRecord
     KINDS[kind]
   end
 
-  # テンプレのデータで、どのキーがどのテンプレに使われているか（{"star" => ["デビュー配信", ...]}）
+  # どのキーがどのテンプレに使われているか（{"star" => ["デビュー配信", ...]}）
+  # テンプレは管理画面の「📋 テンプレ」（DesignTemplate）を見る
   def self.template_usage
-    data = JSON.parse(File.read(TEMPLATES_PATH))
-    list = data.is_a?(Hash) ? (data["templates"] || []) : data
-    usage = Hash.new { |h, k| h[k] = [] }
-    list.each do |t|
-      label = t["label"] || t["id"].to_s
-      keys = []
-      keys << t.dig("background", "material")
-      (t["items"] || []).each { |item| keys << item["material"] }
-      keys.compact.uniq.each { |k| usage[k] << label }
-    end
-    usage
-  rescue Errno::ENOENT, JSON::ParserError
-    {}
+    DesignTemplate.material_usage
   end
 
   # このテンプレで使われているか（使われているテンプレの名前の一覧）
@@ -98,6 +101,24 @@ class Material < ApplicationRecord
     end
     errors.add(:image, "は PNG・JPEG・WebP・GIF・SVG にしてください") unless CONTENT_TYPES.include?(image.blob.content_type)
     errors.add(:image, "は10MBまでにしてください") if image.blob.byte_size > MAX_SIZE
+
+    RATIO_IMAGES.each do |ratio, name|
+      attachment = public_send(name)
+      next unless attachment.attached?
+      errors.add(:base, "#{ratio}用の画像は、背景だけに付けられます") if kind != "background" && !removing?(name)
+      errors.add(:base, "#{ratio}用の画像は PNG・JPEG・WebP・GIF・SVG にしてください") unless CONTENT_TYPES.include?(attachment.blob.content_type)
+      errors.add(:base, "#{ratio}用の画像は10MBまでにしてください") if attachment.blob.byte_size > MAX_SIZE
+    end
+  end
+
+  def removing?(name)
+    ActiveModel::Type::Boolean.new.cast(public_send("remove_#{name}"))
+  end
+
+  def purge_removed_ratio_images
+    RATIO_IMAGES.each_value do |name|
+      public_send(name).purge_later if removing?(name) && public_send(name).attached?
+    end
   end
 
   # テンプレで使っている素材は、キーを変えると見つからなくなる

@@ -1,0 +1,64 @@
+<section class="admin-card">
+  <div class="admin-card-head">
+    <h2>📋 テンプレ（<%= @templates.size %>件）</h2>
+    <div class="admin-row-actions">
+      <%= link_to "＋ 編集画面で新しく作る", root_path, class: "admin-button is-main", data: { turbo: false } %>
+    </div>
+  </div>
+
+  <p class="auth-note">
+    作り方：編集画面でデザインを作って、右上の 👤 メニューの「📋 テンプレとして保存」を押すとここに入ります。
+    中身を直すときは「🎨 編集画面で開く」→ 直して 👤 メニューの「📋 上書き保存」
+  </p>
+
+  <nav class="admin-filter">
+    <%= link_to "すべて（#{@counts.values.sum}）", admin_design_templates_path, class: "admin-button#{' is-current' unless @ratio}" %>
+    <% DesignTemplate::RATIOS.each_key do |ratio| %>
+      <%= link_to "#{ratio}（#{@counts[ratio] || 0}）", admin_design_templates_path(ratio: ratio),
+            class: "admin-button#{' is-current' if @ratio == ratio}" %>
+    <% end %>
+  </nav>
+
+  <% if @templates.empty? %>
+    <p class="auth-note">テンプレがまだありません。前からある分は <code>rails design_templates:import</code> で入ります</p>
+  <% end %>
+
+  <ul class="admin-list">
+    <% @templates.each do |t| %>
+      <% preview = Array(t.data["preview"]) %>
+      <li class="admin-mrow<%= ' is-hidden' unless t.visible %>">
+        <% if t.thumbnail.attached? %>
+          <%= image_tag rails_storage_proxy_path(t.thumbnail), class: "admin-template-thumb", alt: t.name, loading: "lazy",
+                style: "aspect-ratio: #{t.width} / #{t.height}" %>
+        <% else %>
+          <span class="admin-template-thumb"
+                style="aspect-ratio: <%= t.width %> / <%= t.height %>; background: linear-gradient(135deg, <%= preview[0] || '#9b7bff' %>, <%= preview[1] || '#3fd6d0' %>)"><%= t.icon %></span>
+        <% end %>
+
+        <div class="admin-mrow-body">
+          <div class="admin-mrow-title">
+            <strong><%= t.icon %> <%= t.name %></strong>
+            <span class="admin-badge"><%= t.ratio %></span>
+            <% unless t.visible %><span class="admin-badge is-off">非公開</span><% end %>
+          </div>
+          <small class="admin-source">並び順：<%= t.position %>／文字・部品：<%= Array(t.data["items"]).size %>個／更新：<%= t.updated_at.in_time_zone("Asia/Tokyo").strftime("%Y/%m/%d %H:%M") %></small>
+          <% if t.material_keys.any? %>
+            <small class="admin-source">使っている素材：<%= t.material_keys.join("・") %></small>
+          <% end %>
+        </div>
+
+        <div class="admin-mrow-actions">
+          <%= link_to "🎨 編集画面で開く", editor_path(template_id: t.id), class: "admin-button is-main", data: { turbo: false } %>
+          <%= link_to "✏️ 名前など", edit_admin_design_template_path(t), class: "admin-button" %>
+          <%= button_to (t.visible ? "🙈 非公開にする" : "👀 公開する"), toggle_admin_design_template_path(t), method: :patch,
+                form_class: "admin-inline", class: "admin-button" %>
+          <%= button_to "📄 複製", duplicate_admin_design_template_path(t), method: :post,
+                form_class: "admin-inline", class: "admin-button" %>
+          <%= button_to "🗑️ 削除", admin_design_template_path(t), method: :delete,
+                form_class: "admin-inline", class: "admin-button is-danger",
+                data: { turbo_confirm: "「#{t.name}」を削除しますか？（元に戻せません）" } %>
+        </div>
+      </li>
+    <% end %>
+  </ul>
+</section>
