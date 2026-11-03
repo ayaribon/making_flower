@@ -1717,3 +1717,95 @@ ul.auth-alert { padding-left: 28px; }
 @media (prefers-reduced-motion: reduce) {
   .studio-credit.is-show { animation: none; }
 }
+
+/* ===== アップロードの進み具合（％のバー） ===== */
+
+.studio-progress {
+  display: block;
+  width: 180px;
+  height: 8px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: #e3f2fc;
+  overflow: hidden;
+}
+.studio-progress[hidden] { display: none; }
+
+.studio-progress-bar {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #1e8fd8, #3fd6d0);
+  transition: width 0.2s ease;
+}
+
+/* ===== ヘッダー：ユーザー名・管理・ログアウトのメニュー ===== */
+
+.studio-header { gap: 8px; }
+.studio-header-actions { flex-wrap: nowrap; min-width: 0; }
+.studio-history-button,
+.studio-size-badge { white-space: nowrap; flex: 0 0 auto; }
+
+.studio-user-menu { position: relative; flex: 0 0 auto; }
+.studio-user-menu > summary { list-style: none; cursor: pointer; }
+.studio-user-menu > summary::-webkit-details-marker { display: none; }
+
+.studio-user-menu-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+  padding: 8px;
+  border: 2px solid var(--c-line, #cfe9fb);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(30, 143, 216, 0.2);
+}
+
+.studio-user-menu-name {
+  margin: 2px 6px 6px;
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--c-ink, #333);
+}
+
+.studio-user-menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--c-ink, #333);
+  font-size: 13px;
+  text-align: left;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.studio-user-menu-item:hover { background: var(--c-soft, #eaf6ff); }
+
+/* スマホ縦向き：ロゴを小さく、ボタンはアイコンだけ、サイズ表示は1行に */
+@media (max-width: 480px) {
+  .studio-header { padding: 6px 10px; align-items: center; }
+  .studio-logo { font-size: 16px; white-space: nowrap; }
+  .studio-logo small { display: none; }
+  .studio-header-actions { gap: 4px; }
+  .studio-history-button span { display: none; }
+  .studio-history-button { padding: 4px 7px; }
+  .studio-size-badge {
+    padding: 3px 8px;
+    font-size: 10px;
+    line-height: 1.2;
+  }
+}
+
+/* もっと細い画面では、ロゴの「Bouquet」を隠して「Koto」だけにする */
+@media (max-width: 360px) {
+  .studio-logo span { display: none; }
+}

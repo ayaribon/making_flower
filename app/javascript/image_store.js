@@ -40,12 +40,37 @@ async function shrink(file) {
 }
 
 // kind は "part"（部品） か "background"（背景）。保存した画像のIDを返す
-export async function saveImage(file, kind) {
+// onProgress(0〜100) を渡すと、アップロードが何％終わったかを教える
+// （fetch では送信の進み具合が取れないので、ここだけ XMLHttpRequest を使う）
+export async function saveImage(file, kind, onProgress = null) {
   const body = new FormData()
   body.append("file", await shrink(file))
   body.append("kind", kind)
-  const record = await request("/user_images", { method: "POST", body })
-  return record.id
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open("POST", "/user_images")
+    xhr.withCredentials = true
+    xhr.setRequestHeader("X-CSRF-Token", csrfToken())
+    xhr.setRequestHeader("Accept", "application/json")
+    xhr.responseType = "json"
+
+    xhr.upload.onprogress = (e) => {
+      if (onProgress && e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100))
+    }
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        onProgress?.(100)
+        resolve(xhr.response.id)
+      } else {
+        const message = xhr.response?.error || `サーバーとのやりとりに失敗しました（${xhr.status}）`
+        reject(new Error(message))
+      }
+    }
+    xhr.onerror = () => reject(new Error("通信が切れました。電波のいいところでもう一度ためしてね"))
+    xhr.send(body)
+  })
 }
 
 export async function listImages(kind) {
