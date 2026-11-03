@@ -370,13 +370,16 @@
           ["heart", "ハート"],
           ["arrow", "矢印"],
           ["burst-label", "ギザギザ"],
-          ["frame", "枠"]
+          ["frame", "枠"],
+          ["siva-circle.png", "SiVA ロゴ（丸）"],
+          ["siva-banner.png", "SiVA バナー"]
         ].each do |key, label| %>
+          <% file = key.include?(".") ? key : "#{key}.svg" %>
           <button type="button" class="studio-part-thumb"
             title="<%= label %>"
             data-action="click->canvas-editor#addPart"
-            data-canvas-editor-src-param="/parts/<%= key %>.svg">
-            <img src="/parts/<%= key %>.svg" alt="<%= label %>">
+            data-canvas-editor-src-param="/parts/<%= file %>">
+            <img src="/parts/<%= file %>" alt="<%= label %>">
           </button>
         <% end %>
       </div>
@@ -513,7 +516,7 @@
       <button type="button" data-action="click->canvas-editor#toggleTemplatesPanel">
         <span class="studio-toolbar-icon">📋</span><span class="studio-toolbar-label">テンプレ</span>
       </button>
-      <button type="button" class="is-soon" title="次の段階で追加">
+      <button type="button" data-action="click->canvas-editor#exportPng" title="PNGで保存">
         <span class="studio-toolbar-icon">💾</span><span class="studio-toolbar-label">書き出し</span>
       </button>
     </nav>

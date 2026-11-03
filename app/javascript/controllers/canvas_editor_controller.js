@@ -805,6 +805,67 @@ export default class extends Controller {
     this.canvas.requestRenderAll()
   }
 
+  // ===== PNG書き出し =====
+  // 画面では縮小して見せているので、元の大きさ（1280×720 など）に戻して書き出す
+  async exportPng() {
+    if (this.exporting) return
+    this.exporting = true
+
+    // 選択の枠・ハンドルが写らないように、選択を外す
+    this.canvas.discardActiveObject()
+
+    // 「ここに画像」の点線の枠は写さない
+    const hidden = this.canvas.getObjects().filter(o => o.placeholder && o.visible !== false)
+    hidden.forEach(o => o.set("visible", false))
+    this.canvas.renderAll()
+
+    try {
+      const zoom = this.canvas.getZoom()
+      const dataUrl = this.canvas.toDataURL({
+        format: "png",
+        multiplier: 1 / zoom,
+        enableRetinaScaling: false
+      })
+      const blob = await (await fetch(dataUrl)).blob()
+      const fileName = `kotobouquet_${this.timestamp()}.png`
+      const file = new File([blob], fileName, { type: "image/png" })
+
+      // スマホ：共有メニューから「画像を保存」できるとき
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: "KotoBouquet" })
+          return
+        } catch (e) {
+          if (e.name === "AbortError") return  // 共有をやめただけ
+          // 共有できなかったときは、ふつうのダウンロードに切り替える
+        }
+      }
+
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch (e) {
+      console.error(e)
+      alert("書き出しに失敗しました。画像の読み込みが終わってから、もう一度ためしてください。")
+    } finally {
+      hidden.forEach(o => o.set("visible", true))
+      this.canvas.requestRenderAll()
+      this.exporting = false
+    }
+  }
+
+  // 20261104_0237 のような日時の文字
+  timestamp() {
+    const d = new Date()
+    const p = n => String(n).padStart(2, "0")
+    return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`
+  }
+
   // キャンバスの真ん中にテキストを追加する
   addText() {
     const text = new Textbox("テキスト", {
