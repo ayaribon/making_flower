@@ -764,3 +764,317 @@ body {
   color: #c17d91;
   font-weight: bold;
 }
+
+/* =====================================================
+   段階5：かわいいUI（ラベンダー × ピンク × 白）
+   ここより上の studio- 系の指定を、見た目だけ上書きする
+   ===================================================== */
+
+.studio {
+  --c-main: #9b7bff;      /* ラベンダー */
+  --c-pink: #ff8ccf;      /* ピンク */
+  --c-ink: #4a3a6b;       /* 文字色 */
+  --c-soft: #f3eeff;      /* うすいラベンダー */
+  --c-line: #e4dcff;      /* 線 */
+  background:
+    radial-gradient(circle at 15% 20%, rgba(255, 140, 207, 0.25), transparent 40%),
+    radial-gradient(circle at 85% 80%, rgba(155, 123, 255, 0.25), transparent 40%),
+    linear-gradient(160deg, #fbf8ff, #f1ebff);
+  color: var(--c-ink);
+}
+
+.studio-header {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  border-bottom: 2px dashed var(--c-line);
+}
+
+.studio-logo {
+  font-family: "Mochiy Pop One", sans-serif;
+  font-size: 20px;
+  font-weight: normal;
+  color: var(--c-main);
+  letter-spacing: 0.02em;
+}
+
+.studio-logo span { color: var(--c-pink); }
+.studio-logo small { font-size: 14px; color: #ffc94d; }
+
+.studio-size-badge {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--c-soft);
+  color: var(--c-main) !important;
+  font-weight: bold;
+}
+
+.studio-canvas-frame {
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 4px #ffffff,
+    0 0 0 7px var(--c-line),
+    0 10px 30px rgba(155, 123, 255, 0.3);
+}
+
+/* ツールバー：アイコン＋文字 */
+.studio-toolbar {
+  grid-template-columns: repeat(6, 1fr);
+  background: rgba(255, 255, 255, 0.92);
+  border-top: 2px dashed var(--c-line);
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -4px 20px rgba(155, 123, 255, 0.15);
+}
+
+.studio-toolbar button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 0;
+  border-radius: 14px;
+  color: var(--c-ink);
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.studio-toolbar-icon { font-size: 20px; line-height: 1.1; }
+
+.studio-toolbar button:hover,
+.studio-toolbar button:active {
+  background: var(--c-soft);
+  color: var(--c-main);
+  transform: translateY(-1px);
+}
+
+.studio-toolbar button.is-soon { opacity: 0.45; cursor: default; }
+.studio-toolbar button.is-soon:hover { background: transparent; transform: none; }
+
+/* パネル：丸いカード */
+.studio-panel {
+  border-radius: 20px;
+  border: 2px solid var(--c-line);
+  box-shadow: 0 8px 28px rgba(155, 123, 255, 0.25);
+}
+
+.studio-panel-header span { color: var(--c-main); }
+
+.studio-panel-close,
+.studio-panel-lock {
+  border-radius: 999px;
+  border-color: var(--c-line);
+  color: var(--c-ink);
+}
+
+.studio-panel-lock.is-locked,
+.studio-tab.is-active,
+.studio-segment-button.is-active {
+  border-color: var(--c-main);
+}
+
+.studio-panel-delete { border-radius: 999px; }
+
+.studio-tab.is-active {
+  color: var(--c-main);
+  border-bottom-color: var(--c-main);
+}
+
+.studio-segment { border-radius: 999px; border-color: var(--c-line); }
+.studio-segment-button.is-active { background: linear-gradient(135deg, var(--c-main), var(--c-pink)); }
+
+.studio-style-button,
+.studio-bg-thumb,
+.studio-part-thumb { border-radius: 14px; border-color: var(--c-line); }
+
+.studio-style-button:hover,
+.studio-bg-thumb:hover,
+.studio-part-thumb:hover { border-color: var(--c-pink); }
+
+.studio-part-thumb { background: var(--c-soft); }
+
+.studio-setting input[type="range"] { accent-color: var(--c-main); }
+.studio-setting input[type="color"] { border-radius: 10px; border-color: var(--c-line); }
+
+/* =====================================================
+   スマホ横向き：左に縦のツールバー、パネルは右から
+   （高さが低い横長の画面だけに効く）
+   ===================================================== */
+
+@media (orientation: landscape) and (max-height: 560px) {
+  .studio-header { display: none; }
+
+  .studio-stage {
+    padding: 6px 6px 6px 84px;  /* 左はツールバーの分あける */
+  }
+
+  .studio-canvas-frame {
+    width: min(100%, calc((100dvh - 12px) * 16 / 9));
+  }
+
+  .studio-footer {
+    position: static;
+  }
+
+  .studio-toolbar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 76px;
+    grid-template-columns: 1fr;
+    grid-auto-rows: 1fr;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom)) calc(6px + env(safe-area-inset-left));
+    border-top: none;
+    border-right: 2px dashed var(--c-line);
+    border-radius: 0 20px 20px 0;
+    z-index: 20;
+  }
+
+  .studio-toolbar-icon { font-size: 18px; }
+
+  .studio-panel {
+    position: fixed;
+    top: 8px;
+    right: 8px;
+    bottom: 8px;
+    left: auto;
+    width: min(340px, 45vw);
+    overflow-y: auto;
+    z-index: 30;
+  }
+}
+
+/* =====================================================
+   段階5-2：青い海のテーマ ＋ スマホのアプリアイコン風ツールバー
+   ＋ パネルが「ぷにゅっ」と出るアニメーション
+   （上の指定を上書きする。戻すときはこのブロックを丸ごと消せばOK）
+   ===================================================== */
+
+.studio {
+  --c-main: #1e8fd8;      /* 海の青 */
+  --c-pink: #3fd6d0;      /* エメラルド（アクセント） */
+  --c-ink: #17406b;       /* 深い青の文字 */
+  --c-soft: #e6f6ff;      /* 浅瀬の水色 */
+  --c-line: #c7e8fb;      /* 線 */
+  background:
+    radial-gradient(circle at 12% 18%, rgba(63, 214, 208, 0.25), transparent 40%),
+    radial-gradient(circle at 88% 85%, rgba(30, 143, 216, 0.22), transparent 45%),
+    linear-gradient(180deg, #f2fbff 0%, #d9f1ff 55%, #bfe6fb 100%);
+}
+
+.studio-logo small { color: #ffd166; }
+
+.studio-canvas-frame {
+  box-shadow:
+    0 0 0 4px #ffffff,
+    0 0 0 7px var(--c-line),
+    0 12px 30px rgba(30, 143, 216, 0.28);
+}
+
+/* ---- ツールバー：ホーム画面のドックみたいに、まるく囲う ---- */
+.studio-toolbar {
+  margin: 0 10px calc(10px + env(safe-area-inset-bottom));
+  padding: 10px 8px;
+  gap: 6px;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 8px 24px rgba(23, 64, 107, 0.18);
+}
+
+.studio-toolbar button {
+  gap: 4px;
+  padding: 0;
+  background: transparent !important;
+  color: var(--c-ink);
+  font-size: 10px;
+  transform: none !important;
+}
+
+/* アイコン：角の丸い四角＝スマホのアプリアイコン */
+.studio-toolbar-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  font-size: 22px;
+  background: linear-gradient(145deg, #6fd3ff, #1e8fd8);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.55),
+    0 4px 10px rgba(23, 64, 107, 0.22);
+  transition: transform 0.15s ease;
+}
+
+/* アイコンごとに、海の色をちょっとずつ変える */
+.studio-toolbar button:nth-child(1) .studio-toolbar-icon { background: linear-gradient(145deg, #7ee8fa, #2aa8e0); }
+.studio-toolbar button:nth-child(2) .studio-toolbar-icon { background: linear-gradient(145deg, #a8f0d8, #2cc4b0); }
+.studio-toolbar button:nth-child(3) .studio-toolbar-icon { background: linear-gradient(145deg, #8fc9ff, #3b7de0); }
+.studio-toolbar button:nth-child(4) .studio-toolbar-icon { background: linear-gradient(145deg, #c3b5ff, #5f7bf0); }
+.studio-toolbar button:nth-child(5) .studio-toolbar-icon { background: linear-gradient(145deg, #ffe39a, #f5a95c); }
+.studio-toolbar button:nth-child(6) .studio-toolbar-icon { background: linear-gradient(145deg, #ffb8c9, #f0739a); }
+
+.studio-toolbar button:active .studio-toolbar-icon { transform: scale(0.88); }
+.studio-toolbar button:hover .studio-toolbar-icon { transform: translateY(-2px); }
+
+.studio-toolbar button.is-soon .studio-toolbar-icon { filter: grayscale(0.6); }
+.studio-toolbar button.is-soon:hover .studio-toolbar-icon { transform: none; }
+
+/* ---- パネル：ぷにゅっと出てくる ---- */
+@keyframes studio-puni {
+  0%   { opacity: 0; transform: translateY(16px) scale(0.9, 0.85); }
+  55%  { opacity: 1; transform: translateY(-4px) scale(1.03, 1.05); }
+  75%  { transform: translateY(1px) scale(0.99, 0.97); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+
+@keyframes studio-puni-side {
+  0%   { opacity: 0; transform: translateX(24px) scale(0.92, 0.9); }
+  55%  { opacity: 1; transform: translateX(-4px) scale(1.03, 1.03); }
+  100% { transform: translateX(0) scale(1, 1); }
+}
+
+@keyframes studio-fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.studio-panel:not([hidden]) {
+  transform-origin: 50% 100%;
+  animation: studio-puni 0.42s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+/* タブを切り替えたときの中身も、ふわっと出す */
+.studio-tab-page:not([hidden]) {
+  animation: studio-fade-up 0.25s ease-out both;
+}
+
+/* 動きを減らす設定の人には、アニメーションを付けない */
+@media (prefers-reduced-motion: reduce) {
+  .studio-panel:not([hidden]),
+  .studio-tab-page:not([hidden]) { animation: none; }
+}
+
+/* ---- 横向き：ドックを左に縦置き ---- */
+@media (orientation: landscape) and (max-height: 560px) {
+  .studio-toolbar {
+    top: 8px;
+    bottom: 8px;
+    left: calc(8px + env(safe-area-inset-left));
+    width: 72px;
+    margin: 0;
+    padding: 8px 4px;
+    border-radius: 24px;
+  }
+
+  .studio-stage { padding-left: 90px; }
+
+  .studio-toolbar-icon { width: 38px; height: 38px; border-radius: 12px; font-size: 18px; }
+
+  .studio-panel:not([hidden]) {
+    transform-origin: 100% 50%;
+    animation-name: studio-puni-side;
+  }
+}
