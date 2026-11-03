@@ -12,7 +12,7 @@ class EditorsController < ApplicationController
     @material_map = Material.where.not(key: nil).with_attached_image.each_with_object({}) do |m, map|
       next unless m.image.attached?
       map[m.key] = {
-        src: url_for(m.image),
+        src: rails_storage_proxy_path(m.image),
         sourceName: m.source_name.to_s,
         sourceUrl: m.source_url.to_s
       }

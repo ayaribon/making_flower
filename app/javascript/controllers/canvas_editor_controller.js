@@ -878,8 +878,11 @@ export default class extends Controller {
       a.remove()
       setTimeout(() => URL.revokeObjectURL(url), 1000)
     } catch (e) {
-      console.error(e)
-      alert("書き出しに失敗しました。画像の読み込みが終わってから、もう一度ためしてください。")
+      console.error("書き出しに失敗:", e)
+      const reason = e?.name === "SecurityError"
+        ? "別のサーバーから読み込んだ画像が入っているため、書き出せませんでした。"
+        : "画像の読み込みが終わってから、もう一度ためしてください。"
+      alert(`書き出しに失敗しました。${reason}`)
     } finally {
       hidden.forEach(o => o.set("visible", true))
       this.canvas.requestRenderAll()
@@ -1224,6 +1227,7 @@ export default class extends Controller {
     if (!file) return
 
     const kind = input.dataset.kind
+    this.showLoading("画像をアップロード中…")
     try {
       const id = await saveImage(file, kind)
       const url = await getImageUrl(id)
@@ -1236,12 +1240,22 @@ export default class extends Controller {
     } catch (e) {
       console.error(e)
       alert(e.message || "画像を読み込めませんでした。別の画像で試してみてね")
+    } finally {
+      this.hideLoading()
     }
   }
 
   // 保存してある自分の画像を、一覧に並べる
   async renderMyImages(kind) {
     const list = kind === "background" ? this.myBgListTarget : this.myPartListTarget
+
+    // 一覧を取ってくるあいだは「読み込み中」を出しておく
+    list.replaceChildren()
+    const loadingNote = document.createElement("span")
+    loadingNote.className = "studio-list-loading"
+    loadingNote.innerHTML = `<span class="studio-spinner"></span>読み込み中…`
+    list.appendChild(loadingNote)
+
     const records = await listImages(kind)
 
     list.replaceChildren()
@@ -1249,26 +1263,61 @@ export default class extends Controller {
       const url = await getImageUrl(record.id)
       const button = document.createElement("button")
       button.type = "button"
-      button.className = kind === "background" ? "studio-bg-thumb studio-my-thumb" : "studio-part-thumb studio-my-thumb"
+      button.className = (kind === "background" ? "studio-bg-thumb studio-my-thumb" : "studio-part-thumb studio-my-thumb") + " is-loading"
       button.title = record.name
       button.innerHTML = `<img alt=""><span class="studio-my-delete" title="一覧から消す">×</span>`
-      button.querySelector("img").src = url
+      const img = button.querySelector("img")
+      // サムネが届くまでは、ふわふわ光る仮の四角を見せる
+      img.addEventListener("load", () => button.classList.remove("is-loading"), { once: true })
+      img.addEventListener("error", () => button.classList.remove("is-loading"), { once: true })
+      img.src = url
 
       button.addEventListener("click", async (e) => {
         if (e.target.classList.contains("studio-my-delete")) {
           if (!confirm("この画像を消す？\nサーバーからも消えるので、キャンバスに置いてある分も、次に開いたときには表示されなくなります")) return
-          await deleteImage(record.id)
-          await this.renderMyImages(kind)
+          this.showLoading("消しています…")
+          try {
+            await deleteImage(record.id)
+            await this.renderMyImages(kind)
+          } finally {
+            this.hideLoading()
+          }
           return
         }
-        if (kind === "background") {
-          await this.placeBackground(url, record.id)
-        } else {
-          await this.placePart(url, record.id)
+        this.showLoading("画像を読み込み中…")
+        try {
+          if (kind === "background") {
+            await this.placeBackground(url, record.id)
+          } else {
+            await this.placePart(url, record.id)
+          }
+        } finally {
+          this.hideLoading()
         }
       })
       list.appendChild(button)
     }
+  }
+
+  // ===== 読み込み中の表示 =====
+  // 画面の真ん中に「読み込み中…」を出す。重なって呼ばれても、全部終わるまで消さない
+  showLoading(message = "読み込み中…") {
+    this.loadingCount = (this.loadingCount || 0) + 1
+    if (!this.loadingEl) {
+      this.loadingEl = document.createElement("div")
+      this.loadingEl.className = "studio-loading"
+      this.loadingEl.setAttribute("role", "status")
+      this.loadingEl.setAttribute("aria-live", "polite")
+      this.loadingEl.innerHTML = `<div class="studio-loading-card"><span class="studio-spinner"></span><span class="studio-loading-text"></span></div>`
+      this.element.appendChild(this.loadingEl)
+    }
+    this.loadingEl.querySelector(".studio-loading-text").textContent = message
+    this.loadingEl.hidden = false
+  }
+
+  hideLoading() {
+    this.loadingCount = Math.max(0, (this.loadingCount || 1) - 1)
+    if (this.loadingCount === 0 && this.loadingEl) this.loadingEl.hidden = true
   }
 
   // 背景用のグラデーション。キャンバス全体（1280×720）の座標で作る
