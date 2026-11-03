@@ -1351,6 +1351,153 @@ button.studio-size-badge {
   background: var(--c-soft, #eaf6ff);
 }
 
+/* ===== ログイン画面 ===== */
+
+.auth-body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(63, 214, 208, 0.35), transparent 45%),
+    radial-gradient(circle at 80% 85%, rgba(30, 143, 216, 0.35), transparent 45%),
+    linear-gradient(170deg, #e8f8ff, #bfe6ff);
+}
+
+.auth-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 24px;
+}
+
+.auth-card {
+  width: min(360px, 100%);
+  padding: 28px 24px;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 36px rgba(30, 143, 216, 0.25);
+  text-align: center;
+  animation: auth-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes auth-pop {
+  from { opacity: 0; transform: translateY(16px) scale(0.92, 0.88); }
+  to   { opacity: 1; transform: none; }
+}
+
+.auth-logo {
+  margin: 0 0 8px;
+  font-family: "Mochiy Pop One", sans-serif;
+  font-size: 28px;
+  font-weight: normal;
+  color: #1e8fd8;
+}
+
+.auth-logo span { color: #3fd6d0; }
+.auth-logo small { color: #ffc94d; font-size: 18px; }
+
+.auth-lead { margin: 0 0 18px; color: #2b5d80; font-size: 14px; }
+.auth-note { margin: 16px 0 0; color: #6a8aa3; font-size: 12px; }
+
+.auth-alert, .auth-notice {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+.auth-alert  { background: #ffe8ee; color: #c2334f; }
+.auth-notice { background: #e6fbf8; color: #1d8a84; }
+
+.auth-form { display: flex; flex-direction: column; gap: 12px; }
+
+.auth-input {
+  padding: 14px 16px;
+  border: 2px solid #cfe9fb;
+  border-radius: 999px;
+  background: #ffffff;
+  font-size: 16px;   /* 16px未満だと iPhone で勝手に拡大される */
+  text-align: center;
+  outline: none;
+}
+.auth-input:focus { border-color: #1e8fd8; }
+
+.auth-submit {
+  padding: 14px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #1e8fd8, #3fd6d0);
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.auth-submit:active { transform: scale(0.97); }
+
+/* エディタのヘッダー：ユーザー名とログアウト */
+.studio-user-name { font-size: 12px; font-weight: bold; color: var(--c-ink, #333); }
+.studio-logout-form { display: inline; margin: 0; }
+@media (max-width: 480px) { .studio-user-name { display: none; } }
+
+/* ===== 管理画面 ===== */
+
+.admin-page { width: min(760px, 100%); margin: 0 auto; padding: 20px 16px 60px; }
+
+.admin-header {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 10px; margin-bottom: 16px;
+}
+.admin-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 14px; }
+.admin-nav a { color: #1e8fd8; font-weight: bold; text-decoration: none; }
+.admin-inline { display: inline; margin: 0; }
+.admin-nav .admin-inline button {
+  padding: 4px 12px; border: 1px solid #cfe9fb; border-radius: 999px;
+  background: #fff; color: #2b5d80; font-size: 13px; cursor: pointer;
+}
+
+.admin-card {
+  padding: 20px; border: 2px solid rgba(255,255,255,.8); border-radius: 24px;
+  background: rgba(255,255,255,.8); box-shadow: 0 10px 30px rgba(30,143,216,.18);
+  animation: auth-pop .4s cubic-bezier(.34,1.56,.64,1);
+}
+.admin-card h2 { margin: 0 0 12px; color: #1e8fd8; font-size: 18px; }
+.admin-card-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+
+.admin-list { margin: 8px 0 0; padding: 0; list-style: none; }
+.admin-row {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 8px; padding: 12px 4px; border-bottom: 1px dashed #cfe9fb;
+}
+.admin-row-name { display: flex; align-items: center; gap: 6px; }
+.admin-row-actions { display: flex; gap: 6px; }
+
+.admin-badge {
+  padding: 2px 8px; border-radius: 999px; background: #e6f4ff;
+  color: #1e8fd8; font-size: 11px; font-weight: bold;
+}
+.admin-badge.is-me { background: #e6fbf8; color: #1d8a84; }
+
+.admin-button {
+  display: inline-block; padding: 6px 12px; border: 1px solid #cfe9fb; border-radius: 999px;
+  background: #fff; color: #2b5d80; font-size: 12px; font-weight: bold;
+  text-decoration: none; cursor: pointer;
+}
+.admin-button.is-main { background: linear-gradient(135deg,#1e8fd8,#3fd6d0); border: none; color: #fff; }
+.admin-button.is-danger { color: #c2334f; border-color: #f5c7d1; }
+
+.admin-code {
+  margin: 16px 0; padding: 18px; border: 2px dashed #3fd6d0; border-radius: 18px;
+  background: #f2fffd; text-align: center;
+}
+.admin-code code {
+  font-size: 26px; font-weight: bold; letter-spacing: .06em; color: #1e5f8a;
+  user-select: all;   /* タップ1回で全部選べる */
+}
+
+ul.auth-alert { padding-left: 28px; }
+
 /* ===== テンプレート ===== */
 
 .studio-template-list {

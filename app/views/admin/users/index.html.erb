@@ -1,0 +1,30 @@
+<section class="admin-card">
+  <div class="admin-card-head">
+    <h2>👥 ユーザー（<%= @users.size %>人）</h2>
+    <%= link_to "＋ ユーザーを追加", new_admin_user_path, class: "admin-button is-main" %>
+  </div>
+
+  <ul class="admin-list">
+    <% @users.each do |user| %>
+      <li class="admin-row">
+        <div class="admin-row-name">
+          <strong><%= user.name %></strong>
+          <% if user.admin? %><span class="admin-badge">管理者</span><% end %>
+          <% if user == current_user %><span class="admin-badge is-me">あなた</span><% end %>
+        </div>
+        <div class="admin-row-actions">
+          <%= button_to "🔁 IDを作り直す", reissue_admin_user_path(user), method: :post,
+                form_class: "admin-inline", class: "admin-button",
+                data: { turbo_confirm: "#{user.name} さんのIDを作り直しますか？\n今のIDは使えなくなります" } %>
+          <% unless user == current_user %>
+            <%= button_to "🗑️ 削除", admin_user_path(user), method: :delete,
+                  form_class: "admin-inline", class: "admin-button is-danger",
+                  data: { turbo_confirm: "#{user.name} さんを削除しますか？" } %>
+          <% end %>
+        </div>
+      </li>
+    <% end %>
+  </ul>
+
+  <p class="auth-note">ログインIDは、作ったときと作り直したときにしか表示されません。</p>
+</section>

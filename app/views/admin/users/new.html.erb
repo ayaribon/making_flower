@@ -1,0 +1,19 @@
+<section class="admin-card">
+  <h2>＋ ユーザーを追加</h2>
+
+  <% if @user.errors.any? %>
+    <ul class="auth-alert">
+      <% @user.errors.full_messages.each do |msg| %><li><%= msg %></li><% end %>
+    </ul>
+  <% end %>
+
+  <%= form_with model: [:admin, @user], local: true, class: "auth-form" do |f| %>
+    <%= f.text_field :name, placeholder: "呼び名（英数字。例：Kuon）",
+          autocapitalize: "none", autocorrect: "off", spellcheck: false,
+          autofocus: true, required: true, class: "auth-input" %>
+    <%= f.submit "作ってIDを発行する", class: "auth-submit" %>
+  <% end %>
+
+  <p class="auth-note">本名やメールアドレスは入れないでね。ログインIDは「呼び名-ランダム4文字」になります。</p>
+  <p><%= link_to "← 一覧にもどる", admin_users_path %></p>
+</section>

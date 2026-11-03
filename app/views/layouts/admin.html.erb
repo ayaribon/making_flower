@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <title>KotoBouquet 管理</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%# ログインIDを表示する画面があるので、ブラウザや途中の経路に残さない %>
+    <meta http-equiv="Cache-Control" content="no-store">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "/fonts/mochiy-pop-one/400.css" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="auth-body">
+    <main class="admin-page">
+      <header class="admin-header">
+        <h1 class="auth-logo">Koto<span>Bouquet</span> <small>管理</small></h1>
+        <nav class="admin-nav">
+          <%= link_to "👥 ユーザー", admin_users_path %>
+          <%= link_to "🎨 編集画面へ", root_path %>
+          <%= button_to "ログアウト", logout_path, method: :delete, form_class: "admin-inline" %>
+        </nav>
+      </header>
+
+      <% if flash[:notice] %><p class="auth-notice"><%= flash[:notice] %></p><% end %>
+      <% if flash[:alert] %><p class="auth-alert"><%= flash[:alert] %></p><% end %>
+
+      <%= yield %>
+    </main>
+  </body>
+</html>

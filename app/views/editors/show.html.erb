@@ -48,6 +48,13 @@
   <header class="studio-header">
     <h1 class="studio-logo">Koto<span>Bouquet</span> <small>✦</small></h1>
     <div class="studio-header-actions">
+      <span class="studio-user-name">👤 <%= current_user.name %></span>
+      <% if current_user.admin? %>
+        <%= link_to "⚙️ 管理", admin_users_path, class: "studio-history-button", data: { turbo: false } %>
+      <% end %>
+      <%= button_to "ログアウト", logout_path, method: :delete,
+            form_class: "studio-logout-form", class: "studio-history-button",
+            data: { turbo_confirm: "ログアウトしますか？" } %>
       <button type="button" class="studio-history-button" title="元に戻す（Ctrl+Z）"
         data-canvas-editor-target="undoButton"
         data-action="click->canvas-editor#undo" disabled>↩️<span>戻す</span></button>

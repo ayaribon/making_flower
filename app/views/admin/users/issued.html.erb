@@ -1,0 +1,12 @@
+<section class="admin-card is-issued">
+  <h2>🔑 ログインID</h2>
+  <p class="auth-notice"><%= @message %></p>
+
+  <p class="admin-code">
+    <code><%= @login_code %></code>
+  </p>
+
+  <p class="auth-alert">⚠️ このIDが表示されるのは<strong>今だけ</strong>です。本人に渡したら、この画面は閉じてください。</p>
+
+  <p><%= link_to "← 一覧にもどる", admin_users_path, class: "admin-button is-main" %></p>
+</section>
