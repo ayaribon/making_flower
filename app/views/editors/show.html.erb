@@ -12,9 +12,44 @@
   data-action="keydown@window->canvas-editor#onKeydown"
   data-canvas-editor-width-value="<%= @width %>"
   data-canvas-editor-height-value="<%= @height %>">
+  <!-- 比率を選ぶ画面（最初に出す。ヘッダーのサイズを押すと、また開く） -->
+  <div class="studio-ratio-picker" data-canvas-editor-target="ratioPicker">
+    <div class="studio-ratio-card">
+      <h2>どのサイズで作る？</h2>
+      <div class="studio-ratio-list">
+        <button type="button" class="studio-ratio-option"
+          data-action="click->canvas-editor#chooseRatio"
+          data-canvas-editor-ratio-param="16:9">
+          <span class="studio-ratio-shape is-wide"></span>
+          <strong>16:9</strong>
+          <small>YouTubeサムネ・配信背景<br>1280×720</small>
+        </button>
+        <button type="button" class="studio-ratio-option"
+          data-action="click->canvas-editor#chooseRatio"
+          data-canvas-editor-ratio-param="9:16">
+          <span class="studio-ratio-shape is-tall"></span>
+          <strong>9:16</strong>
+          <small>ショート・TikTok・縦配信<br>1080×1920</small>
+        </button>
+        <button type="button" class="studio-ratio-option"
+          data-action="click->canvas-editor#chooseRatio"
+          data-canvas-editor-ratio-param="1:1">
+          <span class="studio-ratio-shape is-square"></span>
+          <strong>1:1</strong>
+          <small>X・インスタの告知<br>1080×1080</small>
+        </button>
+      </div>
+      <button type="button" class="studio-ratio-cancel"
+        data-canvas-editor-target="ratioClose"
+        data-action="click->canvas-editor#closeRatioPicker" hidden>このままにする</button>
+    </div>
+  </div>
+
   <header class="studio-header">
     <h1 class="studio-logo">Koto<span>Bouquet</span> <small>✦</small></h1>
-    <p class="studio-size-badge"><%= @width %> × <%= @height %></p>
+    <button type="button" class="studio-size-badge"
+      data-canvas-editor-target="sizeBadge"
+      data-action="click->canvas-editor#openRatioPicker"><%= @width %> × <%= @height %> ▾</button>
   </header>
 
   <section class="studio-stage">

@@ -2,6 +2,13 @@ import { Controller } from "@hotwired/stimulus"
 import { Canvas, Textbox, Gradient, Shadow, FabricImage } from "fabric"
 import { STYLES, STYLE_DEFAULTS } from "text_styles"
 
+// 選べる比率とキャンバスの実寸
+const RATIOS = {
+  "16:9": { width: 1280, height: 720 },
+  "9:16": { width: 1080, height: 1920 },
+  "1:1":  { width: 1080, height: 1080 }
+}
+
 // グラデーションの向きごとの座標（0〜1 の割合で指定）
 const GRADIENT_COORDS = {
   vertical:   { x1: 0, y1: 0, x2: 0, y2: 1 },
@@ -22,7 +29,8 @@ export default class extends Controller {
     "bgPanel", "bgModeButton", "bgColorLabel", "bgColorInput", "bgColor2Input",
     "bgDirectionInput", "bgGradientOnly",
     "partsPanel", "partPanel", "partOpacityInput", "partOpacityValue",
-    "lockButton"
+    "lockButton",
+    "ratioPicker", "ratioClose", "sizeBadge"
   ]
   static values = { width: Number, height: Number }
 
@@ -48,6 +56,13 @@ export default class extends Controller {
       this.canvas.requestRenderAll()
     })
 
+    // 動かしている間は、下のバーとパネルを隠す（指を離したら戻す）
+    const startDrag = () => this.element.classList.add("is-dragging")
+    this.canvas.on("object:moving", startDrag)
+    this.canvas.on("object:scaling", startDrag)
+    this.canvas.on("object:rotating", startDrag)
+    this.canvas.on("mouse:up", () => this.element.classList.remove("is-dragging"))
+
     this.fit()
 
     this.resizeObserver = new ResizeObserver(() => this.fit())
@@ -57,6 +72,71 @@ export default class extends Controller {
   disconnect() {
     this.resizeObserver?.disconnect()
     this.canvas?.dispose()
+  }
+
+  // ===== 比率（16:9 / 9:16 / 1:1） =====
+
+  openRatioPicker() {
+    // 編集を始めたあとは「このままにする」で戻れるようにする
+    this.ratioCloseTarget.hidden = !this.ratioChosen
+    this.ratioPickerTarget.hidden = false
+  }
+
+  closeRatioPicker() {
+    this.ratioPickerTarget.hidden = true
+  }
+
+  chooseRatio(event) {
+    const size = RATIOS[event.params.ratio]
+    if (!size) return
+
+    this.resizeCanvas(size.width, size.height)
+    this.ratioChosen = true
+    this.closeRatioPicker()
+  }
+
+  // キャンバスの実寸を変えて、置いてあるものを真ん中基準で並べ直す
+  resizeCanvas(newW, newH) {
+    const oldW = this.widthValue
+    const oldH = this.heightValue
+
+    if (newW !== oldW || newH !== oldH) {
+      // はみ出さないように、縮める必要があるときだけ縮める
+      const s = Math.min(1, newW / oldW, newH / oldH)
+
+      this.canvas.getObjects().forEach(obj => {
+        const c = obj.getCenterPoint()
+        obj.set({
+          scaleX: obj.scaleX * s,
+          scaleY: obj.scaleY * s
+        })
+        obj.setPositionByOrigin(
+          { x: newW / 2 + (c.x - oldW / 2) * s, y: newH / 2 + (c.y - oldH / 2) * s },
+          "center",
+          "center"
+        )
+        obj.setCoords()
+      })
+    }
+
+    this.widthValue = newW
+    this.heightValue = newH
+    this.element.style.setProperty("--ratio", newW / newH)
+    this.sizeBadgeTarget.textContent = `${newW} × ${newH} ▾`
+
+    // 背景画像：新しいキャンバスいっぱいに敷き直す
+    const img = this.canvas.backgroundImage
+    if (img) {
+      const scale = Math.max(newW / img.width, newH / img.height)
+      img.set({ left: newW / 2, top: newH / 2, scaleX: scale, scaleY: scale })
+    }
+
+    // 背景のグラデーション：新しい大きさで作り直す
+    if (this.canvas.backgroundColor instanceof Gradient) {
+      this.applyBackground()
+    }
+
+    this.fit()
   }
 
   // 枠の幅に合わせてキャンバスを縮小する
