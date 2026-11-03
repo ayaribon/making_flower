@@ -857,8 +857,9 @@ export default class extends Controller {
       const fileName = `kotobouquet_${this.timestamp()}.png`
       const file = new File([blob], fileName, { type: "image/png" })
 
-      // スマホ：共有メニューから「画像を保存」できるとき
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      // スマホ・タブレット（指で操作する端末）だけ共有メニューを使う。PCはふつうにダウンロード
+      const isTouchDevice = window.matchMedia("(pointer: coarse)").matches
+      if (isTouchDevice && navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
           await navigator.share({ files: [file], title: "KotoBouquet" })
           return
