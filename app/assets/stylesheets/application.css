@@ -1194,3 +1194,84 @@ button.studio-size-badge {
   .studio.is-dragging .studio-toolbar { transform: translateX(-12px); }
   .studio.is-dragging .studio-panel { transform: translateX(12px); }
 }
+
+/* ===== 段階7：自分の画像 ===== */
+
+.studio-my-list {
+  display: contents;   /* 中のボタンを、ほかのサムネと同じ列に並べる */
+}
+
+.studio-my-add {
+  border-style: dashed !important;
+  background: #ffffff !important;
+  color: #1e8fd8;
+  font-size: 11px;
+  font-weight: bold;
+  line-height: 1.3;
+}
+
+.studio-my-thumb {
+  position: relative;
+}
+
+.studio-my-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.studio-part-thumb.studio-my-thumb img { object-fit: contain; }
+
+.studio-my-delete {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #ffffff;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+}
+
+/* ===== 元に戻す・やり直す・リセット（ヘッダー右） ===== */
+
+.studio-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.studio-history-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--c-line, #e5dde0);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--c-ink, #333);
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.studio-history-button:active { transform: scale(0.94); }
+
+.studio-history-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+  transform: none;
+}
+
+.studio-history-button.is-reset { color: #d9534f; }
+
+/* スマホの細い画面では、文字を隠してアイコンだけにする */
+@media (max-width: 480px) {
+  .studio-history-button span { display: none; }
+  .studio-history-button { padding: 4px 8px; }
+}

@@ -47,9 +47,19 @@
 
   <header class="studio-header">
     <h1 class="studio-logo">Koto<span>Bouquet</span> <small>✦</small></h1>
-    <button type="button" class="studio-size-badge"
-      data-canvas-editor-target="sizeBadge"
-      data-action="click->canvas-editor#openRatioPicker"><%= @width %> × <%= @height %> ▾</button>
+    <div class="studio-header-actions">
+      <button type="button" class="studio-history-button" title="元に戻す（Ctrl+Z）"
+        data-canvas-editor-target="undoButton"
+        data-action="click->canvas-editor#undo" disabled>↩️<span>戻す</span></button>
+      <button type="button" class="studio-history-button" title="進める（Ctrl+Shift+Z）"
+        data-canvas-editor-target="redoButton"
+        data-action="click->canvas-editor#redo" disabled>↪️<span>進める</span></button>
+      <button type="button" class="studio-history-button is-reset" title="全部消す"
+        data-action="click->canvas-editor#resetCanvas">🗑️<span>リセット</span></button>
+      <button type="button" class="studio-size-badge"
+        data-canvas-editor-target="sizeBadge"
+        data-action="click->canvas-editor#openRatioPicker"><%= @width %> × <%= @height %> ▾</button>
+    </div>
   </header>
 
   <section class="studio-stage">
@@ -310,6 +320,14 @@
         <div class="studio-bg-image-list">
           <button type="button" class="studio-bg-thumb studio-bg-thumb-none"
             data-action="click->canvas-editor#clearBackgroundImage">なし</button>
+          <button type="button" class="studio-bg-thumb studio-my-add"
+            data-action="click->canvas-editor#pickMyImage"
+            data-canvas-editor-kind-param="background">📷<br>自分の画像</button>
+          <input type="file" accept="image/*" hidden
+            data-canvas-editor-target="bgFileInput"
+            data-action="change->canvas-editor#onMyImageSelected"
+            data-kind="background">
+          <span class="studio-my-list" data-canvas-editor-target="myBgList"></span>
           <% [
             ["burst", "集中線"],
             ["neon-grid", "ネオングリッド"],
@@ -338,6 +356,14 @@
       </div>
 
       <div class="studio-bg-image-list">
+        <button type="button" class="studio-part-thumb studio-my-add"
+          data-action="click->canvas-editor#pickMyImage"
+          data-canvas-editor-kind-param="part">📷<br>自分の<br>画像</button>
+        <input type="file" accept="image/*" hidden
+          data-canvas-editor-target="partFileInput"
+          data-action="change->canvas-editor#onMyImageSelected"
+          data-kind="part">
+        <span class="studio-my-list" data-canvas-editor-target="myPartList"></span>
         <% [
           ["bubble", "吹き出し"],
           ["star", "星"],
@@ -354,6 +380,7 @@
           </button>
         <% end %>
       </div>
+      <p class="studio-tab-note">自分の画像はこの端末のブラウザの中だけに保存されます（サーバーには送りません）。長押し・右クリックの「×」で一覧から消せます</p>
     </div>
 
     <!-- 部品を選んでいるときのパネル -->
