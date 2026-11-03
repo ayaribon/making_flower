@@ -390,7 +390,7 @@ body {
 
 /* 16:9 が「横幅」と「残りの高さ」の両方に収まるようにする */
 .studio-canvas-frame {
-  width: min(100%, calc((100dvh - 160px) * 16 / 9));
+  width: min(100%, calc((100dvh - 160px) * var(--ratio, 1.7778)));
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
   background: #ffffff;
   line-height: 0;
@@ -908,7 +908,7 @@ body {
   }
 
   .studio-canvas-frame {
-    width: min(100%, calc((100dvh - 12px) * 16 / 9));
+    width: min(100%, calc((100dvh - 12px) * var(--ratio, 1.7778)));
   }
 
   .studio-footer {
@@ -1077,4 +1077,120 @@ body {
     transform-origin: 100% 50%;
     animation-name: studio-puni-side;
   }
+}
+
+/* =====================================================
+   段階6：比率を選ぶ画面＋ヘッダーのサイズボタン
+   ===================================================== */
+
+.studio { --ratio: 1.7778; }
+
+button.studio-size-badge {
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.studio-ratio-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(10, 60, 110, 0.35);
+  backdrop-filter: blur(6px);
+}
+
+.studio-ratio-picker[hidden] { display: none; }
+
+.studio-ratio-card {
+  width: min(520px, 100%);
+  padding: 20px;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 12px 40px rgba(10, 60, 110, 0.3);
+  text-align: center;
+  animation: studio-puni 0.4s ease-out;
+}
+
+.studio-ratio-card h2 {
+  margin: 0 0 16px;
+  font-family: "Mochiy Pop One", sans-serif;
+  font-size: 18px;
+  font-weight: normal;
+  color: var(--c-main);
+}
+
+.studio-ratio-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.studio-ratio-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 6px;
+  border: 2px solid var(--c-line);
+  border-radius: 18px;
+  background: var(--c-soft);
+  color: var(--c-ink);
+  cursor: pointer;
+}
+
+.studio-ratio-option:hover,
+.studio-ratio-option:active {
+  border-color: var(--c-main);
+  transform: translateY(-2px);
+}
+
+.studio-ratio-option small { font-size: 10px; line-height: 1.4; color: #6b7c93; }
+
+.studio-ratio-shape {
+  display: block;
+  height: 48px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--c-main), var(--c-pink));
+}
+
+.studio-ratio-shape.is-wide   { width: 72px; height: 40px; }
+.studio-ratio-shape.is-tall   { width: 28px; height: 48px; }
+.studio-ratio-shape.is-square { width: 44px; height: 44px; }
+
+.studio-ratio-cancel {
+  margin-top: 14px;
+  padding: 6px 16px;
+  border: 1px solid var(--c-line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--c-ink);
+  cursor: pointer;
+}
+
+@media (max-width: 420px) {
+  .studio-ratio-list { grid-template-columns: 1fr; }
+  .studio-ratio-option { flex-direction: row; justify-content: flex-start; padding: 10px 14px; text-align: left; }
+}
+
+/* ===== 動かしている間は、下のバー（ドック）とパネルを隠す ===== */
+
+.studio-toolbar,
+.studio-panel {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.studio.is-dragging .studio-toolbar,
+.studio.is-dragging .studio-panel {
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+}
+
+@media (orientation: landscape) and (max-height: 560px) {
+  .studio.is-dragging .studio-toolbar { transform: translateX(-12px); }
+  .studio.is-dragging .studio-panel { transform: translateX(12px); }
 }
