@@ -1275,3 +1275,78 @@ button.studio-size-badge {
   .studio-history-button span { display: none; }
   .studio-history-button { padding: 4px 8px; }
 }
+
+/* ===== エフェクト（フィルター・フレーム） ===== */
+
+.studio-effect-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.studio-effect-toggle {
+  flex: 0 0 auto;
+  min-width: 112px;
+  padding: 6px 10px;
+  border: 2px solid var(--c-line, #e5dde0);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--c-ink, #333);
+  font-size: 12px;
+  font-weight: bold;
+  text-align: left;
+  cursor: pointer;
+}
+
+.studio-effect-toggle.is-active {
+  border-color: var(--c-main, #1e8fd8);
+  background: var(--c-soft, #eaf6ff);
+  color: var(--c-main, #1e8fd8);
+}
+
+.studio-effect-row input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--c-main, #1e8fd8);
+}
+
+.studio-effect-row input[type="color"] {
+  width: 34px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--c-line, #e5dde0);
+  border-radius: 8px;
+}
+
+.studio-frame-list {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.studio-frame-button {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 72px;
+  padding: 8px 4px;
+  border: 2px solid var(--c-line, #e5dde0);
+  border-radius: 14px;
+  background: #ffffff;
+  color: var(--c-ink, #333);
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.studio-frame-button span { font-size: 22px; }
+
+.studio-frame-button.is-active {
+  border-color: var(--c-main, #1e8fd8);
+  background: var(--c-soft, #eaf6ff);
+}

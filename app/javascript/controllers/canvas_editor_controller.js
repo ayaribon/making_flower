@@ -22,7 +22,7 @@ const HISTORY_LIMIT = 30
 
 // 保存するときに、Fabric.js の標準の項目に加えて残しておく項目
 const EXTRA_PROPS = [
-  "locked", "imageId", "editable", "hasControls", "hoverCursor",
+  "locked", "imageId", "effect", "effectKey", "effectStrength", "effectColor", "selectable", "evented", "editable", "hasControls", "hoverCursor",
   "lockMovementX", "lockMovementY", "lockScalingX", "lockScalingY", "lockRotation"
 ]
 
@@ -42,7 +42,8 @@ export default class extends Controller {
     "lockButton",
     "ratioPicker", "ratioClose", "sizeBadge",
     "partFileInput", "bgFileInput", "myPartList", "myBgList",
-    "undoButton", "redoButton"
+    "undoButton", "redoButton",
+    "effectsPanel", "effectTab", "effectPage", "effectToggle", "effectStrength", "tintInput", "frameButton"
   ]
   static values = { width: Number, height: Number }
 
@@ -65,6 +66,7 @@ export default class extends Controller {
     this.canvas.on("mouse:down", ({ target }) => {
       if (!target || target.locked) return
       this.canvas.bringObjectToFront(target)
+      this.raiseEffects()  // エフェクトはいつもいちばん上
       this.canvas.requestRenderAll()
     })
 
@@ -76,6 +78,12 @@ export default class extends Controller {
     this.canvas.on("mouse:up", () => this.element.classList.remove("is-dragging"))
 
     this.fit()
+
+    // 文字や部品を足したら、エフェクトをいちばん上に戻す
+    this.effectSeq = {}
+    this.canvas.on("object:added", ({ target }) => {
+      if (target && !target.effect) this.raiseEffects()
+    })
 
     // ===== 元に戻す／やり直すの記録 =====
     this.undoStack = []
@@ -103,6 +111,291 @@ export default class extends Controller {
     ;["input", "change", "click"].forEach(name => this.element.removeEventListener(name, this.onUiChange))
     this.resizeObserver?.disconnect()
     this.canvas?.dispose()
+  }
+
+  // ===== エフェクト（フィルター・フレーム） =====
+  // どちらも「触れない画像」として、キャンバスのいちばん上に重ねる
+
+  toggleEffectsPanel() {
+    if (!this.effectsPanelTarget.hidden) {
+      this.closeEffectsPanel()
+      return
+    }
+    this.canvas.discardActiveObject()
+    this.canvas.requestRenderAll()
+    ;[this.textPanelTarget, this.partPanelTarget, this.bgPanelTarget, this.partsPanelTarget]
+      .forEach(panel => { panel.hidden = true })
+    this.syncEffectInputs()
+    this.effectsPanelTarget.hidden = false
+  }
+
+  closeEffectsPanel() {
+    this.effectsPanelTarget.hidden = true
+  }
+
+  switchEffectTab(event) {
+    const name = event.params.tab
+    this.effectTabTargets.forEach(tab => tab.classList.toggle("is-active", tab.dataset.tab === name))
+    this.effectPageTargets.forEach(page => { page.hidden = page.dataset.tab !== name })
+  }
+
+  effectObjects(kind) {
+    return this.canvas.getObjects().filter(o => o.effect && (!kind || o.effect === kind))
+  }
+
+  removeEffect(kind, key = null) {
+    this.effectObjects(kind)
+      .filter(o => key === null || o.effectKey === key)
+      .forEach(o => this.canvas.remove(o))
+  }
+
+  // エフェクトを、文字や部品より上に持ってくる（フィルターの上にフレーム）
+  raiseEffects() {
+    this.effectObjects("filter").forEach(o => this.canvas.bringObjectToFront(o))
+    this.effectObjects("frame").forEach(o => this.canvas.bringObjectToFront(o))
+  }
+
+  strengthOf(key) {
+    const input = this.effectStrengthTargets.find(i => i.dataset.key === key)
+    return input ? Number(input.value) / 100 : 0.5
+  }
+
+  async toggleFilter(event) {
+    const key = event.params.key
+    if (this.effectObjects("filter").some(o => o.effectKey === key)) {
+      this.effectSeq[key] = (this.effectSeq[key] || 0) + 1  // 作りかけの分は捨てる
+      this.removeEffect("filter", key)
+      this.canvas.requestRenderAll()
+    } else {
+      await this.setFilter(key, this.strengthOf(key))
+    }
+    this.syncEffectInputs()
+  }
+
+  async changeFilterStrength(event) {
+    const key = event.params.key
+    if (!this.effectObjects("filter").some(o => o.effectKey === key)) return
+    await this.setFilter(key, this.strengthOf(key))
+  }
+
+  async changeTint() {
+    if (!this.effectObjects("filter").some(o => o.effectKey === "tint")) return
+    await this.setFilter("tint", this.strengthOf("tint"))
+  }
+
+  async setFilter(key, strength, color = null) {
+    const seq = this.effectSeq[key] = (this.effectSeq[key] || 0) + 1
+    if (key === "tint") color = color || this.tintInputTarget.value
+
+    const img = await this.svgToImage(this.buildFilterSvg(key, strength, color))
+    if (seq !== this.effectSeq[key]) return  // スライダーを動かし続けている間は、最新の分だけ使う
+
+    this.removeEffect("filter", key)
+    img.set({ effect: "filter", effectKey: key, effectStrength: strength, effectColor: color })
+    this.canvas.add(img)
+    this.raiseEffects()
+    this.canvas.requestRenderAll()
+  }
+
+  async setFrame(event) {
+    await this.applyFrame(event.params.frame)
+    this.syncEffectInputs()
+  }
+
+  async applyFrame(key) {
+    const seq = this.effectSeq.__frame = (this.effectSeq.__frame || 0) + 1
+    if (!key || key === "none") {
+      this.removeEffect("frame")
+      this.canvas.requestRenderAll()
+      return
+    }
+    const img = await this.svgToImage(this.buildFrameSvg(key))
+    if (seq !== this.effectSeq.__frame) return
+
+    this.removeEffect("frame")
+    img.set({ effect: "frame", effectKey: key })
+    this.canvas.add(img)
+    this.raiseEffects()
+    this.canvas.requestRenderAll()
+  }
+
+  // 比率を変えたとき、エフェクトを新しい大きさで作り直す
+  async rebuildEffects() {
+    const filters = this.effectObjects("filter")
+      .map(o => ({ key: o.effectKey, strength: o.effectStrength, color: o.effectColor }))
+    const frame = this.effectObjects("frame")[0]?.effectKey
+    for (const f of filters) await this.setFilter(f.key, f.strength, f.color)
+    if (frame) await this.applyFrame(frame)
+  }
+
+  // 今のエフェクトの状態を、パネルのボタンとスライダーに映す
+  syncEffectInputs() {
+    if (!this.hasEffectsPanelTarget) return
+    const filters = this.effectObjects("filter")
+
+    this.effectToggleTargets.forEach(button => {
+      button.classList.toggle("is-active", filters.some(o => o.effectKey === button.dataset.key))
+    })
+    filters.forEach(o => {
+      const input = this.effectStrengthTargets.find(i => i.dataset.key === o.effectKey)
+      if (input && o.effectStrength) input.value = Math.round(o.effectStrength * 100)
+      if (o.effectKey === "tint" && o.effectColor) this.tintInputTarget.value = o.effectColor
+    })
+
+    const frame = this.effectObjects("frame")[0]?.effectKey || "none"
+    this.frameButtonTargets.forEach(button => {
+      button.classList.toggle("is-active", button.dataset.key === frame)
+    })
+  }
+
+  // SVG の文字列を、触れない画像にする
+  async svgToImage(svg) {
+    const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg)
+    const img = await FabricImage.fromURL(url)
+    img.set({
+      left: 0, top: 0, originX: "left", originY: "top",
+      scaleX: this.widthValue / img.width,
+      scaleY: this.heightValue / img.height,
+      selectable: false, evented: false, hasControls: false, hoverCursor: "default"
+    })
+    return img
+  }
+
+  // いつも同じ並びになる乱数（キラキラの位置が、作り直すたびに変わらないように）
+  seededRandom(seed) {
+    let s = seed
+    return () => {
+      s = (s * 16807) % 2147483647
+      return (s - 1) / 2147483646
+    }
+  }
+
+  starPath(x, y, r) {
+    return `M${x},${y - r} Q${x},${y} ${x + r},${y} Q${x},${y} ${x},${y + r} ` +
+           `Q${x},${y} ${x - r},${y} Q${x},${y} ${x},${y - r} Z`
+  }
+
+  buildFilterSvg(key, s, color) {
+    const W = this.widthValue
+    const H = this.heightValue
+    const head = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`
+
+    switch (key) {
+      case "scanline":
+        return head +
+          `<defs><pattern id="p" width="4" height="4" patternUnits="userSpaceOnUse">` +
+          `<rect width="4" height="2" fill="#000" fill-opacity="${(0.4 * s).toFixed(3)}"/></pattern></defs>` +
+          `<rect width="${W}" height="${H}" fill="url(#p)"/></svg>`
+
+      case "dots":
+        return head +
+          `<defs><pattern id="p" width="10" height="10" patternUnits="userSpaceOnUse">` +
+          `<circle cx="5" cy="5" r="1.6" fill="#ffffff" fill-opacity="${(0.7 * s).toFixed(3)}"/></pattern></defs>` +
+          `<rect width="${W}" height="${H}" fill="url(#p)"/></svg>`
+
+      case "sparkle": {
+        const rand = this.seededRandom(20261104)
+        const count = Math.round(20 + 70 * s)
+        const unit = Math.min(W, H) / 720
+        let stars = ""
+        for (let i = 0; i < count; i++) {
+          const x = (rand() * W).toFixed(1)
+          const y = (rand() * H).toFixed(1)
+          const r = ((4 + rand() * 18) * unit).toFixed(1)
+          const op = (0.5 + rand() * 0.5).toFixed(2)
+          stars += `<path d="${this.starPath(Number(x), Number(y), Number(r))}" fill="#ffffff" fill-opacity="${op}"/>`
+        }
+        return head + stars + `</svg>`
+      }
+
+      case "vignette":
+        return head +
+          `<defs><radialGradient id="g" cx="50%" cy="50%" r="75%">` +
+          `<stop offset="0.55" stop-color="#000" stop-opacity="0"/>` +
+          `<stop offset="1" stop-color="#000" stop-opacity="${(0.85 * s).toFixed(3)}"/></radialGradient></defs>` +
+          `<rect width="${W}" height="${H}" fill="url(#g)"/></svg>`
+
+      case "tint":
+        return head +
+          `<rect width="${W}" height="${H}" fill="${color || "#7b5cff"}" fill-opacity="${(0.45 * s).toFixed(3)}"/></svg>`
+    }
+    return head + `</svg>`
+  }
+
+  buildFrameSvg(key) {
+    const W = this.widthValue
+    const H = this.heightValue
+    const m = Math.min(W, H)
+    const head = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`
+
+    switch (key) {
+      case "pixel": {
+        // ドット絵っぽい、ガタガタのフチ
+        const t = Math.round(m * 0.03)
+        const u = Math.max(6, Math.round(t / 2))
+        let d = `<path fill-rule="evenodd" fill="#1e8fd8" d="M0,0H${W}V${H}H0Z M${t},${t}V${H - t}H${W - t}V${t}Z"/>`
+        let i = 0
+        for (let x = t; x < W - t; x += u, i++) {
+          const fill = i % 2 ? "#3fd6d0" : "#ffffff"
+          d += `<rect x="${x}" y="${t}" width="${u}" height="${u}" fill="${fill}"/>`
+          d += `<rect x="${x}" y="${H - t - u}" width="${u}" height="${u}" fill="${fill}"/>`
+        }
+        i = 0
+        for (let y = t; y < H - t; y += u, i++) {
+          const fill = i % 2 ? "#3fd6d0" : "#ffffff"
+          d += `<rect x="${t}" y="${y}" width="${u}" height="${u}" fill="${fill}"/>`
+          d += `<rect x="${W - t - u}" y="${y}" width="${u}" height="${u}" fill="${fill}"/>`
+        }
+        return head + d + `</svg>`
+      }
+
+      case "ribbon": {
+        const pad = m * 0.025
+        const bow = (cx, cy, r) =>
+          `<g stroke="#ffffff" stroke-width="${(r * 0.12).toFixed(1)}">` +
+          `<ellipse cx="${cx - r * 0.7}" cy="${cy}" rx="${r * 0.75}" ry="${r * 0.5}" fill="#ff8ccf"/>` +
+          `<ellipse cx="${cx + r * 0.7}" cy="${cy}" rx="${r * 0.75}" ry="${r * 0.5}" fill="#ff8ccf"/>` +
+          `<circle cx="${cx}" cy="${cy}" r="${r * 0.32}" fill="#ff5fb7"/></g>`
+        const r = m * 0.06
+        return head +
+          `<rect x="${pad}" y="${pad}" width="${W - pad * 2}" height="${H - pad * 2}" rx="${m * 0.03}" ` +
+          `fill="none" stroke="#ff8ccf" stroke-width="${(m * 0.012).toFixed(1)}"/>` +
+          bow(pad + r * 1.4, pad + r * 0.8, r) + bow(W - pad - r * 1.4, pad + r * 0.8, r) +
+          bow(pad + r * 1.4, H - pad - r * 0.8, r) + bow(W - pad - r * 1.4, H - pad - r * 0.8, r) +
+          `</svg>`
+      }
+
+      case "sparkle": {
+        const pad = m * 0.035
+        const gap = m * 0.09
+        let stars = ""
+        let i = 0
+        const add = (x, y) => {
+          const r = (i++ % 2 ? 0.018 : 0.03) * m
+          stars += `<path d="${this.starPath(x, y, r)}" fill="${i % 3 ? "#ffffff" : "#ffe58a"}"/>`
+        }
+        for (let x = pad; x <= W - pad; x += gap) { add(x, pad); add(x, H - pad) }
+        for (let y = pad + gap; y < H - pad; y += gap) { add(pad, y); add(W - pad, y) }
+        return head +
+          `<rect x="${pad}" y="${pad}" width="${W - pad * 2}" height="${H - pad * 2}" rx="${m * 0.02}" ` +
+          `fill="none" stroke="#ffffff" stroke-opacity="0.7" stroke-width="${(m * 0.004).toFixed(1)}"/>` +
+          stars + `</svg>`
+      }
+
+      case "monitor": {
+        const t = m * 0.05
+        const rad = m * 0.06
+        return head +
+          `<path fill-rule="evenodd" fill="#111827" d="M0,0H${W}V${H}H0Z ` +
+          `M${t + rad},${t} H${W - t - rad} Q${W - t},${t} ${W - t},${t + rad} V${H - t - rad} ` +
+          `Q${W - t},${H - t} ${W - t - rad},${H - t} H${t + rad} Q${t},${H - t} ${t},${H - t - rad} ` +
+          `V${t + rad} Q${t},${t} ${t + rad},${t} Z"/>` +
+          `<rect x="${t}" y="${t}" width="${W - t * 2}" height="${H - t * 2}" rx="${rad}" fill="none" ` +
+          `stroke="#3fd6d0" stroke-opacity="0.8" stroke-width="${(m * 0.006).toFixed(1)}"/>` +
+          `<circle cx="${W - t * 0.5}" cy="${H - t * 0.5}" r="${t * 0.12}" fill="#3fd6d0"/></svg>`
+      }
+    }
+    return head + `</svg>`
   }
 
   // ===== 元に戻す・やり直す・リセット =====
@@ -178,6 +471,7 @@ export default class extends Controller {
 
       this.fit()
       this.canvas.requestRenderAll()
+      this.syncEffectInputs()
       this.lastState = state
     } finally {
       this.restoring = false
@@ -207,6 +501,8 @@ export default class extends Controller {
     this.partPanelTarget.hidden = true
     this.bgPanelTarget.hidden = true
     this.partsPanelTarget.hidden = true
+    this.effectsPanelTarget.hidden = true
+    this.syncEffectInputs()
 
     this.takeSnapshot()
   }
@@ -247,6 +543,7 @@ export default class extends Controller {
       const s = Math.min(1, newW / oldW, newH / oldH)
 
       this.canvas.getObjects().forEach(obj => {
+        if (obj.effect) return  // エフェクトはあとで新しい大きさで作り直す
         const c = obj.getCenterPoint()
         obj.set({
           scaleX: obj.scaleX * s,
@@ -278,6 +575,7 @@ export default class extends Controller {
       this.applyBackground()
     }
 
+    this.rebuildEffects()
     this.fit()
   }
 
@@ -329,6 +627,7 @@ export default class extends Controller {
       this.bgPanelTarget.hidden = true
       this.partsPanelTarget.hidden = true
     }
+    if (isText || isPart) this.effectsPanelTarget.hidden = true
     if (isText || isPart) this.updateLockButtons(active)
     if (isText) this.syncInputs()
     if (isPart) {
@@ -363,6 +662,7 @@ export default class extends Controller {
     this.partsPanelTarget.hidden = true
 
     this.syncBackgroundInputs()
+    this.effectsPanelTarget.hidden = true
     this.bgPanelTarget.hidden = false
   }
 
@@ -385,6 +685,7 @@ export default class extends Controller {
     this.textPanelTarget.hidden = true
     this.partPanelTarget.hidden = true
     this.bgPanelTarget.hidden = true
+    this.effectsPanelTarget.hidden = true
     this.partsPanelTarget.hidden = false
   }
 

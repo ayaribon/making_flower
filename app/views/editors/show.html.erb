@@ -412,6 +412,75 @@
       </div>
     </div>
 
+    <!-- エフェクトパネル（フィルター・フレーム） -->
+    <div class="studio-panel" data-canvas-editor-target="effectsPanel" hidden>
+      <div class="studio-panel-header">
+        <span>エフェクト</span>
+        <div class="studio-panel-actions">
+          <button type="button" class="studio-panel-close"
+            data-action="click->canvas-editor#closeEffectsPanel">閉じる</button>
+        </div>
+      </div>
+
+      <div class="studio-tabs">
+        <button type="button" class="studio-tab is-active"
+          data-canvas-editor-target="effectTab" data-tab="filter"
+          data-action="click->canvas-editor#switchEffectTab"
+          data-canvas-editor-tab-param="filter">フィルター</button>
+        <button type="button" class="studio-tab"
+          data-canvas-editor-target="effectTab" data-tab="frame"
+          data-action="click->canvas-editor#switchEffectTab"
+          data-canvas-editor-tab-param="frame">フレーム</button>
+      </div>
+
+      <div class="studio-tab-page" data-canvas-editor-target="effectPage" data-tab="filter">
+        <% [
+          ["scanline", "📺", "走査線", 50],
+          ["dots", "🔵", "ドット", 40],
+          ["sparkle", "✨", "キラキラ", 60],
+          ["vignette", "🌑", "周りを暗く", 50],
+          ["tint", "🎨", "色かぶり", 40]
+        ].each do |key, icon, label, default| %>
+          <div class="studio-effect-row">
+            <button type="button" class="studio-effect-toggle"
+              data-canvas-editor-target="effectToggle" data-key="<%= key %>"
+              data-action="click->canvas-editor#toggleFilter"
+              data-canvas-editor-key-param="<%= key %>"><%= icon %> <%= label %></button>
+            <input type="range" min="10" max="100" step="1" value="<%= default %>"
+              data-canvas-editor-target="effectStrength" data-key="<%= key %>"
+              data-action="input->canvas-editor#changeFilterStrength"
+              data-canvas-editor-key-param="<%= key %>">
+            <% if key == "tint" %>
+              <input type="color" value="#7b5cff"
+                data-canvas-editor-target="tintInput"
+                data-action="input->canvas-editor#changeTint">
+            <% end %>
+          </div>
+        <% end %>
+        <p class="studio-tab-note">押すとON／OFF。いくつでも重ねられて、スライダーで強さを変えられます</p>
+      </div>
+
+      <div class="studio-tab-page" data-canvas-editor-target="effectPage" data-tab="frame" hidden>
+        <div class="studio-frame-list">
+          <% [
+            ["none", "🚫", "なし"],
+            ["pixel", "👾", "ピクセル"],
+            ["ribbon", "🎀", "リボン"],
+            ["sparkle", "💫", "キラキラ"],
+            ["monitor", "🖥️", "モニター"]
+          ].each do |key, icon, label| %>
+            <button type="button" class="studio-frame-button<%= " is-active" if key == "none" %>"
+              data-canvas-editor-target="frameButton" data-key="<%= key %>"
+              data-action="click->canvas-editor#setFrame"
+              data-canvas-editor-frame-param="<%= key %>">
+              <span><%= icon %></span><%= label %>
+            </button>
+          <% end %>
+        </div>
+        <p class="studio-tab-note">フレームは1つだけ。比率を変えてもフチに合わせて作り直します</p>
+      </div>
+    </div>
+
     <nav class="studio-toolbar">
       <button type="button" data-action="click->canvas-editor#addText">
         <span class="studio-toolbar-icon">✏️</span><span class="studio-toolbar-label">テキスト</span>
@@ -422,7 +491,7 @@
       <button type="button" data-action="click->canvas-editor#toggleBackgroundPanel">
         <span class="studio-toolbar-icon">🖼️</span><span class="studio-toolbar-label">背景</span>
       </button>
-      <button type="button" class="is-soon" title="次の段階で追加">
+      <button type="button" data-action="click->canvas-editor#toggleEffectsPanel">
         <span class="studio-toolbar-icon">✨</span><span class="studio-toolbar-label">エフェクト</span>
       </button>
       <button type="button" class="is-soon" title="次の段階で追加">
