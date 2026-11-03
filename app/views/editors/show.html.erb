@@ -1,0 +1,222 @@
+<% content_for :head do %>
+  <%= stylesheet_link_tag "/fonts/dela-gothic-one/400.css" %>
+  <%= stylesheet_link_tag "/fonts/rocknroll-one/400.css" %>
+  <%= stylesheet_link_tag "/fonts/mochiy-pop-one/400.css" %>
+  <%= stylesheet_link_tag "/fonts/zen-kaku-gothic-new/500.css" %>
+  <%= stylesheet_link_tag "/fonts/zen-kaku-gothic-new/900.css" %>
+<% end %>
+
+<main
+  class="studio"
+  data-controller="canvas-editor"
+  data-action="keydown@window->canvas-editor#onKeydown"
+  data-canvas-editor-width-value="<%= @width %>"
+  data-canvas-editor-height-value="<%= @height %>">
+  <header class="studio-header">
+    <h1>KotoBouquet</h1>
+    <p><%= @width %> × <%= @height %></p>
+  </header>
+
+  <section class="studio-stage">
+    <div class="studio-canvas-frame" data-canvas-editor-target="frame">
+      <canvas data-canvas-editor-target="canvas"></canvas>
+    </div>
+  </section>
+
+  <footer class="studio-footer">
+    <div class="studio-panel" data-canvas-editor-target="textPanel" hidden>
+      <div class="studio-panel-header">
+        <span>テキストを選択中</span>
+        <div class="studio-panel-actions">
+          <button
+            type="button"
+            class="studio-panel-delete"
+            data-action="click->canvas-editor#deleteSelected">
+            削除
+          </button>
+          <button
+            type="button"
+            class="studio-panel-close"
+            data-action="click->canvas-editor#deselect">
+            閉じる
+          </button>
+        </div>
+      </div>
+      
+      <div class="studio-tabs">
+        <button type="button" class="studio-tab is-active"
+          data-canvas-editor-target="tab" data-tab="style"
+          data-action="click->canvas-editor#switchTab"
+          data-canvas-editor-tab-param="style">スタイル</button>
+        <button type="button" class="studio-tab"
+          data-canvas-editor-target="tab" data-tab="fill"
+          data-action="click->canvas-editor#switchTab"
+          data-canvas-editor-tab-param="fill">文字色</button>
+        <button type="button" class="studio-tab"
+          data-canvas-editor-target="tab" data-tab="stroke"
+          data-action="click->canvas-editor#switchTab"
+          data-canvas-editor-tab-param="stroke">フチ</button>
+        <button type="button" class="studio-tab"
+          data-canvas-editor-target="tab" data-tab="shadow"
+          data-action="click->canvas-editor#switchTab"
+          data-canvas-editor-tab-param="shadow">影</button>
+      </div>
+
+      <!-- スタイル -->
+      <div class="studio-tab-page" data-canvas-editor-target="tabPage" data-tab="style">
+        <div class="studio-style-list">
+          <button type="button" class="studio-style-button style-preview-impact"
+            data-action="click->canvas-editor#applyStyle"
+            data-canvas-editor-style-param="impact">🔥 インパクト</button>
+          <button type="button" class="studio-style-button style-preview-gaming"
+            data-action="click->canvas-editor#applyStyle"
+            data-canvas-editor-style-param="gaming">🎮 ゲーム実況</button>
+          <button type="button" class="studio-style-button style-preview-yurukawa"
+            data-action="click->canvas-editor#applyStyle"
+            data-canvas-editor-style-param="yurukawa">🌸 ゆるかわ</button>
+          <button type="button" class="studio-style-button style-preview-neon"
+            data-action="click->canvas-editor#applyStyle"
+            data-canvas-editor-style-param="neon">✨ ネオン</button>
+          <button type="button" class="studio-style-button style-preview-news"
+            data-action="click->canvas-editor#applyStyle"
+            data-canvas-editor-style-param="news">📢 ニュース速報</button>
+        </div>
+
+        <div class="studio-settings">
+          <label class="studio-setting studio-setting-size">
+            <span>サイズ <strong data-canvas-editor-target="sizeValue">96</strong>px</span>
+            <input
+              type="range"
+              min="24"
+              max="300"
+              step="1"
+              data-canvas-editor-target="sizeInput"
+              data-action="input->canvas-editor#changeSize">
+          </label>
+        </div>
+      </div>
+
+      <!-- 文字色 -->
+      <div class="studio-tab-page" data-canvas-editor-target="tabPage" data-tab="fill" hidden>
+        <div class="studio-segment">
+          <button type="button" class="studio-segment-button is-active"
+            data-canvas-editor-target="fillModeButton" data-mode="solid"
+            data-action="click->canvas-editor#changeFillMode"
+            data-canvas-editor-mode-param="solid">単色</button>
+          <button type="button" class="studio-segment-button"
+            data-canvas-editor-target="fillModeButton" data-mode="gradient"
+            data-action="click->canvas-editor#changeFillMode"
+            data-canvas-editor-mode-param="gradient">グラデーション</button>
+        </div>
+
+        <div class="studio-settings">
+          <label class="studio-setting">
+            <span data-canvas-editor-target="colorLabel">文字色</span>
+            <input
+              type="color"
+              data-canvas-editor-target="colorInput"
+              data-action="input->canvas-editor#changeFill">
+          </label>
+
+          <label class="studio-setting" data-canvas-editor-target="gradientOnly" hidden>
+            <span>色2</span>
+            <input
+              type="color"
+              data-canvas-editor-target="color2Input"
+              data-action="input->canvas-editor#changeFill">
+          </label>
+
+          <label class="studio-setting" data-canvas-editor-target="gradientOnly" hidden>
+            <span>向き</span>
+            <select
+              data-canvas-editor-target="directionInput"
+              data-action="change->canvas-editor#changeFill">
+              <option value="vertical">縦（上→下）</option>
+              <option value="horizontal">横（左→右）</option>
+              <option value="diagonal">ななめ</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <!-- フチ（次の回で中身を入れる） -->
+      <div class="studio-tab-page" data-canvas-editor-target="tabPage" data-tab="stroke" hidden>
+        <div class="studio-settings">
+          <label class="studio-setting">
+            <span>フチの色</span>
+            <input
+              type="color"
+              data-canvas-editor-target="strokeColorInput"
+              data-action="input->canvas-editor#changeStroke">
+          </label>
+
+          <label class="studio-setting studio-setting-size">
+            <span>太さ <strong data-canvas-editor-target="strokeWidthValue">0</strong></span>
+            <input
+              type="range"
+              min="0"
+              max="40"
+              step="1"
+              data-canvas-editor-target="strokeWidthInput"
+              data-action="input->canvas-editor#changeStroke">
+          </label>
+        </div>
+        <p class="studio-tab-note">太さを 0 にするとフチなしになります</p>
+      </div>
+
+      <!-- 影（次の回で中身を入れる） -->
+      <div class="studio-tab-page" data-canvas-editor-target="tabPage" data-tab="shadow" hidden>
+        <div class="studio-settings studio-settings-wrap">
+          <label class="studio-setting">
+            <span>影の色</span>
+            <input
+              type="color"
+              data-canvas-editor-target="shadowColorInput"
+              data-action="input->canvas-editor#changeShadow">
+          </label>
+
+          <label class="studio-setting studio-setting-size">
+            <span>濃さ <strong data-canvas-editor-target="shadowOpacityValue">0</strong>%</span>
+            <input
+              type="range" min="0" max="100" step="1"
+              data-canvas-editor-target="shadowOpacityInput"
+              data-action="input->canvas-editor#changeShadow">
+          </label>
+
+          <label class="studio-setting studio-setting-size">
+            <span>ぼかし <strong data-canvas-editor-target="shadowBlurValue">0</strong></span>
+            <input
+              type="range" min="0" max="80" step="1"
+              data-canvas-editor-target="shadowBlurInput"
+              data-action="input->canvas-editor#changeShadow">
+          </label>
+
+          <label class="studio-setting studio-setting-size">
+            <span>横ずれ <strong data-canvas-editor-target="shadowXValue">0</strong></span>
+            <input
+              type="range" min="-40" max="40" step="1"
+              data-canvas-editor-target="shadowXInput"
+              data-action="input->canvas-editor#changeShadow">
+          </label>
+
+          <label class="studio-setting studio-setting-size">
+            <span>縦ずれ <strong data-canvas-editor-target="shadowYValue">0</strong></span>
+            <input
+              type="range" min="-40" max="40" step="1"
+              data-canvas-editor-target="shadowYInput"
+              data-action="input->canvas-editor#changeShadow">
+          </label>
+        </div>
+        <p class="studio-tab-note">濃さを 0 にすると影なしになります。ずれ0・ぼかし大きめで「光る」感じになります</p>
+      </div>
+    </div>
+
+    <nav class="studio-toolbar">
+      <button type="button" data-action="click->canvas-editor#addText">テキスト</button>
+      <button type="button">部品</button>
+      <button type="button">背景</button>
+      <button type="button">レイヤー</button>
+      <button type="button">書き出し</button>
+    </nav>
+  </footer>
+</main>

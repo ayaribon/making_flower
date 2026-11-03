@@ -1,0 +1,49 @@
+<main class="templates-page">
+  <header class="templates-header">
+    <p class="templates-header__eyebrow">KotoBouquet</p>
+    <h1 class="templates-header__title">テンプレート一覧</h1>
+    <p class="templates-header__description">
+      お気に入りのデザインを選んで、オリジナル作品を作りましょう。
+    </p>
+  </header>
+
+  <% if @templates.empty? %>
+    <div class="templates-empty">
+      <p>テンプレートがまだ登録されていません。</p>
+    </div>
+  <% else %>
+    <div class="templates-grid">
+      <% @templates.each do |template| %>
+        <article class="template-card">
+          <div class="template-card__image">
+            <% if template.preview_image.attached? %>
+              <%= image_tag url_for(template.preview_image), alt: template.name %>
+            <% else %>
+              <div class="template-card__no-image">
+                <span>画像なし</span>
+              </div>
+            <% end %>
+          </div>
+
+          <div class="template-card__body">
+            <h2 class="template-card__title">
+              <%= template.name %>
+            </h2>
+
+            <% if template.description.present? %>
+              <p class="template-card__description">
+                <%= template.description %>
+              </p>
+            <% end %>
+
+            <% if template.category.present? %>
+              <span class="template-card__category">
+                <%= template.category %>
+              </span>
+            <% end %>
+          </div>
+        </article>
+      <% end %>
+    </div>
+  <% end %>
+</main>

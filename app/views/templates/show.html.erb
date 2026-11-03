@@ -1,0 +1,37 @@
+<main class="template-detail">
+  <%= link_to "← テンプレート一覧に戻る",
+      templates_path,
+      class: "template-detail__back" %>
+
+  <div class="template-detail__content">
+    <div class="template-detail__preview">
+      <% if @template.image.attached? %>
+        <%= image_tag url_for(@template.image), alt: @template.name %>
+      <% elsif @template.preview_image.attached? %>
+        <%= image_tag url_for(@template.preview_image), alt: @template.name %>
+      <% else %>
+        <p>画像が登録されていません。</p>
+      <% end %>
+    </div>
+
+    <div class="template-detail__info">
+      <% if @template.category.present? %>
+        <p class="template-detail__category">
+          <%= @template.category %>
+        </p>
+      <% end %>
+
+      <h1><%= @template.name %></h1>
+
+      <% if @template.description.present? %>
+        <p class="template-detail__description">
+          <%= @template.description %>
+        </p>
+      <% end %>
+
+      <%= link_to "このテンプレートを編集する",
+          edit_template_path(@template),
+          class: "template-detail__button" %>
+    </div>
+  </div>
+</main>

@@ -12,4 +12,666 @@
  *
  *= require_tree .
  *= require_self
+ *
  */
+/* ==========================
+   KotoBouquet 共通設定
+========================== */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: #fffaf8;
+  color: #493d3d;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Noto Sans JP",
+    sans-serif;
+}
+
+/* ==========================
+   テンプレート一覧
+========================== */
+
+.templates-page {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+
+.templates-header {
+  margin-bottom: 36px;
+}
+
+.templates-header__eyebrow {
+  margin: 0 0 8px;
+  color: #c17d91;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 0.12em;
+}
+
+.templates-header__title {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.templates-header__description {
+  margin-top: 12px;
+  color: #827676;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+/* ==========================
+   テンプレートカード一覧
+========================== */
+
+.templates-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.template-card {
+  min-width: 0;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #f0e5e5;
+  border-radius: 14px;
+  box-shadow: 0 3px 12px rgba(80, 50, 50, 0.04);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.template-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(80, 50, 50, 0.09);
+}
+
+/* 画像の縦横比は維持する */
+.template-card__image {
+  width: 100%;
+  overflow: hidden;
+  background: #f8f1f2;
+}
+
+.template-card__image img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.template-card__no-image {
+  display: flex;
+  min-height: 180px;
+  align-items: center;
+  justify-content: center;
+  color: #aa9999;
+  font-size: 13px;
+}
+
+.template-card__body {
+  padding: 16px;
+}
+
+.template-card__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.template-card__description {
+  margin: 10px 0;
+  color: #827676;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.template-card__category {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  background: #f9edf0;
+  color: #b66e83;
+  font-size: 11px;
+}
+
+/* ==========================
+   テンプレートがない場合
+========================== */
+
+.templates-empty {
+  padding: 60px 20px;
+  border: 1px dashed #e8d5d9;
+  border-radius: 14px;
+  color: #827676;
+  text-align: center;
+}
+
+/* ==========================
+   タブレット
+========================== */
+
+@media (max-width: 900px) {
+  .templates-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+}
+
+/* ==========================
+   スマートフォン
+========================== */
+
+@media (max-width: 480px) {
+  .templates-page {
+    padding: 28px 14px 50px;
+  }
+
+  .templates-header {
+    margin-bottom: 24px;
+  }
+
+  .templates-header__title {
+    font-size: 24px;
+  }
+
+  .templates-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .template-card {
+    border-radius: 10px;
+  }
+
+  .template-card__body {
+    padding: 11px;
+  }
+
+  .template-card__title {
+    font-size: 14px;
+  }
+
+  .template-card__description {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 340px) {
+  .templates-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 編集画面 */
+.editor-page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.editor-header {
+  margin-bottom: 24px;
+}
+
+.editor-back {
+  color: #b66e83;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.editor-header h1 {
+  margin: 16px 0 4px;
+  font-size: 26px;
+}
+
+.editor-header p {
+  color: #827676;
+  font-size: 14px;
+}
+
+.editor-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 24px;
+  align-items: start;
+}
+
+.editor-canvas-area {
+  display: flex;
+  justify-content: center;
+  padding: 32px;
+  background: #f3eeee;
+  border-radius: 16px;
+}
+
+.editor-canvas {
+  width: 100%;
+  max-width: 650px;
+  background: white;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.editor-canvas img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.editor-sidebar {
+  padding: 20px;
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 16px;
+}
+
+.editor-sidebar h2 {
+  margin: 0 0 20px;
+  font-size: 18px;
+}
+
+.editor-menu-button {
+  display: block;
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid #e5c5ce;
+  border-radius: 8px;
+  background: #fff8fa;
+  color: #a96379;
+  cursor: pointer;
+}
+
+.editor-notice {
+  color: #999;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+@media (max-width: 700px) {
+  .editor-page {
+    padding: 16px;
+  }
+
+  .editor-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-canvas-area {
+    padding: 12px;
+  }
+
+  .editor-sidebar {
+    padding: 16px;
+  }
+}
+
+/* キャンバス内の追加テキスト */
+.editor-canvas {
+  position: relative;
+}
+
+.editor-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 8px 12px;
+  color: #333;
+  font-size: 24px;
+  font-weight: bold;
+  white-space: nowrap;
+  cursor: move;
+  user-select: none;
+  touch-action: none;
+  outline: 1px dashed transparent;
+}
+
+.editor-text[contenteditable="true"] {
+  cursor: text;
+  user-select: text;
+  outline: 1px dashed #c17d91;
+}
+
+.editor-text:focus {
+  outline: 1px dashed #c17d91;
+}
+
+/* ===== 新しい編集画面（/editor） ===== */
+
+.studio {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  background: #f4f1f2;
+  color: #333;
+  overflow: hidden;
+}
+
+.studio-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5dde0;
+}
+
+.studio-header h1 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.studio-header p {
+  margin: 0;
+  font-size: 12px;
+  color: #888;
+}
+
+.studio-stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+
+/* 16:9 が「横幅」と「残りの高さ」の両方に収まるようにする */
+.studio-canvas-frame {
+  width: min(100%, calc((100dvh - 160px) * 16 / 9));
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  background: #ffffff;
+  line-height: 0;
+}
+
+.studio-toolbar {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+  background: #ffffff;
+  border-top: 1px solid #e5dde0;
+}
+
+.studio-toolbar button {
+  padding: 10px 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #555;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.studio-toolbar button:hover {
+  background: #f7eef1;
+  color: #c17d91;
+}
+
+/* ===== 設定パネル（テキスト選択時） ===== */
+
+.studio-footer {
+  position: relative;
+}
+
+.studio-panel {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: calc(100% + 8px);
+  padding: 12px 16px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.15);
+}
+
+.studio-panel[hidden] {
+  display: none;
+}
+
+.studio-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.studio-panel-close {
+  padding: 6px 12px;
+  border: 1px solid #e5dde0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #555;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* ===== 文字スタイルのボタン ===== */
+
+.studio-style-list {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.studio-style-button {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  border: 1px solid #e5dde0;
+  border-radius: 20px;
+  background: #fff8fa;
+  color: #555;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.studio-style-button:hover {
+  border-color: #c17d91;
+  color: #c17d91;
+}
+
+/* ===== 文字色・サイズ ===== */
+
+.studio-settings {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+.studio-setting {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.studio-setting input[type="color"] {
+  width: 40px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #e5dde0;
+  border-radius: 6px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.studio-setting-size {
+  flex: 1;
+}
+
+.studio-setting-size input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  accent-color: #c17d91;
+}
+
+/* ===== 削除ボタン ===== */
+
+.studio-panel-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.studio-panel-delete {
+  padding: 6px 12px;
+  border: 1px solid #f0c4c4;
+  border-radius: 8px;
+  background: #fff5f5;
+  color: #c0392b;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.studio-panel-delete:hover {
+  background: #fde8e8;
+}
+
+/* ===== パネルのタブ ===== */
+
+.studio-tabs {
+  display: flex;
+  gap: 4px;
+  margin-top: 12px;
+  border-bottom: 1px solid #eee4e7;
+}
+
+.studio-tab {
+  flex: 1;
+  padding: 8px 0;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #888;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.studio-tab.is-active {
+  border-bottom-color: #c17d91;
+  color: #c17d91;
+  font-weight: bold;
+}
+
+.studio-tab-page[hidden] {
+  display: none;
+}
+
+.studio-tab-note {
+  margin: 12px 0 0;
+  color: #999;
+  font-size: 12px;
+}
+
+/* ===== 文字色：単色／グラデーションの切り替え ===== */
+
+.studio-segment {
+  display: inline-flex;
+  margin-top: 12px;
+  border: 1px solid #e5dde0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.studio-segment-button {
+  padding: 6px 14px;
+  border: none;
+  background: #ffffff;
+  color: #777;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.studio-segment-button + .studio-segment-button {
+  border-left: 1px solid #e5dde0;
+}
+
+.studio-segment-button.is-active {
+  background: #c17d91;
+  color: #ffffff;
+}
+
+.studio-setting[hidden] {
+  display: none;
+}
+
+.studio-setting select {
+  padding: 6px 8px;
+  border: 1px solid #e5dde0;
+  border-radius: 6px;
+  background: #ffffff;
+  font-size: 13px;
+}
+
+/* ===== 影タブ：項目が多いので折り返す ===== */
+
+.studio-settings-wrap {
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.studio-settings-wrap .studio-setting-size {
+  flex: 1 1 140px;
+}
+
+/* ===== スタイルボタンを、そのスタイルの見た目で表示する ===== */
+
+.studio-style-button[class*="style-preview-"] {
+  font-size: 15px;
+}
+
+.style-preview-impact {
+  background: #2b2d42;
+  color: #ffe600;
+  font-family: "Dela Gothic One", sans-serif;
+  -webkit-text-stroke: 1px #111111;
+  paint-order: stroke fill;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
+}
+
+.style-preview-gaming {
+  background: #0d0b1e;
+  color: #3ad1ff;
+  font-family: "RocknRoll One", sans-serif;
+  text-shadow: 0 0 6px rgba(58, 209, 255, 0.8);
+}
+
+.style-preview-yurukawa {
+  background: #fff3f6;
+  color: #f49ab5;
+  font-family: "Mochiy Pop One", sans-serif;
+  text-shadow: 0 2px 4px rgba(240, 140, 170, 0.45);
+}
+
+.style-preview-neon {
+  background: #0a0a14;
+  color: #ffffff;
+  font-family: "Zen Kaku Gothic New", sans-serif;
+  font-weight: 500;
+  text-shadow: 0 0 6px #ff4fd8, 0 0 12px #ff4fd8;
+}
+
+.style-preview-news {
+  background: #d7263d;
+  color: #ffffff;
+  font-family: "Zen Kaku Gothic New", sans-serif;
+  font-weight: 900;
+  border-color: #d7263d;
+}

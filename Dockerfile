@@ -1,25 +1,36 @@
-# 使用するベースイメージ
 FROM ruby:3.2.4
 
-# 必要なパッケージのインストール
+# ホスト側に合わせるUID/GID
+ARG APP_UID=1000
+ARG APP_GID=1000
+
+# 必要なパッケージ
 RUN apt-get update -qq && apt-get install -y \
   nodejs \
   yarn \
   default-mysql-client \
   && rm -rf /var/lib/apt/lists/*
 
-# 作業ディレクトリの設定
+# アプリ実行用ユーザーを作成
+RUN groupadd --gid ${APP_GID} app \
+    && useradd --uid ${APP_UID} --gid app --create-home --shell /bin/bash app
+
 WORKDIR /app
 
-# Gemfileのコピーとbundle install
+# Gemをインストール
 COPY Gemfile Gemfile.lock ./
 RUN bundle install
 
-# アプリのソースコードをコピー
+# アプリケーションをコピー
 COPY . .
 
-# ポートの公開
+# 実行時に必要なディレクトリ
+RUN mkdir -p tmp/pids log storage \
+    && chown -R app:app /app
+
 EXPOSE 3000
 
-# デフォルトのコマンド
+# Railsは非rootユーザーで実行
+USER app
+
 CMD ["rails", "server", "-b", "0.0.0.0"]

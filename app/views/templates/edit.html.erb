@@ -1,0 +1,37 @@
+<main class="editor-page" data-controller="editor">
+  <header class="editor-header">
+    <%= link_to "← 戻る", template_path(@template), class: "editor-back" %>
+
+    <h1>テンプレート編集</h1>
+    <p><%= @template.name %></p>
+  </header>
+
+  <div class="editor-layout">
+    <section class="editor-canvas-area">
+      <div class="editor-canvas" data-editor-target="canvas">
+        <% if @template.image.attached? %>
+          <%= image_tag url_for(@template.image), alt: @template.name %>
+        <% elsif @template.preview_image.attached? %>
+          <%= image_tag url_for(@template.preview_image), alt: @template.name %>
+        <% else %>
+          <p>画像が登録されていません。</p>
+        <% end %>
+      </div>
+    </section>
+
+    <aside class="editor-sidebar">
+      <h2>編集メニュー</h2>
+
+      <button
+        type="button"
+        class="editor-menu-button"
+        data-action="click->editor#addText">
+        ＋ テキストを追加
+      </button>
+
+      <p class="editor-notice">
+        テキストを追加してデザインを作成しましょう。
+      </p>
+    </aside>
+  </div>
+</main>

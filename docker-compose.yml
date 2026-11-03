@@ -8,9 +8,14 @@ services:
       - db_data:/var/lib/mysql
     ports:
       - "3306:3306"
-  
+
   web:
-    build: .
+    build:
+      context: .
+      args:
+        APP_UID: ${APP_UID:-1000}
+        APP_GID: ${APP_GID:-1000}
+    user: app
     command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails s -b '0.0.0.0'"
     volumes:
       - ".:/app"
