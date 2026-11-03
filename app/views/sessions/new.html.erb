@@ -1,0 +1,28 @@
+<main class="auth-page">
+  <div class="auth-card">
+    <h1 class="auth-logo">Koto<span>Bouquet</span> <small>✦</small></h1>
+    <p class="auth-lead">ログインIDを入れてね</p>
+
+    <% if flash[:alert] %>
+      <p class="auth-alert"><%= flash[:alert] %></p>
+    <% end %>
+    <% if flash[:notice] %>
+      <p class="auth-notice"><%= flash[:notice] %></p>
+    <% end %>
+
+    <%= form_with url: login_path, method: :post, local: true, class: "auth-form" do |f| %>
+      <%= f.text_field :login_code,
+            placeholder: "ここにIDを入力",
+            autocomplete: "username",
+            autocapitalize: "none",
+            autocorrect: "off",
+            spellcheck: false,
+            autofocus: true,
+            required: true,
+            class: "auth-input" %>
+      <%= f.submit "はいる", class: "auth-submit" %>
+    <% end %>
+
+    <p class="auth-note">IDを忘れたORまだもらってないときは、スタッフ青に超気軽に連絡くださいっ</p>
+  </div>
+</main>
