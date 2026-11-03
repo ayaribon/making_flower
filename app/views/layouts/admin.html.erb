@@ -18,6 +18,7 @@
         <h1 class="auth-logo">Koto<span>Bouquet</span> <small>管理</small></h1>
         <nav class="admin-nav">
           <%= link_to "👥 ユーザー", admin_users_path %>
+          <%= link_to "🎨 素材", admin_materials_path %>
           <%= link_to "🎨 編集画面へ", root_path %>
           <%= button_to "ログアウト", logout_path, method: :delete, form_class: "admin-inline" %>
         </nav>

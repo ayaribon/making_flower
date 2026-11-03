@@ -23,5 +23,11 @@ module MakingFlower
     #
     # config.time_zone = "Central Time (US & Canada)"
     # config.eager_load_paths << Rails.root.join("extras")
+
+    # 素材の SVG を <img> で表示できるようにする
+    # （Railsは標準だとSVGを「ダウンロードさせるファイル」として返すので、画像として表示されない）
+    # SVG を上げられるのは管理画面の素材だけ。ユーザーの画像は PNG/JPEG/WebP/GIF のみ
+    config.active_storage.content_types_to_serve_as_binary -= ["image/svg+xml"]
+    config.active_storage.content_types_allowed_inline += ["image/svg+xml"]
   end
 end

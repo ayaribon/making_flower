@@ -5,9 +5,14 @@ Rails.application.routes.draw do
   post   "login",  to: "sessions#create"
   delete "logout", to: "sessions#destroy"
 
+  resources :user_images, only: [:index, :create, :show, :destroy]
+
   namespace :admin do
     resources :users, only: [:index, :new, :create, :destroy] do
       post :reissue, on: :member
+    end
+    resources :materials, except: [:show] do
+      patch :toggle, on: :member
     end
   end
 

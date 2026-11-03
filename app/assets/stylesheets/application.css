@@ -1546,3 +1546,97 @@ ul.auth-alert { padding-left: 28px; }
 }
 
 .studio-replace-button { margin-left: 8px; }
+
+/* ===== 管理画面：素材 ===== */
+
+.admin-material {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.admin-material-thumb {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  padding: 4px;
+  border: 1px solid #cfe9fb;
+  border-radius: 12px;
+  background:
+    repeating-conic-gradient(#eef6fb 0% 25%, #ffffff 0% 50%) 50% / 12px 12px;
+  object-fit: contain;
+}
+
+.admin-material-thumb.is-large { width: 120px; height: 120px; display: block; margin: 6px 0; }
+
+.admin-source { display: block; margin-top: 2px; color: #6a8aa3; font-size: 11px; }
+.admin-row.is-hidden { opacity: 0.55; }
+.admin-badge.is-off { background: #f1f1f1; color: #888; }
+
+.admin-form { display: flex; flex-direction: column; gap: 14px; }
+
+.admin-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: bold;
+  color: #2b5d80;
+}
+
+.admin-form input[type="text"],
+.admin-form input[type="url"],
+.admin-form input[type="number"],
+.admin-form select,
+.admin-form textarea {
+  padding: 10px 12px;
+  border: 2px solid #cfe9fb;
+  border-radius: 12px;
+  background: #ffffff;
+  font-size: 16px;
+  font-weight: normal;
+}
+
+.admin-form .admin-check { flex-direction: row; align-items: center; }
+
+/* ===== 引用元の表示（エディタ右下） ===== */
+
+.studio-credit {
+  position: fixed;
+  right: 12px;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  z-index: 40;
+  max-width: 70vw;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(10, 40, 70, 0.72);
+  color: #ffffff;
+  font-size: 11px;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.studio-credit.is-link { pointer-events: auto; text-decoration: underline; }
+.studio-credit[hidden] { display: none; }
+
+.studio-credit.is-show { animation: credit-life 4s ease forwards; }
+
+@keyframes credit-life {
+  0%   { opacity: 0; transform: translateY(6px); }
+  8%   { opacity: 1; transform: none; }
+  85%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* 横向きのときは、右から出るパネルにかぶらないよう左寄りに */
+@media (orientation: landscape) and (max-height: 560px) {
+  .studio-credit { right: auto; left: 92px; bottom: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studio-credit.is-show { animation: none; }
+}
