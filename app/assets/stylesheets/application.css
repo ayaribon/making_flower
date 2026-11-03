@@ -675,3 +675,92 @@ body {
   font-weight: 900;
   border-color: #d7263d;
 }
+
+/* ===== 背景画像の一覧 ===== */
+
+.studio-bg-images {
+  margin-top: 12px;
+}
+
+.studio-bg-images-label {
+  font-size: 13px;
+}
+
+.studio-bg-image-list {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.studio-bg-thumb {
+  flex: 0 0 auto;
+  width: 96px;
+  height: 54px;
+  padding: 0;
+  border: 2px solid #e5dde0;
+  border-radius: 6px;
+  background: #ffffff;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.studio-bg-thumb:hover {
+  border-color: #c17d91;
+}
+
+.studio-bg-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.studio-bg-thumb-none {
+  color: #888;
+  font-size: 12px;
+}
+
+/* ===== 部品の一覧 ===== */
+
+.studio-part-thumb {
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+  padding: 6px;
+  border: 2px solid #e5dde0;
+  border-radius: 8px;
+  background: #f4f1f2;
+  cursor: pointer;
+}
+
+.studio-part-thumb:hover {
+  border-color: #c17d91;
+}
+
+.studio-part-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* ===== ロックボタン ===== */
+
+.studio-panel-lock {
+  padding: 6px 12px;
+  border: 1px solid #e5dde0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #555;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.studio-panel-lock.is-locked {
+  border-color: #c17d91;
+  background: #f7eef1;
+  color: #c17d91;
+  font-weight: bold;
+}

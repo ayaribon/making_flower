@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+  <!-- KotoBouquet オリジナル素材：吹き出し -->
+  <path d="M40 20 H360 Q385 20 385 45 V195 Q385 220 360 220 H170 L110 285 L120 220 H40 Q15 220 15 195 V45 Q15 20 40 20 Z"
+        fill="#ffffff" stroke="#222222" stroke-width="8" stroke-linejoin="round"/>
+</svg>
