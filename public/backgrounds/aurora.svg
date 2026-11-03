@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <!-- KotoBouquet オリジナル素材：オーロラ -->
+<defs><linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#050a24"/><stop offset="1" stop-color="#162a5a"/></linearGradient><filter id="b"><feGaussianBlur stdDeviation="40"/></filter></defs><rect width="1280" height="720" fill="url(#s)"/><g filter="url(#b)" opacity="0.85"><path d="M-50 320 Q300 120 640 300 T1330 220 L1330 380 Q980 480 640 400 T-50 460 Z" fill="#3fd6d0"/><path d="M-50 260 Q400 60 760 240 T1330 140 L1330 240 Q900 360 600 300 T-50 340 Z" fill="#9b7bff"/></g><circle cx="100" cy="60" r="2" fill="#ffffff"/><circle cx="320" cy="140" r="2" fill="#ffffff"/><circle cx="560" cy="40" r="2" fill="#ffffff"/><circle cx="840" cy="90" r="2" fill="#ffffff"/><circle cx="1180" cy="60" r="2" fill="#ffffff"/><circle cx="980" cy="180" r="2" fill="#ffffff"/><circle cx="220" cy="250" r="2" fill="#ffffff"/>
+</svg>

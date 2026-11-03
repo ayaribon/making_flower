@@ -1,43 +1,66 @@
 <section class="admin-card">
   <div class="admin-card-head">
-    <h2>🎨 素材（<%= @materials.size %>件）</h2>
+    <h2>🎨 素材（<%= @total %>件）</h2>
     <div class="admin-row-actions">
       <%= link_to "＋ 部品を追加", new_admin_material_path(kind: "part"), class: "admin-button is-main" %>
       <%= link_to "＋ 背景を追加", new_admin_material_path(kind: "background"), class: "admin-button is-main" %>
     </div>
   </div>
 
+  <%# 検索・絞り込み・並び替え %>
+  <%= form_with url: admin_materials_path, method: :get, local: true, class: "admin-filter" do %>
+    <%= search_field_tag :q, @q, placeholder: "🔍 名前・キー・引用元で検索", class: "admin-filter-search" %>
+    <%= select_tag :kind, options_for_select([["種類：すべて", ""]] + Material::KINDS.map { |k, v| [v, k] }, @kind) %>
+    <%= select_tag :tag, options_for_select(
+          [["タグ：すべて", ""]] +
+          Material::TAGS.flat_map { |kind, tags| tags.map { |key, (icon, label)| ["#{icon} #{label}（#{Material::KINDS[kind]}）", key] } }.uniq { |_, key| key },
+          @tag) %>
+    <%= select_tag :state, options_for_select([["表示：すべて", ""], ["表示中だけ", "visible"], ["非表示だけ", "hidden"]], @state) %>
+    <%= select_tag :sort, options_for_select([["並び順", "position"], ["新しい順", "newest"], ["古い順", "oldest"], ["名前順", "name"]], @sort) %>
+    <%= submit_tag "絞り込む", class: "admin-button is-main", name: nil %>
+    <% if filter_params.any? %>
+      <%= link_to "条件をクリア", admin_materials_path, class: "admin-button" %>
+    <% end %>
+  <% end %>
+
   <% if @materials.empty? %>
-    <p class="auth-note">まだ素材がありません。「＋ 部品を追加」から入れてね</p>
+    <p class="auth-note">条件に合う素材がありません</p>
   <% end %>
 
   <ul class="admin-list">
     <% @materials.each do |m| %>
       <% used = m.key.present? ? (@usage[m.key] || []) : [] %>
-      <li class="admin-row<%= ' is-hidden' unless m.visible %>">
-        <div class="admin-material">
-          <% if m.image.attached? %>
-            <%= image_tag url_for(m.image), class: "admin-material-thumb", alt: m.name %>
-          <% end %>
-          <div class="admin-row-name">
+      <li class="admin-mrow<%= ' is-hidden' unless m.visible %>">
+        <% if m.image.attached? %>
+          <%= image_tag rails_storage_proxy_path(m.image), class: "admin-material-thumb", alt: m.name, loading: "lazy" %>
+        <% else %>
+          <span class="admin-material-thumb"></span>
+        <% end %>
+
+        <div class="admin-mrow-body">
+          <div class="admin-mrow-title">
             <strong><%= m.name %></strong>
             <span class="admin-badge"><%= m.kind_label %></span>
             <% unless m.visible %><span class="admin-badge is-off">非表示</span><% end %>
             <% if m.key.present? %><span class="admin-badge is-key"><%= m.key %></span><% end %>
-            <small class="admin-source">
-              引用元：<%= m.source_name.presence || "（未入力）" %>
-            </small>
-            <% if used.any? %>
-              <small class="admin-source is-used">📋 テンプレで使用中：<%= used.join("・") %></small>
-            <% end %>
           </div>
+          <% if m.tag_labels.any? %>
+            <div class="admin-mrow-tags">
+              <% m.tag_labels.each do |t| %><span class="admin-badge is-tag"><%= t %></span><% end %>
+            </div>
+          <% end %>
+          <small class="admin-source">引用元：<%= m.source_name.presence || "（未入力）" %></small>
+          <% if used.any? %>
+            <small class="admin-source is-used">📋 テンプレで使用中：<%= used.uniq.join("・") %></small>
+          <% end %>
         </div>
-        <div class="admin-row-actions">
+
+        <div class="admin-mrow-actions">
           <%= link_to "✏️ 編集", edit_admin_material_path(m), class: "admin-button" %>
           <%= button_to (m.visible ? "🙈 隠す" : "👀 表示"), toggle_admin_material_path(m), method: :patch,
                 form_class: "admin-inline", class: "admin-button" %>
           <% if used.any? %>
-            <span class="admin-button is-disabled" title="テンプレで使っているので削除できません">🔒 削除できない</span>
+            <span class="admin-button is-disabled" title="テンプレで使っているので削除できません">🔒 削除不可</span>
           <% else %>
             <%= button_to "🗑️ 削除", admin_material_path(m), method: :delete,
                   form_class: "admin-inline", class: "admin-button is-danger",
@@ -47,6 +70,25 @@
       </li>
     <% end %>
   </ul>
+
+  <%# ページ送り %>
+  <% if @pages > 1 %>
+    <nav class="admin-pager">
+      <% if @page > 1 %>
+        <%= link_to "‹ 前へ", admin_materials_path(filter_params(page: @page - 1)), class: "admin-button" %>
+      <% end %>
+      <% (1..@pages).each do |p| %>
+        <% if p == @page %>
+          <span class="admin-button is-current"><%= p %></span>
+        <% else %>
+          <%= link_to p, admin_materials_path(filter_params(page: p)), class: "admin-button" %>
+        <% end %>
+      <% end %>
+      <% if @page < @pages %>
+        <%= link_to "次へ ›", admin_materials_path(filter_params(page: @page + 1)), class: "admin-button" %>
+      <% end %>
+    </nav>
+  <% end %>
 
   <p class="auth-note">ライセンスのメモは管理画面にだけ出ます。素材を入れる前に、商用OK・再配布OK・クレジット表記の条件を確認してね</p>
 </section>

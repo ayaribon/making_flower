@@ -26,6 +26,23 @@
     <%= f.file_field :image, accept: Material::CONTENT_TYPES.join(","), required: !material.persisted? %>
   </label>
 
+  <fieldset class="admin-tags">
+    <legend>タグ（いくつでも）</legend>
+    <% Material::TAGS.each do |kind, tags| %>
+      <div class="admin-tags-group" data-kind="<%= kind %>">
+        <small><%= Material::KINDS[kind] %>のタグ</small>
+        <% tags.each do |key, (icon, label)| %>
+          <label class="admin-check">
+            <%= check_box_tag "material[tag_list][]", key, material.tag_list.include?(key), id: "tag_#{kind}_#{key}" %>
+            <%= icon %> <%= label %>
+          </label>
+        <% end %>
+      </div>
+    <% end %>
+    <%= hidden_field_tag "material[tag_list][]", "" %>
+    <small>種類（部品／背景）に合うタグだけが、エディタに出ます</small>
+  </fieldset>
+
   <label>引用元の名前
     <%= f.text_field :source_name, placeholder: "素材サイトや作者の名前" %>
   </label>

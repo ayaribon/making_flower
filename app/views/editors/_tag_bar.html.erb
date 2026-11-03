@@ -1,0 +1,16 @@
+<%# 部品・背景パネルの上に並べるタグのボタン。使っているタグだけ出す %>
+<% used = materials.flat_map(&:tag_list).uniq %>
+<div class="studio-tag-bar">
+  <button type="button" class="studio-tag is-active" data-tag="all"
+    data-tag-filter-target="button"
+    data-action="click->tag-filter#choose" data-tag-filter-tag-param="all">すべて</button>
+  <% Material::TAGS[kind].each do |key, (icon, label)| %>
+    <% next unless used.include?(key) %>
+    <button type="button" class="studio-tag" data-tag="<%= key %>"
+      data-tag-filter-target="button"
+      data-action="click->tag-filter#choose" data-tag-filter-tag-param="<%= key %>"><%= icon %> <%= label %></button>
+  <% end %>
+  <button type="button" class="studio-tag" data-tag="mine"
+    data-tag-filter-target="button"
+    data-action="click->tag-filter#choose" data-tag-filter-tag-param="mine">📷 マイ素材</button>
+</div>

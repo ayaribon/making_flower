@@ -6,6 +6,42 @@ class Material < ApplicationRecord
   MAX_SIZE = 10.megabytes
   TEMPLATES_PATH = Rails.root.join("public/design_templates/templates.json")
 
+  # パネルの上に並べるタグ（この順番で出る）。キー => [アイコン, 名前]
+  # 管理画面では、このキーを「,」区切りで入れる（例：stamp,sparkle）
+  TAGS = {
+    "part" => {
+      "stamp"   => ["⭐", "スタンプ"],
+      "bubble"  => ["💬", "吹き出し"],
+      "label"   => ["🏷️", "帯・ラベル"],
+      "pixel"   => ["👾", "ピクセル"],
+      "icon"    => ["🐱", "アイコン"],
+      "frame"   => ["🖼️", "枠"],
+      "sparkle" => ["✨", "キラキラ"],
+      "season"  => ["🌸", "季節"]
+    },
+    "background" => {
+      "cyber"   => ["🎮", "サイバー"],
+      "pastel"  => ["🍬", "パステル"],
+      "nature"  => ["🌊", "自然"],
+      "night"   => ["🌙", "夜空"],
+      "pop"     => ["💥", "ポップ"],
+      "season"  => ["🌸", "季節"]
+    }
+  }.freeze
+
+  def tag_list
+    tags.to_s.split(",").map(&:strip).reject(&:blank?)
+  end
+
+  def tag_list=(value)
+    list = value.is_a?(Array) ? value : value.to_s.split(/[,、\s]+/)
+    self.tags = list.map { |t| t.to_s.strip.downcase }.reject(&:blank?).uniq.join(",")
+  end
+
+  def tag_labels
+    tag_list.map { |t| TAGS.dig(kind, t)&.join(" ") || t }
+  end
+
   has_one_attached :image
 
   validates :name, presence: true, length: { maximum: 40 }
