@@ -1350,3 +1350,52 @@ button.studio-size-badge {
   border-color: var(--c-main, #1e8fd8);
   background: var(--c-soft, #eaf6ff);
 }
+
+/* ===== テンプレート ===== */
+
+.studio-template-list {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+
+.studio-template-card {
+  flex: 0 0 auto;
+  height: 104px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px;
+  border: 3px solid #ffffff;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--tpl-a), var(--tpl-b));
+  box-shadow: 0 4px 14px rgba(30, 143, 216, 0.25);
+  color: #ffffff;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.studio-template-card:active { transform: scale(0.95); }
+
+.studio-template-icon { font-size: 26px; line-height: 1; }
+
+.studio-template-label {
+  font-size: 11px;
+  font-weight: bold;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+}
+
+.studio-replace-hint {
+  margin-left: 6px;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: normal;
+  color: var(--c-ink, #555);
+}
+
+.studio-replace-button { margin-left: 8px; }
