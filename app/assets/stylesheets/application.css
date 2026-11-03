@@ -1604,6 +1604,79 @@ ul.auth-alert { padding-left: 28px; }
 .admin-source.is-used { color: #1d8a84; }
 .admin-button.is-disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* ===== 読み込み中の表示 ===== */
+
+.studio-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(232, 248, 255, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.studio-loading[hidden] { display: none; }
+
+.studio-loading-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border: 2px solid #cfe9fb;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(30, 143, 216, 0.25);
+  color: #1e8fd8;
+  font-size: 14px;
+  font-weight: bold;
+  animation: studio-loading-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes studio-loading-pop {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: none; }
+}
+
+.studio-spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 3px solid #cfe9fb;
+  border-top-color: #1e8fd8;
+  border-radius: 50%;
+  animation: studio-spin 0.8s linear infinite;
+}
+
+@keyframes studio-spin { to { transform: rotate(360deg); } }
+
+/* 一覧を取ってくるあいだの文字 */
+.studio-list-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 4px;
+  color: #6a8aa3;
+  font-size: 12px;
+}
+
+.studio-list-loading .studio-spinner { width: 14px; height: 14px; border-width: 2px; }
+
+/* サムネが届くまでの、ふわふわ光る仮の四角 */
+.studio-my-thumb.is-loading {
+  background: linear-gradient(90deg, #eaf6ff 25%, #ffffff 50%, #eaf6ff 75%);
+  background-size: 200% 100%;
+  animation: studio-shimmer 1.2s ease-in-out infinite;
+}
+.studio-my-thumb.is-loading img { opacity: 0; }
+
+@keyframes studio-shimmer { to { background-position: -200% 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .studio-spinner, .studio-my-thumb.is-loading, .studio-loading-card { animation: none; }
+}
+
 /* ===== 引用元の表示（エディタ右下） ===== */
 
 .studio-credit {

@@ -340,10 +340,10 @@
             <button type="button" class="studio-bg-thumb"
               title="<%= m.name %>"
               data-action="click->canvas-editor#setBackgroundImage"
-              data-canvas-editor-src-param="<%= url_for(m.image) %>"
+              data-canvas-editor-src-param="<%= rails_storage_proxy_path(m.image) %>"
               data-canvas-editor-source-param="<%= m.source_name %>"
               data-canvas-editor-source-url-param="<%= m.source_url %>">
-              <img src="<%= url_for(m.image) %>" alt="<%= m.name %>" loading="lazy">
+              <img src="<%= rails_storage_proxy_path(m.image) %>" alt="<%= m.name %>" loading="lazy">
             </button>
           <% end %>
         </div>
@@ -374,10 +374,10 @@
           <button type="button" class="studio-part-thumb"
             title="<%= m.name %>"
             data-action="click->canvas-editor#addPart"
-            data-canvas-editor-src-param="<%= url_for(m.image) %>"
+            data-canvas-editor-src-param="<%= rails_storage_proxy_path(m.image) %>"
             data-canvas-editor-source-param="<%= m.source_name %>"
             data-canvas-editor-source-url-param="<%= m.source_url %>">
-            <img src="<%= url_for(m.image) %>" alt="<%= m.name %>" loading="lazy">
+            <img src="<%= rails_storage_proxy_path(m.image) %>" alt="<%= m.name %>" loading="lazy">
           </button>
         <% end %>
       </div>
