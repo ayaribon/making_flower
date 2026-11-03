@@ -1227,9 +1227,16 @@ export default class extends Controller {
     if (!file) return
 
     const kind = input.dataset.kind
-    this.showLoading("画像をアップロード中…")
+    this.showLoading("画像をアップロード中… 0%")
+    this.setLoadingProgress(0)
     try {
-      const id = await saveImage(file, kind)
+      const id = await saveImage(file, kind, (percent) => {
+        // 送り終わったら、サーバー側の保存を待っている状態になる
+        const label = percent >= 100 ? "保存しています…" : `画像をアップロード中… ${percent}%`
+        this.setLoadingText(label)
+        this.setLoadingProgress(percent)
+      })
+      this.setLoadingText("キャンバスに置いています…")
       const url = await getImageUrl(id)
       if (kind === "background") {
         await this.placeBackground(url, id)
@@ -1308,11 +1315,27 @@ export default class extends Controller {
       this.loadingEl.className = "studio-loading"
       this.loadingEl.setAttribute("role", "status")
       this.loadingEl.setAttribute("aria-live", "polite")
-      this.loadingEl.innerHTML = `<div class="studio-loading-card"><span class="studio-spinner"></span><span class="studio-loading-text"></span></div>`
+      this.loadingEl.innerHTML =
+        `<div class="studio-loading-card"><span class="studio-spinner"></span>` +
+        `<span class="studio-loading-text"></span>` +
+        `<span class="studio-progress" hidden><span class="studio-progress-bar"></span></span></div>`
       this.element.appendChild(this.loadingEl)
     }
-    this.loadingEl.querySelector(".studio-loading-text").textContent = message
+    this.setLoadingText(message)
+    this.loadingEl.querySelector(".studio-progress").hidden = true  // ％を出すときだけ setLoadingProgress で出す
     this.loadingEl.hidden = false
+  }
+
+  setLoadingText(message) {
+    this.loadingEl?.querySelector(".studio-loading-text")?.replaceChildren(message)
+  }
+
+  // 0〜100 の進み具合をバーで見せる
+  setLoadingProgress(percent) {
+    const wrap = this.loadingEl?.querySelector(".studio-progress")
+    if (!wrap) return
+    wrap.hidden = false
+    wrap.querySelector(".studio-progress-bar").style.width = `${Math.min(100, Math.max(0, percent))}%`
   }
 
   hideLoading() {

@@ -4,6 +4,11 @@
   <%= stylesheet_link_tag "/fonts/mochiy-pop-one/400.css" %>
   <%= stylesheet_link_tag "/fonts/zen-kaku-gothic-new/500.css" %>
   <%= stylesheet_link_tag "/fonts/zen-kaku-gothic-new/900.css" %>
+  <%= stylesheet_link_tag "/fonts/dotgothic16/400.css" %>
+  <%= stylesheet_link_tag "/fonts/reggae-one/400.css" %>
+  <%= stylesheet_link_tag "/fonts/hachi-maru-pop/400.css" %>
+  <%= stylesheet_link_tag "/fonts/zen-maru-gothic/500.css" %>
+  <%= stylesheet_link_tag "/fonts/zen-maru-gothic/700.css" %>
 <% end %>
 
 <main
@@ -49,13 +54,6 @@
   <header class="studio-header">
     <h1 class="studio-logo">Koto<span>Bouquet</span> <small>✦</small></h1>
     <div class="studio-header-actions">
-      <span class="studio-user-name">👤 <%= current_user.name %></span>
-      <% if current_user.admin? %>
-        <%= link_to "⚙️ 管理", admin_users_path, class: "studio-history-button", data: { turbo: false } %>
-      <% end %>
-      <%= button_to "ログアウト", logout_path, method: :delete,
-            form_class: "studio-logout-form", class: "studio-history-button",
-            data: { turbo_confirm: "ログアウトしますか？" } %>
       <button type="button" class="studio-history-button" title="元に戻す（Ctrl+Z）"
         data-canvas-editor-target="undoButton"
         data-action="click->canvas-editor#undo" disabled>↩️<span>戻す</span></button>
@@ -67,6 +65,20 @@
       <button type="button" class="studio-size-badge"
         data-canvas-editor-target="sizeBadge"
         data-action="click->canvas-editor#openRatioPicker"><%= @width %> × <%= @height %> ▾</button>
+
+      <%# ユーザー名・管理・ログアウトは、スマホで場所をとらないように「メニュー」にまとめる %>
+      <details class="studio-user-menu">
+        <summary class="studio-history-button" title="メニュー">👤<span><%= current_user.name %></span></summary>
+        <div class="studio-user-menu-list">
+          <p class="studio-user-menu-name">👤 <%= current_user.name %></p>
+          <% if current_user.admin? %>
+            <%= link_to "⚙️ 管理画面", admin_users_path, class: "studio-user-menu-item", data: { turbo: false } %>
+          <% end %>
+          <%= button_to "🚪 ログアウト", logout_path, method: :delete,
+                form_class: "studio-logout-form", class: "studio-user-menu-item",
+                data: { turbo_confirm: "ログアウトしますか？" } %>
+        </div>
+      </details>
     </div>
   </header>
 
@@ -138,6 +150,21 @@
           <button type="button" class="studio-style-button style-preview-news"
             data-action="click->canvas-editor#applyStyle"
             data-canvas-editor-style-param="news">📢 ニュース速報</button>
+          <button type="button" class="studio-style-button style-preview-puffy"
+            data-action="click->canvas-editor#applyStyle"
+            data-canvas-editor-style-param="puffy">💎 ぷっくり</button>
+          <button type="button" class="studio-style-button style-preview-pixel"
+            data-action="click->canvas-editor#applyStyle"
+            data-canvas-editor-style-param="pixel">👾 ピクセル</button>
+          <button type="button" class="studio-style-button style-preview-yumekawa"
+            data-action="click->canvas-editor#applyStyle"
+            data-canvas-editor-style-param="yumekawa">🦄 ゆめかわ</button>
+          <button type="button" class="studio-style-button style-preview-marine"
+            data-action="click->canvas-editor#applyStyle"
+            data-canvas-editor-style-param="marine">🌊 マリン</button>
+          <button type="button" class="studio-style-button style-preview-battle"
+            data-action="click->canvas-editor#applyStyle"
+            data-canvas-editor-style-param="battle">⚔️ バトル</button>
         </div>
 
         <div class="studio-settings">
@@ -323,10 +350,12 @@
         </label>
       </div>
 
-      <div class="studio-bg-images">
+      <div class="studio-bg-images" data-controller="tag-filter">
         <span class="studio-bg-images-label">背景画像</span>
+        <%= render "tag_bar", kind: "background", materials: @background_materials %>
         <div class="studio-bg-image-list">
           <button type="button" class="studio-bg-thumb studio-bg-thumb-none"
+            data-tag-filter-target="item" data-tags="" data-keep-in-mine="1"
             data-action="click->canvas-editor#clearBackgroundImage">なし</button>
           <button type="button" class="studio-bg-thumb studio-my-add"
             data-action="click->canvas-editor#pickMyImage"
@@ -339,6 +368,7 @@
           <% @background_materials.each do |m| %>
             <button type="button" class="studio-bg-thumb"
               title="<%= m.name %>"
+              data-tag-filter-target="item" data-tags="<%= m.tag_list.join(",") %>"
               data-action="click->canvas-editor#setBackgroundImage"
               data-canvas-editor-src-param="<%= rails_storage_proxy_path(m.image) %>"
               data-canvas-editor-source-param="<%= m.source_name %>"
@@ -361,6 +391,8 @@
         </div>
       </div>
 
+      <div data-controller="tag-filter">
+      <%= render "tag_bar", kind: "part", materials: @part_materials %>
       <div class="studio-bg-image-list">
         <button type="button" class="studio-part-thumb studio-my-add"
           data-action="click->canvas-editor#pickMyImage"
@@ -373,6 +405,7 @@
         <% @part_materials.each do |m| %>
           <button type="button" class="studio-part-thumb"
             title="<%= m.name %>"
+            data-tag-filter-target="item" data-tags="<%= m.tag_list.join(",") %>"
             data-action="click->canvas-editor#addPart"
             data-canvas-editor-src-param="<%= rails_storage_proxy_path(m.image) %>"
             data-canvas-editor-source-param="<%= m.source_name %>"
@@ -380,6 +413,7 @@
             <img src="<%= rails_storage_proxy_path(m.image) %>" alt="<%= m.name %>" loading="lazy">
           </button>
         <% end %>
+      </div>
       </div>
       <p class="studio-tab-note">自分の画像はあなたのアカウントにだけ保存されます（ほかの人には見えません）。長押し・右クリックの「×」で一覧から消せます</p>
     </div>

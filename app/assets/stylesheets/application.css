@@ -676,6 +676,12 @@ body {
   border-color: #d7263d;
 }
 
+.style-preview-puffy    { background: #efe9ff; color: #7b5cff; font-family: "Zen Maru Gothic", sans-serif; font-weight: 700; }
+.style-preview-pixel    { background: #120a2a; color: #3ad1ff; font-family: "DotGothic16", sans-serif; text-shadow: 2px 2px 0 #ff4fd8; }
+.style-preview-yumekawa { background: #fff0fa; color: #e46fb6; font-family: "Hachi Maru Pop", sans-serif; }
+.style-preview-marine   { background: #e6f9fb; color: #1e8fd8; font-family: "Zen Maru Gothic", sans-serif; font-weight: 500; }
+.style-preview-battle   { background: #2a0a0a; color: #ffb000; font-family: "Reggae One", sans-serif; text-shadow: 2px 2px 0 #000; }
+
 /* ===== 背景画像の一覧 ===== */
 
 .studio-bg-images {
@@ -1716,4 +1722,220 @@ ul.auth-alert { padding-left: 28px; }
 
 @media (prefers-reduced-motion: reduce) {
   .studio-credit.is-show { animation: none; }
+}
+
+/* ===== アップロードの進み具合（％のバー） ===== */
+
+.studio-progress {
+  display: block;
+  width: 180px;
+  height: 8px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: #e3f2fc;
+  overflow: hidden;
+}
+.studio-progress[hidden] { display: none; }
+
+.studio-progress-bar {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #1e8fd8, #3fd6d0);
+  transition: width 0.2s ease;
+}
+
+/* ===== ヘッダー：ユーザー名・管理・ログアウトのメニュー ===== */
+
+.studio-header { gap: 8px; }
+.studio-header-actions { flex-wrap: nowrap; min-width: 0; }
+.studio-history-button,
+.studio-size-badge { white-space: nowrap; flex: 0 0 auto; }
+
+.studio-user-menu { position: relative; flex: 0 0 auto; }
+.studio-user-menu > summary { list-style: none; cursor: pointer; }
+.studio-user-menu > summary::-webkit-details-marker { display: none; }
+
+.studio-user-menu-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+  padding: 8px;
+  border: 2px solid var(--c-line, #cfe9fb);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(30, 143, 216, 0.2);
+}
+
+.studio-user-menu-name {
+  margin: 2px 6px 6px;
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--c-ink, #333);
+}
+
+.studio-user-menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--c-ink, #333);
+  font-size: 13px;
+  text-align: left;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.studio-user-menu-item:hover { background: var(--c-soft, #eaf6ff); }
+
+/* スマホ縦向き：ロゴを小さく、ボタンはアイコンだけ、サイズ表示は1行に */
+@media (max-width: 480px) {
+  .studio-header { padding: 6px 10px; align-items: center; }
+  .studio-logo { font-size: 16px; white-space: nowrap; }
+  .studio-logo small { display: none; }
+  .studio-header-actions { gap: 4px; }
+  .studio-history-button span { display: none; }
+  .studio-history-button { padding: 4px 7px; }
+  .studio-size-badge {
+    padding: 3px 8px;
+    font-size: 10px;
+    line-height: 1.2;
+  }
+}
+
+/* もっと細い画面では、ロゴの「Bouquet」を隠して「Koto」だけにする */
+@media (max-width: 360px) {
+  .studio-logo span { display: none; }
+}
+
+/* ===== 部品・背景のタグ（プリクラの編集画面みたいな絞り込み） ===== */
+
+.studio-tag-bar {
+  display: flex;
+  gap: 6px;
+  margin: 8px 0 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+.studio-tag-bar::-webkit-scrollbar { display: none; }
+
+.studio-tag {
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  border: 2px solid var(--c-line, #cfe9fb);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--c-ink, #333);
+  font-size: 12px;
+  font-weight: bold;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+.studio-tag:active { transform: scale(0.95); }
+.studio-tag.is-active {
+  border-color: transparent;
+  background: linear-gradient(135deg, #1e8fd8, #3fd6d0);
+  color: #ffffff;
+}
+
+.studio-bg-image-list [hidden],
+.studio-my-list[hidden],
+.studio-my-add[hidden] { display: none !important; }
+
+/* 管理画面：タグのチェック欄 */
+.admin-tags { border: 2px solid #cfe9fb; border-radius: 12px; padding: 10px 12px; }
+.admin-tags legend { font-size: 13px; font-weight: bold; color: #2b5d80; padding: 0 4px; }
+.admin-tags-group { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 6px 0; }
+.admin-tags-group small { width: 100%; color: #6a8aa3; }
+.admin-tags .admin-check { font-weight: normal; }
+.admin-badge.is-tag { background: #fff4e0; color: #b46b00; }
+
+/* ===== 管理画面：素材一覧（カード型の行・絞り込み・ページ送り） ===== */
+
+.admin-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 14px;
+  padding: 12px;
+  border-radius: 16px;
+  background: #f2f9ff;
+}
+.admin-filter-search { flex: 1 1 220px; min-width: 0; }
+.admin-filter input,
+.admin-filter select {
+  padding: 8px 12px;
+  border: 2px solid #cfe9fb;
+  border-radius: 999px;
+  background: #ffffff;
+  font-size: 14px;
+}
+
+.admin-mrow {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 4px;
+  border-bottom: 1px dashed #d8ecfa;
+}
+.admin-mrow.is-hidden { opacity: 0.55; }
+.admin-mrow .admin-material-thumb { width: 64px; height: 64px; }
+
+.admin-mrow-body { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+
+.admin-mrow-title,
+.admin-mrow-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+}
+.admin-mrow-title strong { font-size: 15px; word-break: keep-all; overflow-wrap: anywhere; }
+
+/* バッジの文字が縦に折れないように */
+.admin-mrow .admin-badge { white-space: nowrap; flex: 0 0 auto; }
+.admin-mrow .admin-source { margin: 0; overflow-wrap: anywhere; }
+
+.admin-mrow-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+.admin-mrow-actions .admin-button { white-space: nowrap; }
+
+/* スマホ：操作ボタンは下の段に回す */
+@media (max-width: 640px) {
+  .admin-mrow {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+  .admin-mrow .admin-material-thumb { width: 56px; height: 56px; }
+  .admin-mrow-actions {
+    grid-column: 1 / -1;
+    flex-wrap: wrap;
+  }
+  .admin-filter select { flex: 1 1 45%; }
+}
+
+.admin-pager {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 16px 0 4px;
+}
+.admin-button.is-current {
+  border-color: transparent;
+  background: linear-gradient(135deg, #1e8fd8, #3fd6d0);
+  color: #ffffff;
 }
