@@ -13,8 +13,8 @@
   data-canvas-editor-width-value="<%= @width %>"
   data-canvas-editor-height-value="<%= @height %>">
   <header class="studio-header">
-    <h1>KotoBouquet</h1>
-    <p><%= @width %> × <%= @height %></p>
+    <h1 class="studio-logo">Koto<span>Bouquet</span> <small>✦</small></h1>
+    <p class="studio-size-badge"><%= @width %> × <%= @height %></p>
   </header>
 
   <section class="studio-stage">
@@ -351,11 +351,24 @@
     </div>
 
     <nav class="studio-toolbar">
-      <button type="button" data-action="click->canvas-editor#addText">テキスト</button>
-      <button type="button" data-action="click->canvas-editor#togglePartsPanel">部品</button>
-      <button type="button" data-action="click->canvas-editor#toggleBackgroundPanel">背景</button>
-      <button type="button">レイヤー</button>
-      <button type="button">書き出し</button>
+      <button type="button" data-action="click->canvas-editor#addText">
+        <span class="studio-toolbar-icon">✏️</span><span class="studio-toolbar-label">テキスト</span>
+      </button>
+      <button type="button" data-action="click->canvas-editor#togglePartsPanel">
+        <span class="studio-toolbar-icon">🧸</span><span class="studio-toolbar-label">部品</span>
+      </button>
+      <button type="button" data-action="click->canvas-editor#toggleBackgroundPanel">
+        <span class="studio-toolbar-icon">🖼️</span><span class="studio-toolbar-label">背景</span>
+      </button>
+      <button type="button" class="is-soon" title="次の段階で追加">
+        <span class="studio-toolbar-icon">✨</span><span class="studio-toolbar-label">エフェクト</span>
+      </button>
+      <button type="button" class="is-soon" title="次の段階で追加">
+        <span class="studio-toolbar-icon">📋</span><span class="studio-toolbar-label">テンプレ</span>
+      </button>
+      <button type="button" class="is-soon" title="次の段階で追加">
+        <span class="studio-toolbar-icon">💾</span><span class="studio-toolbar-label">書き出し</span>
+      </button>
     </nav>
   </footer>
 </main>
