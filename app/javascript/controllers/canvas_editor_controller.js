@@ -3,6 +3,7 @@ import { Canvas, Textbox, Gradient, Shadow, FabricImage, Point, util, ActiveSele
 import { STYLES, STYLE_DEFAULTS } from "text_styles"
 import { saveImage, listImages, getImageUrl, deleteImage } from "image_store"
 import { ColorKey } from "color_key_filter"
+import { segmentPoints } from "ai_cutout"
 
 // 選べる比率とキャンバスの実寸
 const RATIOS = {
@@ -50,9 +51,11 @@ export default class extends Controller {
     "viewAllButton", "trash",
     "colorKeyStart", "colorKeyTools", "colorKeyHint", "colorKeyToolButton",
     "colorKeyStrengthInput", "colorKeyStrengthValue", "colorKeyUndo",
-    "partSettings", "colorKeySizeRow", "colorKeySizeInput", "colorKeySizeValue", "colorKeyStrengthRow"
+    "partSettings", "colorKeySizeRow", "colorKeySizeInput", "colorKeySizeValue", "colorKeyStrengthRow",
+    "colorKeyAiRow", "colorKeyAiSign", "colorKeySharpRow", "colorKeySharpInput", "colorKeySharpValue",
+    "colorKeyFeatherInput", "colorKeyFeatherValue"
   ]
-  static values = { width: Number, height: Number, materials: Object, editTemplate: Object }
+  static values = { width: Number, height: Number, materials: Object, editTemplate: Object, mediapipeBase: String }
 
   connect() {
     this.canvas = new Canvas(this.canvasTarget, {
@@ -361,7 +364,7 @@ export default class extends Controller {
       opacity: item.opacity ?? 1
     })
     if (item.colorKey?.ops?.length) {
-      img.filters = [new ColorKey(item.colorKey)]
+      img.filters = [await ColorKey.fromObject(item.colorKey)]
       img.applyFilters()
     }
     this.canvas.add(img)
@@ -516,7 +519,7 @@ export default class extends Controller {
         const stretch = obj.scaleY ? obj.scaleX / obj.scaleY : 1
         if (Math.abs(stretch - 1) > 0.01) item.stretch = this.round(stretch, 3)
         const ck = this.colorKeyOf(obj)
-        if (ck && !ck.isNeutralState()) item.colorKey = { strength: ck.strength, ops: ck.ops.map(op => ({ ...op })) }
+        if (ck && !ck.isNeutralState()) item.colorKey = { strength: ck.strength, sharp: ck.sharp || 0, feather: ck.feather || 0, ops: ck.ops.map(op => ({ ...op })) }
         data.items.push(item)
       } else {
         // 「ここに画像」の枠・自分の画像・どの素材かわからない画像は、「ここに画像」の枠にする
@@ -1768,15 +1771,26 @@ export default class extends Controller {
     this.colorKeyToolsTarget.hidden = !editing
     if (!editing) return
 
-    const brush = this.colorKeyTool !== "all"
+    const tool = this.colorKeyTool
+    const brush = tool === "keep" || tool === "erase"
     this.colorKeyToolButtonTargets.forEach(b => b.classList.toggle("is-active", b.dataset.tool === this.colorKeyTool))
     this.colorKeySizeRowTarget.hidden = !brush
-    this.colorKeyStrengthRowTarget.hidden = brush
+    this.colorKeyStrengthRowTarget.hidden = tool !== "all"
+    if (this.hasColorKeyAiRowTarget) {
+      this.colorKeyAiRowTarget.hidden = tool !== "ai"
+      this.colorKeyAiSignTargets.forEach(b => b.classList.toggle("is-active", (b.dataset.sign === "plus") === this.aiPlus))
+      this.colorKeySharpRowTarget.hidden = tool !== "ai"
+      this.colorKeySharpInputTarget.value = this.colorKeySharp ?? 0
+      this.colorKeySharpValueTarget.textContent = this.colorKeySharp ?? 0
+    }
+    this.colorKeyFeatherInputTarget.value = this.colorKeyFeather ?? 0
+    this.colorKeyFeatherValueTarget.textContent = this.colorKeyFeather ?? 0
     this.colorKeySizeInputTarget.value = this.colorKeySize
     this.colorKeySizeValueTarget.textContent = this.colorKeySize
     this.colorKeyStrengthInputTarget.value = this.colorKeyStrength
     this.colorKeyStrengthValueTarget.textContent = this.colorKeyStrength
     const hints = {
+      ai: "残したいもの（キャラなど）をタップ。−に切り替えてタップすると、その場所を外します",
       keep: "残したい所をなぞる（最初の1回で、なぞっていない所が消えます）",
       erase: "消したい所をなぞる",
       all: "消したい色の所をタップ（同じ色が全部消えます）"
@@ -1791,7 +1805,11 @@ export default class extends Controller {
     if (!(part instanceof FabricImage)) return
     this.colorKeyPart = part
     this.colorKeyTool = "keep"
+    this.aiPoints = []
+    this.aiPlus = true
     this.colorKeyStrength = this.colorKeyOf(part)?.strength ?? ColorKey.defaults.strength
+    this.colorKeySharp = this.colorKeyOf(part)?.sharp ?? 0
+    this.colorKeyFeather = this.colorKeyOf(part)?.feather ?? 0
     // 編集している間は、タップで部品が動かないようにする（終わったら元に戻す）
     this.colorKeySaved = this.colorKeyLockState(part)
     this.colorKeyWasLocked = !!part.locked
@@ -1829,7 +1847,7 @@ export default class extends Controller {
 
   // 選んだ道具に合わせて、キャンバスを「なぞる」か「タップする」にする
   applyColorKeyTool() {
-    const brush = !!this.colorKeyPart && this.colorKeyTool !== "all"
+    const brush = !!this.colorKeyPart && (this.colorKeyTool === "keep" || this.colorKeyTool === "erase")
     this.canvas.isDrawingMode = brush
     if (!brush) return
     const pen = new PencilBrush(this.canvas)
@@ -1840,6 +1858,8 @@ export default class extends Controller {
 
   chooseColorKeyTool(event) {
     this.colorKeyTool = event.currentTarget.dataset.tool
+    this.aiPoints = []
+    this.aiPlus = true
     this.applyColorKeyTool()
     this.syncColorKeyPanel(this.colorKeyPart)
   }
@@ -1899,6 +1919,10 @@ export default class extends Controller {
     if (Math.hypot(opt.e.clientX - down.x, opt.e.clientY - down.y) > 10) return
     const p = this.toPartPoint(part, opt.e)
     if (p.x < 0 || p.x > 1 || p.y < 0 || p.y > 1) return
+    if (this.colorKeyTool === "ai") {
+      this.aiTap(part, p)
+      return
+    }
     this.updateColorKey(part, ck => ck.ops.push({ act: "all", x: this.round(p.x), y: this.round(p.y) }))
   }
 
@@ -1921,9 +1945,48 @@ export default class extends Controller {
     this.updateColorKey(part, ck => ck.ops.push({ act: this.colorKeyTool, r: this.round(r, 5), pts }))
   }
 
+  chooseAiSign(event) {
+    this.aiPlus = event.currentTarget.dataset.sign === "plus"
+    this.syncColorKeyPanel(this.colorKeyPart)
+  }
+
+  // ✨：タップした点を足して、AI に切り抜いてもらう
+  async aiTap(part, p) {
+    if (this.aiBusy) return
+    const points = [...(this.aiPoints || []), { x: this.round(p.x), y: this.round(p.y), plus: this.aiPlus }]
+    if (!points.some(q => q.plus)) {
+      this.colorKeyHintTarget.textContent = "まず「＋ 足す」で、残したいものをタップしてね"
+      return
+    }
+    this.aiBusy = true
+    this.showLoading(this.aiReady ? "AIが考え中…" : "AIを準備中…（最初だけ、約44MB読み込みます）")
+    try {
+      // AI が動いている間は画面が止まるので、先に「準備中」を表示させる
+      await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)))
+      const image = part._originalElement || part.getElement()
+      const src = await segmentPoints(this.mediapipeBaseValue || "/mediapipe", image, points)
+      this.aiReady = true
+      await ColorKey.loadMask(src)
+      // 同じ ✨ で2回目以降のタップなら、前の結果と入れ替える
+      const replace = (this.aiPoints || []).length > 0
+      this.aiPoints = points
+      this.updateColorKey(part, ck => {
+        const op = { act: "ai", src }
+        if (replace && ck.ops[ck.ops.length - 1]?.act === "ai") ck.ops[ck.ops.length - 1] = op
+        else ck.ops.push(op)
+      })
+    } catch (e) {
+      console.error(e)
+      this.colorKeyHintTarget.textContent = "AIの準備に失敗しました。もう一度タップしてみてね"
+    } finally {
+      this.aiBusy = false
+      this.hideLoading()
+    }
+  }
+
   // 透過の設定を変えて、計算し直す
   updateColorKey(part, change) {
-    const ck = this.colorKeyOf(part) || new ColorKey({ strength: this.colorKeyStrength })
+    const ck = this.colorKeyOf(part) || new ColorKey({ strength: this.colorKeyStrength, sharp: this.colorKeySharp || 0, feather: this.colorKeyFeather || 0 })
     change(ck)
     ck.preview = this.colorKeyPart === part
     part.filters = ck.isNeutralState() ? [] : [ck]
@@ -1945,14 +2008,84 @@ export default class extends Controller {
     })
   }
 
+  changeColorKeyFeather(event) {
+    const part = this.colorKeyPart
+    if (!part) return
+    this.colorKeyFeather = Number(event.target.value)
+    this.colorKeyFeatherValueTarget.textContent = this.colorKeyFeather
+    // 動かしている間は、1コマに1回だけ計算する
+    cancelAnimationFrame(this.colorKeyFeatherFrame)
+    this.colorKeyFeatherFrame = requestAnimationFrame(() => {
+      this.updateColorKey(part, ck => { ck.feather = this.colorKeyFeather })
+    })
+  }
+
+  changeColorKeySharp(event) {
+    const part = this.colorKeyPart
+    if (!part) return
+    this.colorKeySharp = Number(event.target.value)
+    this.colorKeySharpValueTarget.textContent = this.colorKeySharp
+    // 動かしている間は、1コマに1回だけ計算する
+    cancelAnimationFrame(this.colorKeySharpFrame)
+    this.colorKeySharpFrame = requestAnimationFrame(() => {
+      this.updateColorKey(part, ck => { ck.sharp = this.colorKeySharp })
+    })
+  }
+
   // 「↶ 1つ戻す」：最後のタップを取り消す
   undoColorKey() {
+    this.aiPoints = []
     if (this.colorKeyPart) this.updateColorKey(this.colorKeyPart, ck => ck.ops.pop())
   }
 
   // 「↺ リセット」：透過を全部やめて、元の画像に戻す
   resetColorKey() {
+    this.aiPoints = []
     if (this.colorKeyPart) this.updateColorKey(this.colorKeyPart, ck => { ck.ops = [] })
+  }
+
+  // 「💾 マイ素材に保存」：透過したあとの画像を PNG にして、マイ素材（部品）に追加する。
+  // キャンバスの部品はそのまま。左右反転・回転は入れない（置くときにまた変えられる）
+  async saveColorKeyAsMaterial() {
+    const part = this.colorKeyPart
+    const ck = part && this.colorKeyOf(part)
+    if (!ck || ck.isNeutralState()) {
+      this.colorKeyHintTarget.textContent = "まだ透過していません"
+      return
+    }
+    this.showLoading("透過した画像を作っています…")
+    this.setLoadingProgress(0)
+    try {
+      // 元の画像に、うっすら表示なしの同じ透過をかける
+      const src = part._originalElement || part.getElement()
+      const w = src.naturalWidth || src.width
+      const h = src.naturalHeight || src.height
+      const canvas = document.createElement("canvas")
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext("2d", { willReadFrequently: true })
+      ctx.drawImage(src, 0, 0, w, h)
+      const imageData = ctx.getImageData(0, 0, w, h)
+      const finalKey = new ColorKey({ strength: ck.strength, sharp: ck.sharp || 0, feather: ck.feather || 0, ops: ck.ops })
+      finalKey.applyTo2d({ imageData })
+      ctx.putImageData(imageData, 0, 0)
+
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"))
+      if (!blob) throw new Error("画像を作れませんでした")
+      const file = new File([blob], `transparent-${this.timestamp()}.png`, { type: "image/png" })
+
+      await saveImage(file, "part", (percent) => {
+        this.setLoadingText(percent >= 100 ? "保存しています…" : `アップロード中… ${percent}%`)
+        this.setLoadingProgress(percent)
+      })
+      await this.renderMyImages("part")
+      this.colorKeyHintTarget.textContent = "💾 マイ素材に保存しました（部品の📷から置けます）"
+    } catch (e) {
+      console.error(e)
+      alert(e.message || "保存できませんでした。もう一度ためしてね")
+    } finally {
+      this.hideLoading()
+    }
   }
 
   // ===== ロック =====

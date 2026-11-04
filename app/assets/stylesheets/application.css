@@ -1220,8 +1220,12 @@ button.studio-size-badge {
 .studio-colorkey-start { padding: 6px 14px; }
 .studio-colorkey-tools { display: grid; gap: 10px; }
 .studio-colorkey-hint { margin: 0; font-size: 13px; line-height: 1.5; color: var(--c-main); }
-.studio-colorkey-modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-.studio-colorkey-modes button {
+.studio-colorkey-modes { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; }
+@media (max-width: 420px) {
+  .studio-colorkey-modes { grid-auto-flow: row; grid-template-columns: repeat(2, 1fr); }
+}
+.studio-colorkey-modes button,
+.studio-colorkey-ai button {
   padding: 8px 6px;
   border: 2px solid var(--c-line);
   border-radius: 999px;
@@ -1230,11 +1234,13 @@ button.studio-size-badge {
   white-space: nowrap;
   cursor: pointer;
 }
-.studio-colorkey-modes button.is-active {
+.studio-colorkey-modes button.is-active,
+.studio-colorkey-ai button.is-active {
   border-color: var(--c-main);
   background: var(--c-soft);
   font-weight: bold;
 }
+.studio-colorkey-ai { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .studio-colorkey-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 .studio-colorkey-done { font-weight: bold; }
 

@@ -9,12 +9,36 @@ config.configure({ enableGLFiltering: false })
 //   { act: "keep",  r, pts: [x0, y0, x1, y1, …] }  🖌 なぞった所を残す（最初の1回で、ほかは全部消える）
 //   { act: "erase", r, pts: [...] }                🧽 なぞった所を消す
 //   { act: "all", x, y }                           🌈 タップした所と似た色を、画像の中から全部消す
+//   { act: "ai", src }                             ✨ AI が選んだ形（PNG）を残す（最初の1回で、ほかは全部消える）
 // r：ブラシの半径（画像の長い辺に対する割合）
 // strength：🌈で、どこまで似た色を同じとみなすか（1〜80。RGB それぞれの差が strength × 2.55 まで）
 // preview：true の間は、消える所をうっすら見せる（編集中だけ。defaults に入れないので保存されない）
 export class ColorKey extends filters.BaseFilter {
   static type = "ColorKey"
-  static defaults = { strength: 20, ops: [] }
+  static defaults = { strength: 20, sharp: 0, feather: 0, ops: [] }
+
+  // AI の形（PNG）は、計算する前に読み込んでおく
+  static masks = new Map()
+
+  static loadMask(src) {
+    if (ColorKey.masks.has(src)) return Promise.resolve(ColorKey.masks.get(src))
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => { ColorKey.masks.set(src, img); resolve(img) }
+      img.onerror = reject
+      img.src = src
+    })
+  }
+
+  static preload(ops = []) {
+    return Promise.all(ops.filter(op => op.act === "ai" && op.src).map(op => ColorKey.loadMask(op.src)))
+  }
+
+  // 保存したデータから作り直すときも、先に AI の形を読み込む
+  static async fromObject({ type, ...options }) {
+    await ColorKey.preload(options.ops)
+    return new this(options)
+  }
 
   constructor(options = {}) {
     super(options)
@@ -46,6 +70,16 @@ export class ColorKey extends filters.BaseFilter {
         this.removeSameColor(ctx, data, w, h, op)
         continue
       }
+      if (act === "ai") {
+        const mask = ColorKey.masks.get(op.src)
+        if (!mask) continue
+        if (!kept) {
+          ctx.clearRect(0, 0, w, h)
+          kept = true
+        }
+        ctx.drawImage(this.sharpenMask(mask, w, h), 0, 0, w, h)
+        continue
+      }
       if (!Array.isArray(op.pts) || op.pts.length < 2) continue
       // 🖌 残す：最初の1回で、なぞっていない所を全部消す
       if (act === "keep" && !kept) {
@@ -59,10 +93,18 @@ export class ColorKey extends filters.BaseFilter {
 
     // 型紙に合わせて、画像の透明度を変える（ふちは少しなめらかになる）
     const m = ctx.getImageData(0, 0, w, h).data
+    // フチぼかし：型紙の透明度だけを、ぼかしてなめらかにする（2回かけて自然なぼけ方にする）
+    const alpha = new Float32Array(n)
+    for (let i = 0; i < n; i++) alpha[i] = m[i * 4 + 3]
+    const r = Math.round(((this.feather || 0) / 1000) * long)
+    if (r > 0) {
+      this.boxBlur(alpha, w, h, r)
+      this.boxBlur(alpha, w, h, r)
+    }
     const ghost = this.preview ? 0.2 : 0
     for (let i = 0; i < n; i++) {
-      const a = m[i * 4 + 3]
-      if (a === 255) continue
+      const a = alpha[i]
+      if (a >= 255) continue
       data[i * 4 + 3] = Math.round(data[i * 4 + 3] * (ghost + (1 - ghost) * a / 255))
     }
   }
@@ -81,6 +123,49 @@ export class ColorKey extends filters.BaseFilter {
     ctx.moveTo(pts[0] * w, pts[1] * h)
     for (let k = 2; k < pts.length; k += 2) ctx.lineTo(pts[k] * w, pts[k + 1] * h)
     ctx.stroke()
+  }
+
+  // くっきり：AI が迷った所（半透明）を、残すか消すかに寄せる。sharp は 0〜100（0 のときは何もしない）
+  sharpenMask(mask, w, h) {
+    const s = this.sharp || 0
+    if (s <= 0) return mask
+    const c = document.createElement("canvas")
+    c.width = w
+    c.height = h
+    const ctx = c.getContext("2d", { willReadFrequently: true })
+    ctx.drawImage(mask, 0, 0, w, h)
+    const img = ctx.getImageData(0, 0, w, h)
+    const d = img.data
+    const k = 1 + (s / 100) * 19   // 100 で 20 倍の差をつける
+    for (let i = 3; i < d.length; i += 4) {
+      const a = (d[i] / 255 - 0.5) * k + 0.5
+      d[i] = Math.round(Math.min(1, Math.max(0, a)) * 255)
+    }
+    ctx.putImageData(img, 0, 0)
+    return c
+  }
+
+  // フチぼかし用：横→縦の順に、まわり r 画素の平均にする（ふちは、はしの値をのばして計算する）
+  boxBlur(src, w, h, r) {
+    const tmp = new Float32Array(src.length)
+    const size = r * 2 + 1
+    for (let y = 0; y < h; y++) {
+      const row = y * w
+      let sum = 0
+      for (let k = -r; k <= r; k++) sum += src[row + Math.min(w - 1, Math.max(0, k))]
+      for (let x = 0; x < w; x++) {
+        tmp[row + x] = sum / size
+        sum += src[row + Math.min(w - 1, x + r + 1)] - src[row + Math.max(0, x - r)]
+      }
+    }
+    for (let x = 0; x < w; x++) {
+      let sum = 0
+      for (let k = -r; k <= r; k++) sum += tmp[Math.min(h - 1, Math.max(0, k)) * w + x]
+      for (let y = 0; y < h; y++) {
+        src[y * w + x] = sum / size
+        sum += tmp[Math.min(h - 1, y + r + 1) * w + x] - tmp[Math.max(0, y - r) * w + x]
+      }
+    }
   }
 
   // 🌈：タップした所の色（元の画像の色）に似ている所を、型紙から消す
