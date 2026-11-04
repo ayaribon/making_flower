@@ -39,12 +39,32 @@ async function shrink(file) {
   return new File([blob], name, { type: "image/png" })
 }
 
+const THUMB_SIDE = 256  // 一覧に使う小さい画像の長い辺
+
+// 一覧用の小さい PNG を作る（透過もそのまま残る）。src は File か、読み込み済みの <img>
+export async function makeThumb(src) {
+  const bitmap = src instanceof Blob ? await createImageBitmap(src) : src
+  const w = bitmap.naturalWidth || bitmap.width
+  const h = bitmap.naturalHeight || bitmap.height
+  const scale = Math.min(1, THUMB_SIDE / Math.max(w, h))
+  const canvas = document.createElement("canvas")
+  canvas.width = Math.max(1, Math.round(w * scale))
+  canvas.height = Math.max(1, Math.round(h * scale))
+  canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+  return new Promise(resolve => canvas.toBlob(resolve, "image/png"))
+}
+
 // kind は "part"（部品） か "background"（背景）。保存した画像のIDを返す
 // onProgress(0〜100) を渡すと、アップロードが何％終わったかを教える
 // （fetch では送信の進み具合が取れないので、ここだけ XMLHttpRequest を使う）
 export async function saveImage(file, kind, onProgress = null) {
   const body = new FormData()
-  body.append("file", await shrink(file))
+  const shrunk = await shrink(file)
+  body.append("file", shrunk)
+  try {
+    const thumb = await makeThumb(shrunk)
+    if (thumb) body.append("thumb", thumb, "thumb.png")
+  } catch (_) {}   // サムネが作れなくても、元の画像は保存する
   body.append("kind", kind)
 
   return new Promise((resolve, reject) => {
@@ -84,4 +104,16 @@ export async function getImageUrl(id) {
 
 export async function deleteImage(id) {
   await request(`/user_images/${id}`, { method: "DELETE" })
+}
+
+// 一覧用の小さい画像の URL（サムネがない画像は 404 になる）
+export function getThumbUrl(id) {
+  return `/user_images/${id}/thumb`
+}
+
+// サムネがない画像に、あとからつける
+export async function uploadThumb(id, blob) {
+  const body = new FormData()
+  body.append("thumb", blob, "thumb.png")
+  return request(`/user_images/${id}/thumb`, { method: "PUT", body })
 }
