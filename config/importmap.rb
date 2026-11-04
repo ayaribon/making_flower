@@ -8,3 +8,4 @@ pin_all_from "app/javascript/controllers", under: "controllers"
 pin "fabric" # @7.4.0
 pin "text_styles"
 pin "image_store"
+pin "color_key_filter"
