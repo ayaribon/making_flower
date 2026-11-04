@@ -23,6 +23,15 @@ Rails.application.configure do
   # Disable serving static files from `public/`, relying on NGINX/Apache to do so instead.
   # config.public_file_server.enabled = false
 
+  # 静的ファイル（/fonts・/parts・/backgrounds・/assets）をブラウザに1週間キャッシュさせる。
+  # /parts などはファイル名にハッシュがないので、差し替えが反映されるよう長くしすぎない。
+  config.public_file_server.headers = { "cache-control" => "public, max-age=#{1.week.to_i}" }
+
+  # テキスト系のレスポンスを gzip 圧縮する。public/ のフォントCSSも圧縮されるよう、
+  # 静的ファイル配信（ActionDispatch::Static）より前に入れる。woff2・PNG などは圧縮済みなので対象外。
+  config.middleware.insert_before ActionDispatch::Static, Rack::Deflater,
+    include: %w[text/html text/css text/javascript application/javascript application/json image/svg+xml]
+
   # Compress CSS using a preprocessor.
   # config.assets.css_compressor = :sass
 
