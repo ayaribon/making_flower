@@ -502,11 +502,19 @@
               data-canvas-editor-target="colorKeyStrengthInput"
               data-action="input->canvas-editor#changeColorKeyStrength">
           </label>
+          <label class="studio-setting studio-setting-size">
+            <span>フチぼかし <strong data-canvas-editor-target="colorKeyFeatherValue">0</strong></span>
+            <input type="range" min="0" max="20" step="1" value="0"
+              data-canvas-editor-target="colorKeyFeatherInput"
+              data-action="input->canvas-editor#changeColorKeyFeather">
+          </label>
           <div class="studio-colorkey-actions">
             <button type="button" class="studio-panel-close" data-canvas-editor-target="colorKeyUndo"
               data-action="click->canvas-editor#undoColorKey">↶ 1つ戻す</button>
             <button type="button" class="studio-panel-close"
               data-action="click->canvas-editor#resetColorKey">↺ リセット</button>
+            <button type="button" class="studio-panel-close"
+              data-action="click->canvas-editor#saveColorKeyAsMaterial">💾 マイ素材に保存</button>
             <button type="button" class="studio-panel-close studio-colorkey-done"
               data-action="click->canvas-editor#finishColorKey">✓ 完了</button>
           </div>

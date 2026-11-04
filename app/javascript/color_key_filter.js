@@ -15,7 +15,7 @@ config.configure({ enableGLFiltering: false })
 // preview：true の間は、消える所をうっすら見せる（編集中だけ。defaults に入れないので保存されない）
 export class ColorKey extends filters.BaseFilter {
   static type = "ColorKey"
-  static defaults = { strength: 20, sharp: 0, ops: [] }
+  static defaults = { strength: 20, sharp: 0, feather: 0, ops: [] }
 
   // AI の形（PNG）は、計算する前に読み込んでおく
   static masks = new Map()
@@ -93,10 +93,18 @@ export class ColorKey extends filters.BaseFilter {
 
     // 型紙に合わせて、画像の透明度を変える（ふちは少しなめらかになる）
     const m = ctx.getImageData(0, 0, w, h).data
+    // フチぼかし：型紙の透明度だけを、ぼかしてなめらかにする（2回かけて自然なぼけ方にする）
+    const alpha = new Float32Array(n)
+    for (let i = 0; i < n; i++) alpha[i] = m[i * 4 + 3]
+    const r = Math.round(((this.feather || 0) / 1000) * long)
+    if (r > 0) {
+      this.boxBlur(alpha, w, h, r)
+      this.boxBlur(alpha, w, h, r)
+    }
     const ghost = this.preview ? 0.2 : 0
     for (let i = 0; i < n; i++) {
-      const a = m[i * 4 + 3]
-      if (a === 255) continue
+      const a = alpha[i]
+      if (a >= 255) continue
       data[i * 4 + 3] = Math.round(data[i * 4 + 3] * (ghost + (1 - ghost) * a / 255))
     }
   }
@@ -135,6 +143,29 @@ export class ColorKey extends filters.BaseFilter {
     }
     ctx.putImageData(img, 0, 0)
     return c
+  }
+
+  // フチぼかし用：横→縦の順に、まわり r 画素の平均にする（ふちは、はしの値をのばして計算する）
+  boxBlur(src, w, h, r) {
+    const tmp = new Float32Array(src.length)
+    const size = r * 2 + 1
+    for (let y = 0; y < h; y++) {
+      const row = y * w
+      let sum = 0
+      for (let k = -r; k <= r; k++) sum += src[row + Math.min(w - 1, Math.max(0, k))]
+      for (let x = 0; x < w; x++) {
+        tmp[row + x] = sum / size
+        sum += src[row + Math.min(w - 1, x + r + 1)] - src[row + Math.max(0, x - r)]
+      }
+    }
+    for (let x = 0; x < w; x++) {
+      let sum = 0
+      for (let k = -r; k <= r; k++) sum += tmp[Math.min(h - 1, Math.max(0, k)) * w + x]
+      for (let y = 0; y < h; y++) {
+        src[y * w + x] = sum / size
+        sum += tmp[Math.min(h - 1, y + r + 1) * w + x] - tmp[Math.max(0, y - r) * w + x]
+      }
+    }
   }
 
   // 🌈：タップした所の色（元の画像の色）に似ている所を、型紙から消す
