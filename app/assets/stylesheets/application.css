@@ -1190,16 +1190,48 @@ button.studio-size-badge {
 }
 
 .studio.is-dragging .studio-toolbar,
-.studio.is-dragging .studio-panel {
+.studio.is-dragging .studio-panel,
+.studio.is-viewing .studio-toolbar,
+.studio.is-viewing .studio-panel {
   opacity: 0;
   transform: translateY(12px);
   pointer-events: none;
 }
 
 @media (orientation: landscape) and (max-height: 560px) {
-  .studio.is-dragging .studio-toolbar { transform: translateX(-12px); }
-  .studio.is-dragging .studio-panel { transform: translateX(12px); }
+  .studio.is-dragging .studio-toolbar,
+  .studio.is-viewing .studio-toolbar { transform: translateX(-12px); }
+  .studio.is-dragging .studio-panel,
+  .studio.is-viewing .studio-panel { transform: translateX(12px); }
 }
+
+/* ===== 指2本の操作・全体を見る（👀） ===== */
+/* キャンバスの上では、ブラウザのスクロールや画面ズームをさせない */
+.studio-canvas-frame {
+  position: relative;
+  touch-action: none;
+}
+
+.studio-view-all {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  font-size: 18px;
+  line-height: 36px;
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.studio-view-all:hover,
+.studio-view-all[aria-pressed="true"] { opacity: 1; }
 
 /* ===== 段階7：自分の画像 ===== */
 
