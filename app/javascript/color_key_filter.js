@@ -111,6 +111,16 @@ export class ColorKey extends filters.BaseFilter {
       if (a >= 255) continue
       data[i * 4 + 3] = Math.round(data[i * 4 + 3] * (ghost + (1 - ghost) * a / 255))
     }
+    // 🛡 編集中だけ、守った所をうっすら青くする（完了・書き出しには写らない）
+    if (this.preview && guard) {
+      for (let i = 0; i < n; i++) {
+        if (guard[i * 4 + 3] === 0) continue
+        const j = i * 4
+        data[j]     = Math.round(data[j]     * 0.7 + 52  * 0.3)
+        data[j + 1] = Math.round(data[j + 1] * 0.7 + 152 * 0.3)
+        data[j + 2] = Math.round(data[j + 2] * 0.7 + 219 * 0.3)
+      }
+    }
   }
 
   // なぞった線を型紙に描く（1点だけのときは丸を描く）
