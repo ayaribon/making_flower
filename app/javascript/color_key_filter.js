@@ -9,6 +9,7 @@ config.configure({ enableGLFiltering: false })
 //   { act: "keep",  r, pts: [x0, y0, x1, y1, …] }  🖌 なぞった所を残す（最初の1回で、ほかは全部消える）
 //   { act: "erase", r, pts: [...] }                🧽 なぞった所を消す
 //   { act: "all", x, y }                           🌈 タップした所と似た色を、画像の中から全部消す
+//   { act: "protect", r, pts: [...] }              🛡 なぞった所は、🌈で消えないようにする（順番は関係なし）
 //   { act: "ai", src }                             ✨ AI が選んだ形（PNG）を残す（最初の1回で、ほかは全部消える）
 // r：ブラシの半径（画像の長い辺に対する割合）
 // strength：🌈で、どこまで似た色を同じとみなすか（1〜80。RGB それぞれの差が strength × 2.55 まで）
@@ -63,11 +64,14 @@ export class ColorKey extends filters.BaseFilter {
     const ctx = mask.getContext("2d", { willReadFrequently: true })
     ctx.fillRect(0, 0, w, h)   // 最初は全部見える
     let kept = false
+    // 🛡 守る：先に「守る型紙」を作っておく（🌈の前でもあとでも、なぞった所は守られる）
+    const guard = this.buildGuard(w, h, long)
 
     for (const op of this.ops) {
       const act = op.all ? "all" : op.act   // all: true は前の形（🌈）
+      if (act === "protect") continue
       if (act === "all") {
-        this.removeSameColor(ctx, data, w, h, op)
+        this.removeSameColor(ctx, data, w, h, op, guard)
         continue
       }
       if (act === "ai") {
@@ -125,6 +129,18 @@ export class ColorKey extends filters.BaseFilter {
     ctx.stroke()
   }
 
+  // 🛡 守る型紙を作る。守る線がなければ null（いつもどおり）
+  buildGuard(w, h, long) {
+    const strokes = this.ops.filter(op => op.act === "protect" && Array.isArray(op.pts) && op.pts.length >= 2)
+    if (strokes.length === 0) return null
+    const c = document.createElement("canvas")
+    c.width = w
+    c.height = h
+    const g = c.getContext("2d", { willReadFrequently: true })
+    for (const op of strokes) this.drawStroke(g, op.pts, Math.max(1, op.r * 2 * long), w, h)
+    return g.getImageData(0, 0, w, h).data
+  }
+
   // くっきり：AI が迷った所（半透明）を、残すか消すかに寄せる。sharp は 0〜100（0 のときは何もしない）
   sharpenMask(mask, w, h) {
     const s = this.sharp || 0
@@ -169,7 +185,7 @@ export class ColorKey extends filters.BaseFilter {
   }
 
   // 🌈：タップした所の色（元の画像の色）に似ている所を、型紙から消す
-  removeSameColor(ctx, data, w, h, op) {
+  removeSameColor(ctx, data, w, h, op, guard = null) {
     const px = Math.min(w - 1, Math.max(0, Math.round(op.x * (w - 1))))
     const py = Math.min(h - 1, Math.max(0, Math.round(op.y * (h - 1))))
     const j = (py * w + px) * 4
@@ -179,6 +195,7 @@ export class ColorKey extends filters.BaseFilter {
     const img = ctx.getImageData(0, 0, w, h)
     const m = img.data
     for (let k = 0; k < w * h * 4; k += 4) {
+      if (guard && guard[k + 3] > 0) continue   // 🛡で守った所は消さない
       if (data[k + 3] >= 10 &&
         Math.abs(data[k] - r) <= tol && Math.abs(data[k + 1] - g) <= tol && Math.abs(data[k + 2] - b) <= tol) {
         m[k + 3] = 0

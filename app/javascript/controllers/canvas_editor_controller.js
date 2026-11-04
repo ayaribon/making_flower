@@ -1782,7 +1782,7 @@ export default class extends Controller {
     }
 
     const tool = this.colorKeyTool
-    const brush = tool === "keep" || tool === "erase"
+    const brush = tool === "keep" || tool === "erase" || tool === "protect"
     this.colorKeyToolButtonTargets.forEach(b => b.classList.toggle("is-active", b.dataset.tool === this.colorKeyTool))
     this.colorKeySizeRowTarget.hidden = !brush
     this.colorKeyStrengthRowTarget.hidden = tool !== "all"
@@ -1802,6 +1802,7 @@ export default class extends Controller {
     const hints = {
       ai: "残したいもの（キャラなど）をタップ。−に切り替えてタップすると、その場所を外します",
       keep: "残したい所をなぞる（最初の1回で、なぞっていない所が消えます）",
+      protect: "🌈で消したくない所をなぞる（なぞった所は、🌈色で消すが効きません）",
       erase: "消したい所をなぞる",
       all: "消したい色の所をタップ（同じ色が全部消えます）"
     }
@@ -1857,11 +1858,12 @@ export default class extends Controller {
 
   // 選んだ道具に合わせて、キャンバスを「なぞる」か「タップする」にする
   applyColorKeyTool() {
-    const brush = !!this.colorKeyPart && (this.colorKeyTool === "keep" || this.colorKeyTool === "erase")
+    const brush = !!this.colorKeyPart && ["keep", "erase", "protect"].includes(this.colorKeyTool)
     this.canvas.isDrawingMode = brush
     if (!brush) return
     const pen = new PencilBrush(this.canvas)
-    pen.color = this.colorKeyTool === "keep" ? "rgba(46, 204, 113, 0.55)" : "rgba(240, 115, 154, 0.55)"
+    const penColors = { keep: "rgba(46, 204, 113, 0.55)", erase: "rgba(240, 115, 154, 0.55)", protect: "rgba(52, 152, 219, 0.55)" }
+    pen.color = penColors[this.colorKeyTool] || penColors.keep
     pen.width = this.colorKeySize / this.canvas.getZoom()   // 画面の上で同じ太さに見えるようにする
     this.canvas.freeDrawingBrush = pen
   }
