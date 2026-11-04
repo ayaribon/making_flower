@@ -1211,20 +1211,23 @@ button.studio-size-badge {
   touch-action: none;
 }
 
-/* ===== 🪄 透過（カラーキー） ===== */
-.studio-colorkey { flex-basis: 100%; display: grid; gap: 8px; }
-.studio-colorkey-tools { display: grid; gap: 8px; }
-.studio-colorkey-tools[hidden] { display: none; }
+/* ===== 🪄 透過（ブラシ・色で消す） ===== */
+/* .studio-setting などは display: flex なので、hidden を付けても隠れない。ここで隠す */
+.studio-settings[hidden],
+.studio-colorkey [hidden] { display: none !important; }
+
+.studio-colorkey { margin-top: 10px; }
+.studio-colorkey-start { padding: 6px 14px; }
+.studio-colorkey-tools { display: grid; gap: 10px; }
 .studio-colorkey-hint { margin: 0; font-size: 13px; line-height: 1.5; color: var(--c-main); }
-.studio-colorkey-modes,
-.studio-colorkey-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.studio-colorkey-modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .studio-colorkey-modes button {
-  flex: 1 1 auto;
-  padding: 6px 10px;
+  padding: 8px 6px;
   border: 2px solid var(--c-line);
   border-radius: 999px;
   background: #ffffff;
   font-size: 13px;
+  white-space: nowrap;
   cursor: pointer;
 }
 .studio-colorkey-modes button.is-active {
@@ -1232,6 +1235,7 @@ button.studio-size-badge {
   background: var(--c-soft);
   font-weight: bold;
 }
+.studio-colorkey-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 .studio-colorkey-done { font-weight: bold; }
 
 /* ===== 段階7：自分の画像 ===== */

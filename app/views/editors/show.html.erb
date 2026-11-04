@@ -444,7 +444,7 @@
         </div>
       </div>
 
-      <div class="studio-settings">
+      <div class="studio-settings" data-canvas-editor-target="partSettings">
         <label class="studio-setting studio-setting-size">
           <span>透明度 <strong data-canvas-editor-target="partOpacityValue">100</strong>%</span>
           <input type="range" min="10" max="100" step="1"
@@ -453,39 +453,47 @@
         </label>
         <button type="button" class="studio-panel-close"
           data-action="click->canvas-editor#flipPart">左右反転</button>
-        <div class="studio-colorkey">
-          <button type="button" class="studio-panel-close"
-            data-canvas-editor-target="colorKeyStart"
-            data-action="click->canvas-editor#startColorKey">🪄 背景を透過</button>
-          <div class="studio-colorkey-tools" data-canvas-editor-target="colorKeyTools" hidden>
-            <p class="studio-colorkey-hint" data-canvas-editor-target="colorKeyHint"></p>
-            <div class="studio-colorkey-modes">
-              <button type="button" data-tool="flood" data-canvas-editor-target="colorKeyToolButton"
-                data-action="click->canvas-editor#chooseColorKeyTool">🎯 つながってる所を消す</button>
-              <button type="button" data-tool="all" data-canvas-editor-target="colorKeyToolButton"
-                data-action="click->canvas-editor#chooseColorKeyTool">🌈 同じ色を全部消す</button>
-              <button type="button" data-tool="keep" data-canvas-editor-target="colorKeyToolButton"
-                data-action="click->canvas-editor#chooseColorKeyTool">↩︎ タップで戻す</button>
-            </div>
-            <label class="studio-setting studio-setting-size">
-              <span>強さ <strong data-canvas-editor-target="colorKeyStrengthValue">20</strong></span>
-              <input type="range" min="1" max="80" step="1" value="20"
-                data-canvas-editor-target="colorKeyStrengthInput"
-                data-action="input->canvas-editor#changeColorKeyStrength">
-            </label>
-            <div class="studio-colorkey-actions">
-              <button type="button" class="studio-panel-close" data-canvas-editor-target="colorKeyUndo"
-                data-action="click->canvas-editor#undoColorKey">↶ 1つ戻す</button>
-              <button type="button" class="studio-panel-close"
-                data-action="click->canvas-editor#resetColorKey">↺ リセット</button>
-              <button type="button" class="studio-panel-close studio-colorkey-done"
-                data-action="click->canvas-editor#finishColorKey">✓ 完了</button>
-            </div>
-          </div>
-        </div>
         <button type="button" class="studio-panel-close studio-replace-button"
           data-canvas-editor-target="replaceButton" hidden
           data-action="click->canvas-editor#replacePlaceholder">📷 自分の画像に差し替え</button>
+      </div>
+
+      <!-- 🪄 透過：設定の行とは別の段に置く -->
+      <div class="studio-colorkey">
+        <button type="button" class="studio-panel-close studio-colorkey-start"
+          data-canvas-editor-target="colorKeyStart"
+          data-action="click->canvas-editor#startColorKey">🪄 背景を透過</button>
+        <div class="studio-colorkey-tools" data-canvas-editor-target="colorKeyTools" hidden>
+          <div class="studio-colorkey-modes">
+            <button type="button" data-tool="keep" data-canvas-editor-target="colorKeyToolButton"
+              data-action="click->canvas-editor#chooseColorKeyTool">🖌 残す</button>
+            <button type="button" data-tool="erase" data-canvas-editor-target="colorKeyToolButton"
+              data-action="click->canvas-editor#chooseColorKeyTool">🧽 消す</button>
+            <button type="button" data-tool="all" data-canvas-editor-target="colorKeyToolButton"
+              data-action="click->canvas-editor#chooseColorKeyTool">🌈 色で消す</button>
+          </div>
+          <p class="studio-colorkey-hint" data-canvas-editor-target="colorKeyHint"></p>
+          <label class="studio-setting studio-setting-size" data-canvas-editor-target="colorKeySizeRow">
+            <span>太さ <strong data-canvas-editor-target="colorKeySizeValue">24</strong></span>
+            <input type="range" min="4" max="80" step="1" value="24"
+              data-canvas-editor-target="colorKeySizeInput"
+              data-action="input->canvas-editor#changeColorKeySize">
+          </label>
+          <label class="studio-setting studio-setting-size" data-canvas-editor-target="colorKeyStrengthRow" hidden>
+            <span>強さ <strong data-canvas-editor-target="colorKeyStrengthValue">20</strong></span>
+            <input type="range" min="1" max="80" step="1" value="20"
+              data-canvas-editor-target="colorKeyStrengthInput"
+              data-action="input->canvas-editor#changeColorKeyStrength">
+          </label>
+          <div class="studio-colorkey-actions">
+            <button type="button" class="studio-panel-close" data-canvas-editor-target="colorKeyUndo"
+              data-action="click->canvas-editor#undoColorKey">↶ 1つ戻す</button>
+            <button type="button" class="studio-panel-close"
+              data-action="click->canvas-editor#resetColorKey">↺ リセット</button>
+            <button type="button" class="studio-panel-close studio-colorkey-done"
+              data-action="click->canvas-editor#finishColorKey">✓ 完了</button>
+          </div>
+        </div>
       </div>
     </div>
 

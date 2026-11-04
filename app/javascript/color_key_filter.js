@@ -4,19 +4,23 @@ import { filters, classRegistry, config } from "fabric"
 // このアプリは Fabric のほかのフィルタを使っていないので、影響はない
 config.configure({ enableGLFiltering: false })
 
-// 指定した色を透明にするフィルタ（カラーキー）。元の画像は書き換えない。
-// ops：タップした順の操作。x, y は画像の中の位置（0〜1）
-//   { x, y, act: "erase" }            タップした所から、似た色でつながっている部分を消す
-//   { x, y, act: "erase", all: true } タップした所と似た色を、画像の中から全部消す
-//   { x, y, act: "keep" }             タップした所から、似た色でつながっている部分を元に戻す
-// strength：どこまで似た色を同じとみなすか（1〜80。RGB それぞれの差が strength × 2.55 まで）
+// 部品の画像の一部を透明にするフィルタ。元の画像は書き換えず、「どこをなぞったか」だけを覚える。
+// ops：操作した順。位置（x, y, pts）は画像の中の割合（0〜1）
+//   { act: "keep",  r, pts: [x0, y0, x1, y1, …] }  🖌 なぞった所を残す（最初の1回で、ほかは全部消える）
+//   { act: "erase", r, pts: [...] }                🧽 なぞった所を消す
+//   { act: "all", x, y }                           🌈 タップした所と似た色を、画像の中から全部消す
+// r：ブラシの半径（画像の長い辺に対する割合）
+// strength：🌈で、どこまで似た色を同じとみなすか（1〜80。RGB それぞれの差が strength × 2.55 まで）
+// preview：true の間は、消える所をうっすら見せる（編集中だけ。defaults に入れないので保存されない）
 export class ColorKey extends filters.BaseFilter {
   static type = "ColorKey"
   static defaults = { strength: 20, ops: [] }
 
   constructor(options = {}) {
     super(options)
-    this.ops = (options.ops || []).map(op => ({ ...op }))  // 配列をほかと共有しない
+    // 配列をほかと共有しない
+    this.ops = (options.ops || []).map(op => (op.pts ? { ...op, pts: [...op.pts] } : { ...op }))
+    this.preview = false
   }
 
   isNeutralState() {
@@ -26,49 +30,76 @@ export class ColorKey extends filters.BaseFilter {
   applyTo2d({ imageData }) {
     const { data, width: w, height: h } = imageData
     const n = w * h
-    const tol = Math.round((this.strength ?? 20) * 2.55)
-    const visible = new Uint8Array(n).fill(1)   // 1：見える、0：透明にする
-    const seen = new Uint8Array(n)
-    const stack = new Int32Array(n)
+    const long = Math.max(w, h)
 
-    // i 番目の画素が、色 (r, g, b) に似ているか（元から透明な所は、色がないので似ていない扱い）
-    const like = (i, r, g, b) => {
-      const j = i * 4
-      return data[j + 3] >= 10 &&
-        Math.abs(data[j] - r) <= tol && Math.abs(data[j + 1] - g) <= tol && Math.abs(data[j + 2] - b) <= tol
-    }
+    // 見える所を表す「型紙」。塗ってある所が見える、透明な所が消える
+    const mask = document.createElement("canvas")
+    mask.width = w
+    mask.height = h
+    const ctx = mask.getContext("2d", { willReadFrequently: true })
+    ctx.fillRect(0, 0, w, h)   // 最初は全部見える
+    let kept = false
 
     for (const op of this.ops) {
-      const px = Math.min(w - 1, Math.max(0, Math.round(op.x * (w - 1))))
-      const py = Math.min(h - 1, Math.max(0, Math.round(op.y * (h - 1))))
-      const seed = py * w + px
-      const j = seed * 4
-      if (data[j + 3] < 10) continue   // 元から透明な所をタップしたときは何もしない
-      const r = data[j], g = data[j + 1], b = data[j + 2]
-      const value = op.act === "keep" ? 1 : 0
-
-      if (op.all && op.act !== "keep") {
-        for (let i = 0; i < n; i++) if (like(i, r, g, b)) visible[i] = value
+      const act = op.all ? "all" : op.act   // all: true は前の形（🌈）
+      if (act === "all") {
+        this.removeSameColor(ctx, data, w, h, op)
         continue
       }
-
-      // ペイントの塗りつぶしと同じやり方で、つながっている所だけをたどる（上下左右）
-      seen.fill(0)
-      let top = 0
-      stack[top++] = seed
-      seen[seed] = 1
-      while (top > 0) {
-        const i = stack[--top]
-        visible[i] = value
-        const x = i % w
-        if (x > 0 && !seen[i - 1]) { seen[i - 1] = 1; if (like(i - 1, r, g, b)) stack[top++] = i - 1 }
-        if (x < w - 1 && !seen[i + 1]) { seen[i + 1] = 1; if (like(i + 1, r, g, b)) stack[top++] = i + 1 }
-        if (i - w >= 0 && !seen[i - w]) { seen[i - w] = 1; if (like(i - w, r, g, b)) stack[top++] = i - w }
-        if (i + w < n && !seen[i + w]) { seen[i + w] = 1; if (like(i + w, r, g, b)) stack[top++] = i + w }
+      if (!Array.isArray(op.pts) || op.pts.length < 2) continue
+      // 🖌 残す：最初の1回で、なぞっていない所を全部消す
+      if (act === "keep" && !kept) {
+        ctx.clearRect(0, 0, w, h)
+        kept = true
       }
+      ctx.globalCompositeOperation = act === "erase" ? "destination-out" : "source-over"
+      this.drawStroke(ctx, op.pts, Math.max(1, op.r * 2 * long), w, h)
+      ctx.globalCompositeOperation = "source-over"
     }
 
-    for (let i = 0; i < n; i++) if (!visible[i]) data[i * 4 + 3] = 0
+    // 型紙に合わせて、画像の透明度を変える（ふちは少しなめらかになる）
+    const m = ctx.getImageData(0, 0, w, h).data
+    const ghost = this.preview ? 0.2 : 0
+    for (let i = 0; i < n; i++) {
+      const a = m[i * 4 + 3]
+      if (a === 255) continue
+      data[i * 4 + 3] = Math.round(data[i * 4 + 3] * (ghost + (1 - ghost) * a / 255))
+    }
+  }
+
+  // なぞった線を型紙に描く（1点だけのときは丸を描く）
+  drawStroke(ctx, pts, width, w, h) {
+    ctx.beginPath()
+    if (pts.length === 2) {
+      ctx.arc(pts[0] * w, pts[1] * h, width / 2, 0, Math.PI * 2)
+      ctx.fill()
+      return
+    }
+    ctx.lineWidth = width
+    ctx.lineCap = "round"
+    ctx.lineJoin = "round"
+    ctx.moveTo(pts[0] * w, pts[1] * h)
+    for (let k = 2; k < pts.length; k += 2) ctx.lineTo(pts[k] * w, pts[k + 1] * h)
+    ctx.stroke()
+  }
+
+  // 🌈：タップした所の色（元の画像の色）に似ている所を、型紙から消す
+  removeSameColor(ctx, data, w, h, op) {
+    const px = Math.min(w - 1, Math.max(0, Math.round(op.x * (w - 1))))
+    const py = Math.min(h - 1, Math.max(0, Math.round(op.y * (h - 1))))
+    const j = (py * w + px) * 4
+    if (data[j + 3] < 10) return   // 元から透明な所をタップしたときは何もしない
+    const r = data[j], g = data[j + 1], b = data[j + 2]
+    const tol = Math.round((this.strength ?? 20) * 2.55)
+    const img = ctx.getImageData(0, 0, w, h)
+    const m = img.data
+    for (let k = 0; k < w * h * 4; k += 4) {
+      if (data[k + 3] >= 10 &&
+        Math.abs(data[k] - r) <= tol && Math.abs(data[k + 1] - g) <= tol && Math.abs(data[k + 2] - b) <= tol) {
+        m[k + 3] = 0
+      }
+    }
+    ctx.putImageData(img, 0, 0)
   }
 }
 
