@@ -465,6 +465,7 @@
           data-canvas-editor-target="colorKeyStart"
           data-action="click->canvas-editor#startColorKey">🪄 背景を透過</button>
         <div class="studio-colorkey-tools" data-canvas-editor-target="colorKeyTools" hidden>
+          <div class="studio-colorkey-head">
           <div class="studio-colorkey-modes">
             <% if Rails.env.development? || ENV["MEDIAPIPE_BASE_URL"].present? %>
               <button type="button" data-tool="ai" data-canvas-editor-target="colorKeyToolButton"
@@ -477,13 +478,20 @@
             <button type="button" data-tool="all" data-canvas-editor-target="colorKeyToolButton"
               data-action="click->canvas-editor#chooseColorKeyTool">🌈 色で消す</button>
           </div>
-          <p class="studio-colorkey-hint" data-canvas-editor-target="colorKeyHint"></p>
+            <button type="button" class="studio-colorkey-fold"
+              data-canvas-editor-target="colorKeyFoldButton"
+              data-action="click->canvas-editor#toggleColorKeyFold"
+              aria-expanded="true" title="説明とスライダーをしまう">▾</button>
+          </div>
           <div class="studio-colorkey-ai" data-canvas-editor-target="colorKeyAiRow" hidden>
             <button type="button" data-sign="plus" data-canvas-editor-target="colorKeyAiSign"
               data-action="click->canvas-editor#chooseAiSign">＋ 足す</button>
             <button type="button" data-sign="minus" data-canvas-editor-target="colorKeyAiSign"
               data-action="click->canvas-editor#chooseAiSign">− 外す</button>
           </div>
+          <!-- ▾でしまえるところ：説明とスライダー -->
+          <div class="studio-colorkey-details" data-canvas-editor-target="colorKeyDetails">
+          <p class="studio-colorkey-hint" data-canvas-editor-target="colorKeyHint"></p>
           <label class="studio-setting studio-setting-size" data-canvas-editor-target="colorKeySharpRow" hidden>
             <span>くっきり <strong data-canvas-editor-target="colorKeySharpValue">0</strong></span>
             <input type="range" min="0" max="100" step="1" value="0"
@@ -508,6 +516,7 @@
               data-canvas-editor-target="colorKeyFeatherInput"
               data-action="input->canvas-editor#changeColorKeyFeather">
           </label>
+          </div>
           <div class="studio-colorkey-actions">
             <button type="button" class="studio-panel-close" data-canvas-editor-target="colorKeyUndo"
               data-action="click->canvas-editor#undoColorKey">↶ 1つ戻す</button>

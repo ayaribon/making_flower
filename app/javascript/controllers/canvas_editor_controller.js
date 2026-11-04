@@ -53,7 +53,8 @@ export default class extends Controller {
     "colorKeyStrengthInput", "colorKeyStrengthValue", "colorKeyUndo",
     "partSettings", "colorKeySizeRow", "colorKeySizeInput", "colorKeySizeValue", "colorKeyStrengthRow",
     "colorKeyAiRow", "colorKeyAiSign", "colorKeySharpRow", "colorKeySharpInput", "colorKeySharpValue",
-    "colorKeyFeatherInput", "colorKeyFeatherValue"
+    "colorKeyFeatherInput", "colorKeyFeatherValue",
+    "colorKeyDetails", "colorKeyFoldButton"
   ]
   static values = { width: Number, height: Number, materials: Object, editTemplate: Object, mediapipeBase: String }
 
@@ -1771,6 +1772,15 @@ export default class extends Controller {
     this.colorKeyToolsTarget.hidden = !editing
     if (!editing) return
 
+    // ▾：説明とスライダーをしまう（編集のあいだ、しまったかどうかを覚えておく）
+    if (this.hasColorKeyDetailsTarget) {
+      const folded = !!this.colorKeyFolded
+      this.colorKeyDetailsTarget.hidden = folded
+      this.colorKeyFoldButtonTarget.textContent = folded ? "▴" : "▾"
+      this.colorKeyFoldButtonTarget.setAttribute("aria-expanded", String(!folded))
+      this.colorKeyFoldButtonTarget.title = folded ? "説明とスライダーを出す" : "説明とスライダーをしまう"
+    }
+
     const tool = this.colorKeyTool
     const brush = tool === "keep" || tool === "erase"
     this.colorKeyToolButtonTargets.forEach(b => b.classList.toggle("is-active", b.dataset.tool === this.colorKeyTool))
@@ -1854,6 +1864,11 @@ export default class extends Controller {
     pen.color = this.colorKeyTool === "keep" ? "rgba(46, 204, 113, 0.55)" : "rgba(240, 115, 154, 0.55)"
     pen.width = this.colorKeySize / this.canvas.getZoom()   // 画面の上で同じ太さに見えるようにする
     this.canvas.freeDrawingBrush = pen
+  }
+
+  toggleColorKeyFold() {
+    this.colorKeyFolded = !this.colorKeyFolded
+    this.syncColorKeyPanel(this.colorKeyPart)
   }
 
   chooseColorKeyTool(event) {
