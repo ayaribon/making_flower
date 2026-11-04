@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import { Canvas, Textbox, Gradient, Shadow, FabricImage } from "fabric"
+import { Canvas, Textbox, Gradient, Shadow, FabricImage, Point } from "fabric"
 import { STYLES, STYLE_DEFAULTS } from "text_styles"
 import { saveImage, listImages, getImageUrl, deleteImage } from "image_store"
 
@@ -45,7 +45,8 @@ export default class extends Controller {
     "undoButton", "redoButton", "credit",
     "effectsPanel", "effectTab", "effectPage", "effectToggle", "effectStrength", "tintInput", "frameButton",
     "templatesPanel", "templateList", "replaceButton", "replaceHint",
-    "saveDialog", "saveName", "saveIcon", "saveOverwrite", "saveNote", "saveStatus"
+    "saveDialog", "saveName", "saveIcon", "saveOverwrite", "saveNote", "saveStatus",
+    "viewAllButton"
   ]
   static values = { width: Number, height: Number, materials: Object, editTemplate: Object }
 
@@ -85,6 +86,14 @@ export default class extends Controller {
     this.canvas.on("object:scaling", startDrag)
     this.canvas.on("object:rotating", startDrag)
     this.canvas.on("mouse:up", () => this.element.classList.remove("is-dragging"))
+
+    // 指2本で拡大縮小・回転（スマホ）／Ctrl＋ホイールで拡大縮小（PC）
+    this.setupGestures()
+
+    // 「全体を見る」の途中で、何もないところをタップしたら、バーとパネルを戻す
+    this.canvas.on("mouse:down", ({ target }) => {
+      if (!target) this.setViewing(false)
+    })
 
     this.fit()
 
@@ -136,6 +145,7 @@ export default class extends Controller {
     clearTimeout(this.snapshotTimer)
     ;["input", "change", "click"].forEach(name => this.element.removeEventListener(name, this.onUiChange))
     this.resizeObserver?.disconnect()
+    this.teardownGestures?.()
     this.canvas?.dispose()
   }
 
@@ -1192,6 +1202,209 @@ export default class extends Controller {
     })
     this.canvas.setZoom(scale)
     this.canvas.requestRenderAll()
+  }
+
+  // ===== 指2本の操作 =====
+  // Fabric.js 7 には指2本の操作がないので、自分で作る。
+  // 指が2本になったら、Fabric に1本指の動きを渡さないようにして、こっちで拡大縮小・回転・移動をする
+  setupGestures() {
+    this.touches = new Map()   // 今キャンバスに触れている指（pointerId → 画面上の位置）
+    this.pinch = null          // 指2本で操作している間の情報
+    this.blockTouch = false    // true の間は、指の動きを Fabric に渡さない
+    this.pinchDone = null      // 指2本で動かし終わった部品（全部の指が離れたら選び直す）
+
+    const frame = this.frameTarget
+
+    // 指を置いた（Fabric より先に受け取るため capture で聞く）
+    this.onGestureDown = (e) => {
+      if (e.pointerType !== "touch" || e.target.tagName !== "CANVAS") return
+      if (this.touches.size === 0) this.pinchCandidate = this.canvas.getActiveObject()
+      this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      if (this.touches.size === 2) this.startPinch()
+    }
+
+    // 指を動かした（window の capture なので、Fabric のどの処理よりも先に来る）
+    this.onGestureMove = (e) => {
+      if (e.pointerType !== "touch" || !this.touches.has(e.pointerId)) return
+      this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      if (!this.blockTouch) return
+      e.stopImmediatePropagation()
+      if (this.pinch) this.updatePinch()
+    }
+
+    // 指を離した（Fabric にもそのまま渡す。Fabric 側の操作をきれいに終わらせるため）
+    this.onGestureUp = (e) => {
+      if (e.pointerType !== "touch" || !this.touches.has(e.pointerId)) return
+      this.touches.delete(e.pointerId)
+      if (this.pinch && this.touches.size < 2) this.endPinch()
+      // 指が全部離れるまでは止めたままにする（残った1本の指で、部品がとばないように）
+      if (this.touches.size === 0) {
+        this.blockTouch = false
+        const target = this.pinchDone
+        this.pinchDone = null
+        // Fabric が指を離したときの処理を終えてから、動かした部品を選び直す
+        if (target) setTimeout(() => {
+          if (!this.canvas.getObjects().includes(target)) return
+          this.canvas.setActiveObject(target)
+          this.canvas.requestRenderAll()
+          this.updatePanel()
+        }, 0)
+      }
+    }
+
+    // iPhone の Safari で、画面全体がズームされないようにする
+    this.onGestureStart = (e) => e.preventDefault()
+
+    // PC：Ctrl＋ホイール（トラックパッドのピンチもこれで届く）で、選んでいる部品を拡大縮小
+    this.onWheel = (e) => this.wheelZoom(e)
+
+    frame.addEventListener("pointerdown", this.onGestureDown, true)
+    window.addEventListener("pointermove", this.onGestureMove, true)
+    window.addEventListener("pointerup", this.onGestureUp, true)
+    window.addEventListener("pointercancel", this.onGestureUp, true)
+    frame.addEventListener("gesturestart", this.onGestureStart)
+    frame.addEventListener("wheel", this.onWheel, { passive: false })
+  }
+
+  teardownGestures() {
+    const frame = this.frameTarget
+    frame.removeEventListener("pointerdown", this.onGestureDown, true)
+    window.removeEventListener("pointermove", this.onGestureMove, true)
+    window.removeEventListener("pointerup", this.onGestureUp, true)
+    window.removeEventListener("pointercancel", this.onGestureUp, true)
+    frame.removeEventListener("gesturestart", this.onGestureStart)
+    frame.removeEventListener("wheel", this.onWheel, { passive: false })
+    clearTimeout(this.wheelTimer)
+  }
+
+  // 指2本・ホイールで動かしていいもの（ロック中・エフェクト・触れないものはダメ）
+  canGesture(obj) {
+    return !!obj && !obj.locked && !obj.effect &&
+      obj.selectable !== false && obj.evented !== false &&
+      !obj.lockScalingX && !obj.lockRotation
+  }
+
+  // 画面上の位置 → キャンバスの中の位置（1280×720 などの座標）
+  toScene(x, y) {
+    const rect = this.canvasTarget.getBoundingClientRect()
+    const zoom = this.canvas.getZoom()
+    return new Point((x - rect.left) / zoom, (y - rect.top) / zoom)
+  }
+
+  // その位置にある、いちばん上の動かせるもの
+  objectAt(point) {
+    return [...this.canvas.getObjects()].reverse()
+      .find(o => this.canGesture(o) && o.containsPoint(point))
+  }
+
+  startPinch() {
+    const [a, b] = [...this.touches.values()]
+    const mid = this.toScene((a.x + b.x) / 2, (a.y + b.y) / 2)
+
+    // 動かすもの：指を置く前に選んでいたもの → 2本の指の真ん中にあるもの
+    let target = this.pinchCandidate
+    if (!this.canGesture(target) || !this.canvas.getObjects().includes(target)) target = this.objectAt(mid)
+
+    // 指2本の間は、何もないところでも Fabric の1本指の操作（範囲選択など）を止める
+    this.blockTouch = true
+    if (!target) return
+
+    this.pinch = {
+      target,
+      dist: Math.hypot(b.x - a.x, b.y - a.y) || 1,
+      angle: Math.atan2(b.y - a.y, b.x - a.x),
+      mid,
+      center: target.getCenterPoint(),
+      scaleX: target.scaleX,
+      scaleY: target.scaleY,
+      objAngle: target.angle || 0
+    }
+    if (this.canvas.getActiveObject() !== target) this.canvas.setActiveObject(target)
+    this.element.classList.add("is-dragging")
+    this.canvas.requestRenderAll()
+  }
+
+  updatePinch() {
+    const p = this.pinch
+    const [a, b] = [...this.touches.values()]
+
+    // 指の間の広さ → 大きさ（小さくなりすぎないようにする）
+    const min = 0.02 / Math.min(Math.abs(p.scaleX), Math.abs(p.scaleY))
+    const k = Math.max(Math.hypot(b.x - a.x, b.y - a.y) / p.dist, min)
+
+    // ひねった角度 → 回転。0°・90°・180°・270° の近く（±4°）では吸い付かせる
+    let angle = p.objAngle + (Math.atan2(b.y - a.y, b.x - a.x) - p.angle) * 180 / Math.PI
+    const snapped = Math.round(angle / 90) * 90
+    if (Math.abs(angle - snapped) < 4) angle = snapped
+    const rad = (angle - p.objAngle) * Math.PI / 180
+
+    // 指の下にあった場所が、指についてくるように動かす
+    const mid = this.toScene((a.x + b.x) / 2, (a.y + b.y) / 2)
+    const dx = (p.center.x - p.mid.x) * k
+    const dy = (p.center.y - p.mid.y) * k
+    const center = new Point(
+      mid.x + dx * Math.cos(rad) - dy * Math.sin(rad),
+      mid.y + dx * Math.sin(rad) + dy * Math.cos(rad)
+    )
+
+    p.target.set({ scaleX: p.scaleX * k, scaleY: p.scaleY * k, angle: ((angle % 360) + 360) % 360 })
+    p.target.setPositionByOrigin(center, "center", "center")
+    p.target.setCoords()
+    this.syncInputs()
+    this.canvas.requestRenderAll()
+  }
+
+  endPinch() {
+    const { target } = this.pinch
+    this.pinch = null
+    target.setCoords()
+    this.pinchDone = target
+    this.element.classList.remove("is-dragging")
+    // 元に戻す／やり直すに1回だけ記録する
+    this.canvas.fire("object:modified", { target })
+  }
+
+  // PC：Ctrl＋ホイールで、選んでいるものを拡大縮小する
+  wheelZoom(e) {
+    if (!e.ctrlKey) return                       // ふつうのホイールは何もしない
+    const target = this.canvas.getActiveObject()
+    if (!this.canGesture(target)) return         // 何も選んでいないときは、ブラウザの拡大に任せる
+    e.preventDefault()                           // ブラウザの画面ズームを止める
+
+    // マウスのホイール1目盛りで約0.74倍、トラックパッドのピンチはなめらかに
+    const delta = Math.max(-30, Math.min(30, e.deltaY))
+    const min = 0.02 / Math.min(Math.abs(target.scaleX), Math.abs(target.scaleY))
+    const k = Math.max(Math.exp(-delta * 0.01), min)
+
+    const center = target.getCenterPoint()
+    target.set({ scaleX: target.scaleX * k, scaleY: target.scaleY * k })
+    target.setPositionByOrigin(center, "center", "center")
+    target.setCoords()
+    this.element.classList.add("is-dragging")
+    this.syncInputs()
+    this.canvas.requestRenderAll()
+
+    // 回し終わったら（0.3秒なにもなければ）、バーとパネルを戻して、記録を1回だけ残す
+    clearTimeout(this.wheelTimer)
+    this.wheelTimer = setTimeout(() => {
+      this.element.classList.remove("is-dragging")
+      this.canvas.fire("object:modified", { target })
+    }, 300)
+  }
+
+  // ===== 全体を見る =====
+  // 下のバーとパネルをしまって、キャンバス全体を見る（選んでいるものはそのまま）
+  toggleViewAll() {
+    this.setViewing(!this.element.classList.contains("is-viewing"))
+  }
+
+  setViewing(on) {
+    this.element.classList.toggle("is-viewing", on)
+    if (!this.hasViewAllButtonTarget) return
+    const button = this.viewAllButtonTarget
+    button.setAttribute("aria-pressed", String(on))
+    button.textContent = on ? "↩︎" : "👀"
+    button.title = on ? "バーとパネルを戻す" : "バーとパネルをしまって全体を見る"
   }
 
   // ===== PNG書き出し =====
