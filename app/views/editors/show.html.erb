@@ -484,6 +484,12 @@
             <button type="button" data-sign="minus" data-canvas-editor-target="colorKeyAiSign"
               data-action="click->canvas-editor#chooseAiSign">− 外す</button>
           </div>
+          <label class="studio-setting studio-setting-size" data-canvas-editor-target="colorKeySharpRow" hidden>
+            <span>くっきり <strong data-canvas-editor-target="colorKeySharpValue">0</strong></span>
+            <input type="range" min="0" max="100" step="1" value="0"
+              data-canvas-editor-target="colorKeySharpInput"
+              data-action="input->canvas-editor#changeColorKeySharp">
+          </label>
           <label class="studio-setting studio-setting-size" data-canvas-editor-target="colorKeySizeRow">
             <span>太さ <strong data-canvas-editor-target="colorKeySizeValue">24</strong></span>
             <input type="range" min="4" max="80" step="1" value="24"

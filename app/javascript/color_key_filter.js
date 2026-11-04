@@ -15,7 +15,7 @@ config.configure({ enableGLFiltering: false })
 // preview：true の間は、消える所をうっすら見せる（編集中だけ。defaults に入れないので保存されない）
 export class ColorKey extends filters.BaseFilter {
   static type = "ColorKey"
-  static defaults = { strength: 20, ops: [] }
+  static defaults = { strength: 20, sharp: 0, ops: [] }
 
   // AI の形（PNG）は、計算する前に読み込んでおく
   static masks = new Map()
@@ -77,7 +77,7 @@ export class ColorKey extends filters.BaseFilter {
           ctx.clearRect(0, 0, w, h)
           kept = true
         }
-        ctx.drawImage(mask, 0, 0, w, h)
+        ctx.drawImage(this.sharpenMask(mask, w, h), 0, 0, w, h)
         continue
       }
       if (!Array.isArray(op.pts) || op.pts.length < 2) continue
@@ -115,6 +115,26 @@ export class ColorKey extends filters.BaseFilter {
     ctx.moveTo(pts[0] * w, pts[1] * h)
     for (let k = 2; k < pts.length; k += 2) ctx.lineTo(pts[k] * w, pts[k + 1] * h)
     ctx.stroke()
+  }
+
+  // くっきり：AI が迷った所（半透明）を、残すか消すかに寄せる。sharp は 0〜100（0 のときは何もしない）
+  sharpenMask(mask, w, h) {
+    const s = this.sharp || 0
+    if (s <= 0) return mask
+    const c = document.createElement("canvas")
+    c.width = w
+    c.height = h
+    const ctx = c.getContext("2d", { willReadFrequently: true })
+    ctx.drawImage(mask, 0, 0, w, h)
+    const img = ctx.getImageData(0, 0, w, h)
+    const d = img.data
+    const k = 1 + (s / 100) * 19   // 100 で 20 倍の差をつける
+    for (let i = 3; i < d.length; i += 4) {
+      const a = (d[i] / 255 - 0.5) * k + 0.5
+      d[i] = Math.round(Math.min(1, Math.max(0, a)) * 255)
+    }
+    ctx.putImageData(img, 0, 0)
+    return c
   }
 
   // 🌈：タップした所の色（元の画像の色）に似ている所を、型紙から消す
