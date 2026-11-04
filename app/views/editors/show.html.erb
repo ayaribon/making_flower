@@ -17,6 +17,7 @@
   data-action="keydown@window->canvas-editor#onKeydown"
   data-canvas-editor-width-value="<%= @width %>"
   data-canvas-editor-height-value="<%= @height %>"
+  data-canvas-editor-mediapipe-base-value="<%= ENV.fetch("MEDIAPIPE_BASE_URL", "/mediapipe") %>"
   data-canvas-editor-materials-value="<%= @material_map.to_json %>"
   <% if @edit_template %>data-canvas-editor-edit-template-value="<%= @edit_template.to_json %>"<% end %>>
   <!-- 比率を選ぶ画面（最初に出す。ヘッダーのサイズを押すと、また開く） -->
@@ -465,6 +466,10 @@
           data-action="click->canvas-editor#startColorKey">🪄 背景を透過</button>
         <div class="studio-colorkey-tools" data-canvas-editor-target="colorKeyTools" hidden>
           <div class="studio-colorkey-modes">
+            <% if Rails.env.development? || ENV["MEDIAPIPE_BASE_URL"].present? %>
+              <button type="button" data-tool="ai" data-canvas-editor-target="colorKeyToolButton"
+                data-action="click->canvas-editor#chooseColorKeyTool">✨ AI</button>
+            <% end %>
             <button type="button" data-tool="keep" data-canvas-editor-target="colorKeyToolButton"
               data-action="click->canvas-editor#chooseColorKeyTool">🖌 残す</button>
             <button type="button" data-tool="erase" data-canvas-editor-target="colorKeyToolButton"
@@ -473,6 +478,12 @@
               data-action="click->canvas-editor#chooseColorKeyTool">🌈 色で消す</button>
           </div>
           <p class="studio-colorkey-hint" data-canvas-editor-target="colorKeyHint"></p>
+          <div class="studio-colorkey-ai" data-canvas-editor-target="colorKeyAiRow" hidden>
+            <button type="button" data-sign="plus" data-canvas-editor-target="colorKeyAiSign"
+              data-action="click->canvas-editor#chooseAiSign">＋ 足す</button>
+            <button type="button" data-sign="minus" data-canvas-editor-target="colorKeyAiSign"
+              data-action="click->canvas-editor#chooseAiSign">− 外す</button>
+          </div>
           <label class="studio-setting studio-setting-size" data-canvas-editor-target="colorKeySizeRow">
             <span>太さ <strong data-canvas-editor-target="colorKeySizeValue">24</strong></span>
             <input type="range" min="4" max="80" step="1" value="24"

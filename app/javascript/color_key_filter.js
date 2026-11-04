@@ -9,12 +9,36 @@ config.configure({ enableGLFiltering: false })
 //   { act: "keep",  r, pts: [x0, y0, x1, y1, …] }  🖌 なぞった所を残す（最初の1回で、ほかは全部消える）
 //   { act: "erase", r, pts: [...] }                🧽 なぞった所を消す
 //   { act: "all", x, y }                           🌈 タップした所と似た色を、画像の中から全部消す
+//   { act: "ai", src }                             ✨ AI が選んだ形（PNG）を残す（最初の1回で、ほかは全部消える）
 // r：ブラシの半径（画像の長い辺に対する割合）
 // strength：🌈で、どこまで似た色を同じとみなすか（1〜80。RGB それぞれの差が strength × 2.55 まで）
 // preview：true の間は、消える所をうっすら見せる（編集中だけ。defaults に入れないので保存されない）
 export class ColorKey extends filters.BaseFilter {
   static type = "ColorKey"
   static defaults = { strength: 20, ops: [] }
+
+  // AI の形（PNG）は、計算する前に読み込んでおく
+  static masks = new Map()
+
+  static loadMask(src) {
+    if (ColorKey.masks.has(src)) return Promise.resolve(ColorKey.masks.get(src))
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => { ColorKey.masks.set(src, img); resolve(img) }
+      img.onerror = reject
+      img.src = src
+    })
+  }
+
+  static preload(ops = []) {
+    return Promise.all(ops.filter(op => op.act === "ai" && op.src).map(op => ColorKey.loadMask(op.src)))
+  }
+
+  // 保存したデータから作り直すときも、先に AI の形を読み込む
+  static async fromObject({ type, ...options }) {
+    await ColorKey.preload(options.ops)
+    return new this(options)
+  }
 
   constructor(options = {}) {
     super(options)
@@ -44,6 +68,16 @@ export class ColorKey extends filters.BaseFilter {
       const act = op.all ? "all" : op.act   // all: true は前の形（🌈）
       if (act === "all") {
         this.removeSameColor(ctx, data, w, h, op)
+        continue
+      }
+      if (act === "ai") {
+        const mask = ColorKey.masks.get(op.src)
+        if (!mask) continue
+        if (!kept) {
+          ctx.clearRect(0, 0, w, h)
+          kept = true
+        }
+        ctx.drawImage(mask, 0, 0, w, h)
         continue
       }
       if (!Array.isArray(op.pts) || op.pts.length < 2) continue

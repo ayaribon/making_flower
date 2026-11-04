@@ -3,6 +3,7 @@ import { Canvas, Textbox, Gradient, Shadow, FabricImage, Point, util, ActiveSele
 import { STYLES, STYLE_DEFAULTS } from "text_styles"
 import { saveImage, listImages, getImageUrl, deleteImage } from "image_store"
 import { ColorKey } from "color_key_filter"
+import { segmentPoints } from "ai_cutout"
 
 // 選べる比率とキャンバスの実寸
 const RATIOS = {
@@ -50,9 +51,10 @@ export default class extends Controller {
     "viewAllButton", "trash",
     "colorKeyStart", "colorKeyTools", "colorKeyHint", "colorKeyToolButton",
     "colorKeyStrengthInput", "colorKeyStrengthValue", "colorKeyUndo",
-    "partSettings", "colorKeySizeRow", "colorKeySizeInput", "colorKeySizeValue", "colorKeyStrengthRow"
+    "partSettings", "colorKeySizeRow", "colorKeySizeInput", "colorKeySizeValue", "colorKeyStrengthRow",
+    "colorKeyAiRow", "colorKeyAiSign"
   ]
-  static values = { width: Number, height: Number, materials: Object, editTemplate: Object }
+  static values = { width: Number, height: Number, materials: Object, editTemplate: Object, mediapipeBase: String }
 
   connect() {
     this.canvas = new Canvas(this.canvasTarget, {
@@ -361,7 +363,7 @@ export default class extends Controller {
       opacity: item.opacity ?? 1
     })
     if (item.colorKey?.ops?.length) {
-      img.filters = [new ColorKey(item.colorKey)]
+      img.filters = [await ColorKey.fromObject(item.colorKey)]
       img.applyFilters()
     }
     this.canvas.add(img)
@@ -1768,15 +1770,21 @@ export default class extends Controller {
     this.colorKeyToolsTarget.hidden = !editing
     if (!editing) return
 
-    const brush = this.colorKeyTool !== "all"
+    const tool = this.colorKeyTool
+    const brush = tool === "keep" || tool === "erase"
     this.colorKeyToolButtonTargets.forEach(b => b.classList.toggle("is-active", b.dataset.tool === this.colorKeyTool))
     this.colorKeySizeRowTarget.hidden = !brush
-    this.colorKeyStrengthRowTarget.hidden = brush
+    this.colorKeyStrengthRowTarget.hidden = tool !== "all"
+    if (this.hasColorKeyAiRowTarget) {
+      this.colorKeyAiRowTarget.hidden = tool !== "ai"
+      this.colorKeyAiSignTargets.forEach(b => b.classList.toggle("is-active", (b.dataset.sign === "plus") === this.aiPlus))
+    }
     this.colorKeySizeInputTarget.value = this.colorKeySize
     this.colorKeySizeValueTarget.textContent = this.colorKeySize
     this.colorKeyStrengthInputTarget.value = this.colorKeyStrength
     this.colorKeyStrengthValueTarget.textContent = this.colorKeyStrength
     const hints = {
+      ai: "残したいもの（キャラなど）をタップ。−に切り替えてタップすると、その場所を外します",
       keep: "残したい所をなぞる（最初の1回で、なぞっていない所が消えます）",
       erase: "消したい所をなぞる",
       all: "消したい色の所をタップ（同じ色が全部消えます）"
@@ -1791,6 +1799,8 @@ export default class extends Controller {
     if (!(part instanceof FabricImage)) return
     this.colorKeyPart = part
     this.colorKeyTool = "keep"
+    this.aiPoints = []
+    this.aiPlus = true
     this.colorKeyStrength = this.colorKeyOf(part)?.strength ?? ColorKey.defaults.strength
     // 編集している間は、タップで部品が動かないようにする（終わったら元に戻す）
     this.colorKeySaved = this.colorKeyLockState(part)
@@ -1829,7 +1839,7 @@ export default class extends Controller {
 
   // 選んだ道具に合わせて、キャンバスを「なぞる」か「タップする」にする
   applyColorKeyTool() {
-    const brush = !!this.colorKeyPart && this.colorKeyTool !== "all"
+    const brush = !!this.colorKeyPart && (this.colorKeyTool === "keep" || this.colorKeyTool === "erase")
     this.canvas.isDrawingMode = brush
     if (!brush) return
     const pen = new PencilBrush(this.canvas)
@@ -1840,6 +1850,8 @@ export default class extends Controller {
 
   chooseColorKeyTool(event) {
     this.colorKeyTool = event.currentTarget.dataset.tool
+    this.aiPoints = []
+    this.aiPlus = true
     this.applyColorKeyTool()
     this.syncColorKeyPanel(this.colorKeyPart)
   }
@@ -1899,6 +1911,10 @@ export default class extends Controller {
     if (Math.hypot(opt.e.clientX - down.x, opt.e.clientY - down.y) > 10) return
     const p = this.toPartPoint(part, opt.e)
     if (p.x < 0 || p.x > 1 || p.y < 0 || p.y > 1) return
+    if (this.colorKeyTool === "ai") {
+      this.aiTap(part, p)
+      return
+    }
     this.updateColorKey(part, ck => ck.ops.push({ act: "all", x: this.round(p.x), y: this.round(p.y) }))
   }
 
@@ -1919,6 +1935,45 @@ export default class extends Controller {
     const end = stroke[stroke.length - 1]
     if (last !== end) pts.push(this.round(end.x), this.round(end.y))
     this.updateColorKey(part, ck => ck.ops.push({ act: this.colorKeyTool, r: this.round(r, 5), pts }))
+  }
+
+  chooseAiSign(event) {
+    this.aiPlus = event.currentTarget.dataset.sign === "plus"
+    this.syncColorKeyPanel(this.colorKeyPart)
+  }
+
+  // ✨：タップした点を足して、AI に切り抜いてもらう
+  async aiTap(part, p) {
+    if (this.aiBusy) return
+    const points = [...(this.aiPoints || []), { x: this.round(p.x), y: this.round(p.y), plus: this.aiPlus }]
+    if (!points.some(q => q.plus)) {
+      this.colorKeyHintTarget.textContent = "まず「＋ 足す」で、残したいものをタップしてね"
+      return
+    }
+    this.aiBusy = true
+    this.showLoading(this.aiReady ? "AIが考え中…" : "AIを準備中…（最初だけ、約44MB読み込みます）")
+    try {
+      // AI が動いている間は画面が止まるので、先に「準備中」を表示させる
+      await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)))
+      const image = part._originalElement || part.getElement()
+      const src = await segmentPoints(this.mediapipeBaseValue || "/mediapipe", image, points)
+      this.aiReady = true
+      await ColorKey.loadMask(src)
+      // 同じ ✨ で2回目以降のタップなら、前の結果と入れ替える
+      const replace = (this.aiPoints || []).length > 0
+      this.aiPoints = points
+      this.updateColorKey(part, ck => {
+        const op = { act: "ai", src }
+        if (replace && ck.ops[ck.ops.length - 1]?.act === "ai") ck.ops[ck.ops.length - 1] = op
+        else ck.ops.push(op)
+      })
+    } catch (e) {
+      console.error(e)
+      this.colorKeyHintTarget.textContent = "AIの準備に失敗しました。もう一度タップしてみてね"
+    } finally {
+      this.aiBusy = false
+      this.hideLoading()
+    }
   }
 
   // 透過の設定を変えて、計算し直す
@@ -1947,11 +2002,13 @@ export default class extends Controller {
 
   // 「↶ 1つ戻す」：最後のタップを取り消す
   undoColorKey() {
+    this.aiPoints = []
     if (this.colorKeyPart) this.updateColorKey(this.colorKeyPart, ck => ck.ops.pop())
   }
 
   // 「↺ リセット」：透過を全部やめて、元の画像に戻す
   resetColorKey() {
+    this.aiPoints = []
     if (this.colorKeyPart) this.updateColorKey(this.colorKeyPart, ck => { ck.ops = [] })
   }
 
