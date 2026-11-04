@@ -9,12 +9,14 @@ class UserImage < ApplicationRecord
 
   belongs_to :user
   has_one_attached :file
+  has_one_attached :thumb   # 一覧用の小さい画像（長い辺256px・PNG）
 
   validates :kind, inclusion: { in: KINDS }
   validate :file_must_be_image
+  validate :thumb_must_be_small_png
 
   # アップロードされたファイルを、その人のフォルダに保存して作る
-  def self.create_for!(user, kind:, upload:)
+  def self.create_for!(user, kind:, upload:, thumb: nil)
     image = new(user: user, kind: kind, name: upload.original_filename.to_s.first(100))
     image.file.attach(
       io: upload,
@@ -22,11 +24,30 @@ class UserImage < ApplicationRecord
       content_type: upload.content_type,
       key: "users/#{user.id}/#{SecureRandom.uuid}"
     )
+    image.attach_thumb(thumb) if thumb.present?
     image.save!
     image
   end
 
+  # サムネをつける（アップロードしたときと、あとから作って送ってきたとき）
+  def attach_thumb(upload)
+    thumb.attach(
+      io: upload,
+      filename: "thumb.png",
+      content_type: "image/png",
+      key: "users/#{user_id}/thumbs/#{SecureRandom.uuid}"
+    )
+  end
+
   private
+
+  THUMB_MAX_BYTES = 1.megabyte
+
+  def thumb_must_be_small_png
+    return unless thumb.attached?
+    errors.add(:thumb, "は PNG にしてください") unless thumb.content_type == "image/png"
+    errors.add(:thumb, "は1MB以下にしてください") if thumb.byte_size > THUMB_MAX_BYTES
+  end
 
   def file_must_be_image
     unless file.attached?

@@ -5,7 +5,12 @@ Rails.application.routes.draw do
   post   "login",  to: "sessions#create"
   delete "logout", to: "sessions#destroy"
 
-  resources :user_images, only: [:index, :create, :show, :destroy]
+  resources :user_images, only: [:index, :create, :show, :destroy] do
+    member do
+      get :thumb
+      put :thumb, action: :update_thumb
+    end
+  end
 
   namespace :admin do
     resources :users, only: [:index, :new, :create, :destroy] do

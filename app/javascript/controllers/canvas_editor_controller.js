@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import { Canvas, Textbox, Gradient, Shadow, FabricImage, Point, util, ActiveSelection, PencilBrush } from "fabric"
 import { STYLES, STYLE_DEFAULTS } from "text_styles"
-import { saveImage, listImages, getImageUrl, deleteImage } from "image_store"
+import { saveImage, listImages, getImageUrl, deleteImage, getThumbUrl, makeThumb, uploadThumb } from "image_store"
 import { ColorKey } from "color_key_filter"
 import { segmentPoints } from "ai_cutout"
 
@@ -2335,7 +2335,20 @@ export default class extends Controller {
       // サムネが届くまでは、ふわふわ光る仮の四角を見せる
       img.addEventListener("load", () => button.classList.remove("is-loading"), { once: true })
       img.addEventListener("error", () => button.classList.remove("is-loading"), { once: true })
-      img.src = url
+      // 一覧はサムネを使う。まだない画像は元の画像を出して、読めたらサムネを作って送っておく（次から速くなる）
+      if (record.thumb) {
+        img.src = getThumbUrl(record.id)
+      } else {
+        img.addEventListener("load", async () => {
+          try {
+            const blob = await makeThumb(img)
+            if (blob) await uploadThumb(record.id, blob)
+          } catch (e) {
+            console.warn("サムネを作れませんでした", e)
+          }
+        }, { once: true })
+        img.src = url
+      }
 
       button.addEventListener("click", async (e) => {
         if (e.target.classList.contains("studio-my-delete")) {
