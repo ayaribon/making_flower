@@ -54,7 +54,8 @@ export default class extends Controller {
     "partSettings", "colorKeySizeRow", "colorKeySizeInput", "colorKeySizeValue", "colorKeyStrengthRow",
     "colorKeyAiRow", "colorKeyAiSign", "colorKeySharpRow", "colorKeySharpInput", "colorKeySharpValue",
     "colorKeyFeatherInput", "colorKeyFeatherValue",
-    "colorKeyDetails", "colorKeyFoldButton"
+    "colorKeyDetails", "colorKeyFoldButton",
+    "loupe"
   ]
   static values = { width: Number, height: Number, materials: Object, editTemplate: Object, mediapipeBase: String }
 
@@ -1834,6 +1835,7 @@ export default class extends Controller {
   finishColorKey() {
     const part = this.colorKeyPart
     if (!part) return
+    this.hideLoupe()
     this.canvas.isDrawingMode = false
     this.colorKeyStroke = null
     this.colorKeyDown = null
@@ -1897,6 +1899,8 @@ export default class extends Controller {
   onColorKeyDown(opt) {
     const part = this.colorKeyPart
     if (!part) return
+    this.loupeOn = true
+    this.scheduleLoupe(opt.e)
     if (opt.e?.pointerType !== "touch") this.pinchUsed = false   // マウスのときは、前の「指2本」の印を消す
     if (this.canvas.isDrawingMode) {
       this.colorKeyStroke = [this.toPartPoint(part, opt.e)]
@@ -1907,13 +1911,69 @@ export default class extends Controller {
   }
 
   onColorKeyMove(opt) {
+    if (this.colorKeyPart && this.loupeOn) this.scheduleLoupe(opt.e)
     if (!this.colorKeyStroke || !this.colorKeyPart) return
     this.colorKeyStroke.push(this.toPartPoint(this.colorKeyPart, opt.e))
+  }
+
+  // 🔍 拡大鏡：1コマに1回だけ描く（指を動かすたびに描くと重いので）
+  scheduleLoupe(e) {
+    this.loupeEvent = { clientX: e?.clientX ?? e?.touches?.[0]?.clientX, clientY: e?.clientY ?? e?.touches?.[0]?.clientY }
+    if (this.loupeFrame) return
+    this.loupeFrame = requestAnimationFrame(() => {
+      this.loupeFrame = null
+      if (this.loupeOn && this.loupeEvent) this.drawLoupe(this.loupeEvent)
+    })
+  }
+
+  // 🔍 拡大鏡：指の下を2倍にして、丸く切り抜いて見せる
+  drawLoupe(e) {
+    if (!this.hasLoupeTarget || e.clientX == null) return
+    const loupe = this.loupeTarget
+    const lower = this.canvas.lowerCanvasEl
+    const upper = this.canvas.upperCanvasEl
+    const rect = lower.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    const size = 120, zoom = 2
+    const ratio = lower.width / rect.width   // 画面の1px → canvas の画素
+    const src = (size / zoom) * ratio
+    loupe.width = size
+    loupe.height = size
+    const ctx = loupe.getContext("2d")
+    ctx.clearRect(0, 0, size, size)
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2)
+    ctx.clip()
+    ctx.fillStyle = "#ffffff"
+    ctx.fillRect(0, 0, size, size)
+    for (const el of [lower, upper]) {
+      if (el) ctx.drawImage(el, x * ratio - src / 2, y * ratio - src / 2, src, src, 0, 0, size, size)
+    }
+    ctx.restore()
+    // まん中の十字
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.6)"
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(size / 2 - 8, size / 2); ctx.lineTo(size / 2 + 8, size / 2)
+    ctx.moveTo(size / 2, size / 2 - 8); ctx.lineTo(size / 2, size / 2 + 8)
+    ctx.stroke()
+    // 指が左上にあるときは、右上に逃げる
+    loupe.classList.toggle("is-right", x < size + 40 && y < size + 40)
+    loupe.hidden = false
+  }
+
+  hideLoupe() {
+    this.loupeOn = false
+    this.loupeEvent = null
+    if (this.hasLoupeTarget) this.loupeTarget.hidden = true
   }
 
   onColorKeyUp(opt) {
     const part = this.colorKeyPart
     if (!part) return
+    this.hideLoupe()
 
     // 🖌🧽：なぞり終わり
     const stroke = this.colorKeyStroke

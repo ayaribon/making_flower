@@ -2147,3 +2147,20 @@ ul.auth-alert { padding-left: 28px; }
 @media (prefers-reduced-motion: reduce) {
   .studio-trash { transition: none; }
 }
+
+/* ===== 🔍 透過でなぞっている所の拡大鏡 ===== */
+.studio-loupe {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 5;
+  width: 120px;
+  height: 120px;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  pointer-events: none;   /* 拡大鏡の上でもなぞれるように */
+}
+.studio-loupe[hidden] { display: none; }
+/* 指が左上にあるときは、右上に逃げる */
+.studio-loupe.is-right { left: auto; right: 10px; }
