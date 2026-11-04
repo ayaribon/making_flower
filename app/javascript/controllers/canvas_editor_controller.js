@@ -1,7 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
-import { Canvas, Textbox, Gradient, Shadow, FabricImage, Point } from "fabric"
+import { Canvas, Textbox, Gradient, Shadow, FabricImage, Point, util, ActiveSelection } from "fabric"
 import { STYLES, STYLE_DEFAULTS } from "text_styles"
 import { saveImage, listImages, getImageUrl, deleteImage } from "image_store"
+import { ColorKey } from "color_key_filter"
 
 // 選べる比率とキャンバスの実寸
 const RATIOS = {
@@ -46,7 +47,9 @@ export default class extends Controller {
     "effectsPanel", "effectTab", "effectPage", "effectToggle", "effectStrength", "tintInput", "frameButton",
     "templatesPanel", "templateList", "replaceButton", "replaceHint",
     "saveDialog", "saveName", "saveIcon", "saveOverwrite", "saveNote", "saveStatus",
-    "viewAllButton"
+    "viewAllButton", "trash",
+    "colorKeyStart", "colorKeyTools", "colorKeyHint", "colorKeyToolButton",
+    "colorKeyStrengthInput", "colorKeyStrengthValue", "colorKeyUndo"
   ]
   static values = { width: Number, height: Number, materials: Object, editTemplate: Object }
 
@@ -87,8 +90,19 @@ export default class extends Controller {
     this.canvas.on("object:rotating", startDrag)
     this.canvas.on("mouse:up", () => this.element.classList.remove("is-dragging"))
 
+    // 下に引っぱって捨てる：動かしている間だけ「🗑 ここで離すと削除」を出す
+    this.canvas.on("object:moving", (opt) => this.onTrashMove(opt))
+    this.canvas.on("mouse:up", () => this.onTrashDrop())
+
     // 指2本で拡大縮小・回転（スマホ）／Ctrl＋ホイールで拡大縮小（PC）
     this.setupGestures()
+
+    // 🪄 透過：編集中の部品をタップしたら、その場所の色を消す／戻す
+    this.colorKeyPart = null
+    this.colorKeyTool = "flood"
+    this.colorKeyStrength = ColorKey.defaults.strength
+    this.canvas.on("mouse:down", (opt) => this.onColorKeyDown(opt))
+    this.canvas.on("mouse:up", (opt) => this.onColorKeyUp(opt))
 
     // 「全体を見る」の途中で、何もないところをタップしたら、バーとパネルを戻す
     this.canvas.on("mouse:down", ({ target }) => {
@@ -341,6 +355,10 @@ export default class extends Controller {
       flipY: !!item.flipY,
       opacity: item.opacity ?? 1
     })
+    if (item.colorKey?.ops?.length) {
+      img.filters = [new ColorKey(item.colorKey)]
+      img.applyFilters()
+    }
     this.canvas.add(img)
   }
 
@@ -491,6 +509,8 @@ export default class extends Controller {
         if ((obj.opacity ?? 1) !== 1) item.opacity = this.round(obj.opacity, 2)
         const stretch = obj.scaleY ? obj.scaleX / obj.scaleY : 1
         if (Math.abs(stretch - 1) > 0.01) item.stretch = this.round(stretch, 3)
+        const ck = this.colorKeyOf(obj)
+        if (ck && !ck.isNeutralState()) item.colorKey = { strength: ck.strength, ops: ck.ops.map(op => ({ ...op })) }
         data.items.push(item)
       } else {
         // 「ここに画像」の枠・自分の画像・どの素材かわからない画像は、「ここに画像」の枠にする
@@ -1010,11 +1030,19 @@ export default class extends Controller {
 
   // 今の状態を文字列にする（比率も一緒に覚えておく）
   serialize() {
-    return JSON.stringify({
-      width: this.widthValue,
-      height: this.heightValue,
-      canvas: this.canvas.toObject(EXTRA_PROPS)
-    })
+    // 🪄 透過の編集中は、部品が動かないように一時的に変えている設定を、元の値で記録する
+    const part = this.colorKeyPart
+    const editing = part ? this.colorKeyLockState(part) : null
+    if (part) part.set(this.colorKeySaved)
+    try {
+      return JSON.stringify({
+        width: this.widthValue,
+        height: this.heightValue,
+        canvas: this.canvas.toObject(EXTRA_PROPS)
+      })
+    } finally {
+      if (part) part.set(editing)
+    }
   }
 
   // 少し待ってから記録する。待っている間にまた変わったら、待ち直す
@@ -1064,6 +1092,7 @@ export default class extends Controller {
 
   // 覚えておいた状態に戻す
   async restore(state) {
+    this.finishColorKey()
     this.restoring = true
     try {
       const data = JSON.parse(state)
@@ -1218,7 +1247,10 @@ export default class extends Controller {
     // 指を置いた（Fabric より先に受け取るため capture で聞く）
     this.onGestureDown = (e) => {
       if (e.pointerType !== "touch" || e.target.tagName !== "CANVAS") return
-      if (this.touches.size === 0) this.pinchCandidate = this.canvas.getActiveObject()
+      if (this.touches.size === 0) {
+        this.pinchCandidate = this.canvas.getActiveObject()
+        this.pinchUsed = false
+      }
       this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY })
       if (this.touches.size === 2) this.startPinch()
     }
@@ -1307,6 +1339,9 @@ export default class extends Controller {
 
     // 指2本の間は、何もないところでも Fabric の1本指の操作（範囲選択など）を止める
     this.blockTouch = true
+    this.pinchUsed = true
+    this.hideTrash()
+    this.trashObject = null
     if (!target) return
 
     this.pinch = {
@@ -1403,8 +1438,60 @@ export default class extends Controller {
     if (!this.hasViewAllButtonTarget) return
     const button = this.viewAllButtonTarget
     button.setAttribute("aria-pressed", String(on))
-    button.textContent = on ? "↩︎" : "👀"
+    button.querySelector(".studio-toolbar-icon").textContent = on ? "↩︎" : "👀"
+    button.querySelector(".studio-toolbar-label").textContent = on ? "戻す" : "全体"
     button.title = on ? "バーとパネルを戻す" : "バーとパネルをしまって全体を見る"
+  }
+
+  // ===== 下に引っぱって捨てる（🗑） =====
+  canTrash(obj) {
+    return !!obj && !obj.locked && !obj.effect && obj !== this.colorKeyPart
+  }
+
+  onTrashMove(opt) {
+    const target = opt.target || opt.transform?.target
+    // 捨てられないもの・指2本で操作しているときは出さない
+    if (!this.canTrash(target) || this.blockTouch || (this.touches?.size || 0) > 1) {
+      this.hideTrash()
+      return
+    }
+    this.trashObject = target
+    this.element.classList.add("is-trash-ready")
+
+    const point = opt.e?.touches?.[0] || opt.e
+    const wasOver = this.element.classList.contains("is-over-trash")
+    const over = this.isOverTrash(point?.clientX, point?.clientY)
+    this.element.classList.toggle("is-over-trash", over)
+    if (over && !wasOver) navigator.vibrate?.(10)   // 入った瞬間に軽く震わせる（対応している端末だけ）
+  }
+
+  // 指（マウス）が削除の場所の上にあるか。狙いやすいように、見た目より少し広く取る
+  isOverTrash(x, y) {
+    if (!this.hasTrashTarget || x == null || y == null) return false
+    const r = this.trashTarget.getBoundingClientRect()
+    const pad = 24
+    return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad
+  }
+
+  onTrashDrop() {
+    const obj = this.trashObject
+    const over = this.element.classList.contains("is-over-trash")
+    this.trashObject = null
+    this.hideTrash()
+    if (!obj || !over || obj.isEditing) return
+
+    // Fabric が「指を離した」処理を終えてから消す（元に戻すで、1回で戻せる）
+    setTimeout(() => {
+      const items = obj instanceof ActiveSelection ? obj.getObjects() : [obj]
+      this.canvas.discardActiveObject()
+      items.filter(o => !o.locked).forEach(o => this.canvas.remove(o))
+      this.canvas.requestRenderAll()
+      this.updatePanel()
+    }, 0)
+  }
+
+  hideTrash() {
+    this.element.classList.remove("is-trash-ready", "is-over-trash")
   }
 
   // ===== PNG書き出し =====
@@ -1497,6 +1584,9 @@ export default class extends Controller {
     const isText = active instanceof Textbox
     const isPart = active instanceof FabricImage
 
+    // 🪄 透過の編集中に、ほかのものを選んだり選択をやめたりしたら、編集を終える
+    if (this.colorKeyPart && active !== this.colorKeyPart) this.finishColorKey()
+
     this.textPanelTarget.hidden = !isText
     this.partPanelTarget.hidden = !isPart
 
@@ -1514,6 +1604,7 @@ export default class extends Controller {
       const opacity = Math.round((active.opacity ?? 1) * 100)
       this.partOpacityInputTarget.value = opacity
       this.partOpacityValueTarget.textContent = opacity
+      this.syncColorKeyPanel(active)
     }
   }
 
@@ -1639,6 +1730,132 @@ export default class extends Controller {
 
     part.set("flipX", !part.flipX)
     this.canvas.requestRenderAll()
+  }
+
+  // ===== 🪄 透過（カラーキー） =====
+  // 指定した色を透明にする。元の画像は書き換えず、「どこをタップしたか」を部品のフィルタに覚えさせる
+
+  colorKeyOf(part) {
+    return part?.filters?.find(f => f instanceof ColorKey) || null
+  }
+
+  colorKeyLockState(part) {
+    return {
+      lockMovementX: part.lockMovementX, lockMovementY: part.lockMovementY,
+      hasControls: part.hasControls, hoverCursor: part.hoverCursor
+    }
+  }
+
+  // 部品パネルの「🪄 透過」の表示を、選んでいる部品に合わせる
+  syncColorKeyPanel(part) {
+    if (!this.hasColorKeyStartTarget || !part) return
+    const editing = this.colorKeyPart === part
+    const ck = this.colorKeyOf(part)
+    this.colorKeyStartTarget.hidden = editing
+    this.colorKeyStartTarget.textContent = ck && !ck.isNeutralState() ? "🪄 透過を直す" : "🪄 背景を透過"
+    this.colorKeyToolsTarget.hidden = !editing
+    if (!editing) return
+
+    this.colorKeyStrengthInputTarget.value = this.colorKeyStrength
+    this.colorKeyStrengthValueTarget.textContent = this.colorKeyStrength
+    this.colorKeyToolButtonTargets.forEach(b => b.classList.toggle("is-active", b.dataset.tool === this.colorKeyTool))
+    const hints = {
+      flood: "消したい色の所をタップ（つながっている所だけ消えます）",
+      all: "消したい色の所をタップ（同じ色が全部消えます）",
+      keep: "戻したい所をタップ（つながっている所が戻ります）"
+    }
+    this.colorKeyHintTarget.textContent = hints[this.colorKeyTool]
+    this.colorKeyUndoTarget.disabled = !(ck && ck.ops.length)
+  }
+
+  // 「🪄 背景を透過」：編集を始める
+  startColorKey() {
+    const part = this.canvas.getActiveObject()
+    if (!(part instanceof FabricImage)) return
+    this.colorKeyPart = part
+    this.colorKeyTool = "flood"
+    this.colorKeyStrength = this.colorKeyOf(part)?.strength ?? ColorKey.defaults.strength
+    // 編集している間は、タップで部品が動かないようにする（終わったら元に戻す）
+    this.colorKeySaved = this.colorKeyLockState(part)
+    part.set({ lockMovementX: true, lockMovementY: true, hasControls: false, hoverCursor: "crosshair" })
+    this.canvas.requestRenderAll()
+    this.syncColorKeyPanel(part)
+  }
+
+  // 「✓ 完了」：編集を終えて、いつもの操作に戻す
+  finishColorKey() {
+    const part = this.colorKeyPart
+    if (!part) return
+    part.set(this.colorKeySaved || {})
+    this.colorKeyPart = null
+    this.colorKeySaved = null
+    this.colorKeyDown = null
+    this.canvas.requestRenderAll()
+    if (this.canvas.getActiveObject() === part) this.syncColorKeyPanel(part)
+  }
+
+  chooseColorKeyTool(event) {
+    this.colorKeyTool = event.currentTarget.dataset.tool
+    this.syncColorKeyPanel(this.colorKeyPart)
+  }
+
+  onColorKeyDown(opt) {
+    if (!this.colorKeyPart || opt.target !== this.colorKeyPart) return
+    this.colorKeyDown = { x: opt.e.clientX, y: opt.e.clientY }
+  }
+
+  // 指を離したときに「タップ」として扱う（指2本を使ったとき・指がずれたときはタップにしない）
+  onColorKeyUp(opt) {
+    const down = this.colorKeyDown
+    this.colorKeyDown = null
+    const part = this.colorKeyPart
+    if (!down || !part || this.pinchUsed) return
+    if (Math.hypot(opt.e.clientX - down.x, opt.e.clientY - down.y) > 10) return
+
+    // タップした場所 → 部品の画像の中の位置（0〜1）。回転・反転・拡大していても合うように、部品の変形を逆にかける
+    const p = this.canvas.getScenePoint(opt.e)
+    const local = util.transformPoint(p, util.invertTransform(part.calcTransformMatrix()))
+    const x = local.x / part.width + 0.5
+    const y = local.y / part.height + 0.5
+    if (x < 0 || x > 1 || y < 0 || y > 1) return
+
+    const tool = this.colorKeyTool
+    const op = { x: this.round(x), y: this.round(y), act: tool === "keep" ? "keep" : "erase" }
+    if (tool === "all") op.all = true
+    this.updateColorKey(part, ck => ck.ops.push(op))
+  }
+
+  // 透過の設定を変えて、計算し直す
+  updateColorKey(part, change) {
+    const ck = this.colorKeyOf(part) || new ColorKey({ strength: this.colorKeyStrength })
+    change(ck)
+    part.filters = ck.isNeutralState() ? [] : [ck]
+    part.applyFilters()
+    this.canvas.requestRenderAll()
+    this.syncColorKeyPanel(part)
+    this.canvas.fire("object:modified", { target: part })   // 元に戻すの記録
+  }
+
+  changeColorKeyStrength(event) {
+    const part = this.colorKeyPart
+    if (!part) return
+    this.colorKeyStrength = Number(event.target.value)
+    this.colorKeyStrengthValueTarget.textContent = this.colorKeyStrength
+    // スライダーを動かしている間は、1コマに1回だけ計算する（大きい画像でも重くなりすぎないように）
+    cancelAnimationFrame(this.colorKeyFrame)
+    this.colorKeyFrame = requestAnimationFrame(() => {
+      this.updateColorKey(part, ck => { ck.strength = this.colorKeyStrength })
+    })
+  }
+
+  // 「↶ 1つ戻す」：最後のタップを取り消す
+  undoColorKey() {
+    if (this.colorKeyPart) this.updateColorKey(this.colorKeyPart, ck => ck.ops.pop())
+  }
+
+  // 「↺ リセット」：透過を全部やめて、元の画像に戻す
+  resetColorKey() {
+    if (this.colorKeyPart) this.updateColorKey(this.colorKeyPart, ck => { ck.ops = [] })
   }
 
   // ===== ロック =====

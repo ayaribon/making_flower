@@ -89,10 +89,6 @@
   <section class="studio-stage">
     <div class="studio-canvas-frame" data-canvas-editor-target="frame">
       <canvas data-canvas-editor-target="canvas"></canvas>
-      <button type="button" class="studio-view-all"
-        data-canvas-editor-target="viewAllButton"
-        data-action="click->canvas-editor#toggleViewAll"
-        aria-pressed="false" title="バーとパネルをしまって全体を見る">👀</button>
     </div>
   </section>
 
@@ -457,6 +453,36 @@
         </label>
         <button type="button" class="studio-panel-close"
           data-action="click->canvas-editor#flipPart">左右反転</button>
+        <div class="studio-colorkey">
+          <button type="button" class="studio-panel-close"
+            data-canvas-editor-target="colorKeyStart"
+            data-action="click->canvas-editor#startColorKey">🪄 背景を透過</button>
+          <div class="studio-colorkey-tools" data-canvas-editor-target="colorKeyTools" hidden>
+            <p class="studio-colorkey-hint" data-canvas-editor-target="colorKeyHint"></p>
+            <div class="studio-colorkey-modes">
+              <button type="button" data-tool="flood" data-canvas-editor-target="colorKeyToolButton"
+                data-action="click->canvas-editor#chooseColorKeyTool">🎯 つながってる所を消す</button>
+              <button type="button" data-tool="all" data-canvas-editor-target="colorKeyToolButton"
+                data-action="click->canvas-editor#chooseColorKeyTool">🌈 同じ色を全部消す</button>
+              <button type="button" data-tool="keep" data-canvas-editor-target="colorKeyToolButton"
+                data-action="click->canvas-editor#chooseColorKeyTool">↩︎ タップで戻す</button>
+            </div>
+            <label class="studio-setting studio-setting-size">
+              <span>強さ <strong data-canvas-editor-target="colorKeyStrengthValue">20</strong></span>
+              <input type="range" min="1" max="80" step="1" value="20"
+                data-canvas-editor-target="colorKeyStrengthInput"
+                data-action="input->canvas-editor#changeColorKeyStrength">
+            </label>
+            <div class="studio-colorkey-actions">
+              <button type="button" class="studio-panel-close" data-canvas-editor-target="colorKeyUndo"
+                data-action="click->canvas-editor#undoColorKey">↶ 1つ戻す</button>
+              <button type="button" class="studio-panel-close"
+                data-action="click->canvas-editor#resetColorKey">↺ リセット</button>
+              <button type="button" class="studio-panel-close studio-colorkey-done"
+                data-action="click->canvas-editor#finishColorKey">✓ 完了</button>
+            </div>
+          </div>
+        </div>
         <button type="button" class="studio-panel-close studio-replace-button"
           data-canvas-editor-target="replaceButton" hidden
           data-action="click->canvas-editor#replacePlaceholder">📷 自分の画像に差し替え</button>
@@ -572,7 +598,18 @@
       <button type="button" data-action="click->canvas-editor#exportPng" title="PNGで保存">
         <span class="studio-toolbar-icon">💾</span><span class="studio-toolbar-label">書き出し</span>
       </button>
+      <button type="button" class="studio-view-all-button"
+        data-canvas-editor-target="viewAllButton"
+        data-action="click->canvas-editor#toggleViewAll"
+        aria-pressed="false" title="バーとパネルをしまって全体を見る">
+        <span class="studio-toolbar-icon">👀</span><span class="studio-toolbar-label">全体</span>
+      </button>
     </nav>
+
+    <!-- 動かしている間だけ出る、削除の場所 -->
+    <div class="studio-trash" data-canvas-editor-target="trash" aria-hidden="true">
+      <span class="studio-trash-icon">🗑</span><span>ここで離すと削除</span>
+    </div>
   </footer>
 
   <% if current_user.admin? %>
