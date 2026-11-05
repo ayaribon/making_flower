@@ -56,6 +56,8 @@
   <header class="studio-header">
     <h1 class="studio-logo">Koto<span>Bouquet</span> <small>✦</small></h1>
     <div class="studio-header-actions">
+      <button type="button" class="studio-history-button" title="マイテンプレに保存"
+        data-action="click->canvas-editor#openMySaveDialog">⭐<span>マイ保存</span></button>
       <button type="button" class="studio-history-button" title="元に戻す（Ctrl+Z）"
         data-canvas-editor-target="undoButton"
         data-action="click->canvas-editor#undo" disabled>↩️<span>戻す</span></button>
@@ -73,8 +75,6 @@
         <summary class="studio-history-button" title="メニュー">👤<span><%= current_user.name %></span></summary>
         <div class="studio-user-menu-list">
           <p class="studio-user-menu-name">👤 <%= current_user.name %></p>
-          <button type="button" class="studio-user-menu-item"
-            data-action="click->canvas-editor#openMySaveDialog">⭐ マイテンプレに保存</button>
           <% if current_user.admin? %>
             <button type="button" class="studio-user-menu-item"
               data-action="click->canvas-editor#openSaveDialog">📋 テンプレとして保存</button>
