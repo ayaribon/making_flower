@@ -73,6 +73,8 @@
         <summary class="studio-history-button" title="メニュー">👤<span><%= current_user.name %></span></summary>
         <div class="studio-user-menu-list">
           <p class="studio-user-menu-name">👤 <%= current_user.name %></p>
+          <button type="button" class="studio-user-menu-item"
+            data-action="click->canvas-editor#openMySaveDialog">⭐ マイテンプレに保存</button>
           <% if current_user.admin? %>
             <button type="button" class="studio-user-menu-item"
               data-action="click->canvas-editor#openSaveDialog">📋 テンプレとして保存</button>
@@ -625,6 +627,16 @@
             data-action="click->canvas-editor#closeTemplatesPanel">閉じる</button>
         </div>
       </div>
+      <div class="studio-tabs">
+        <button type="button" class="studio-tab is-active"
+          data-canvas-editor-target="templateTab" data-tab="shared"
+          data-action="click->canvas-editor#switchTemplateTab"
+          data-canvas-editor-tab-param="shared">みんな</button>
+        <button type="button" class="studio-tab"
+          data-canvas-editor-target="templateTab" data-tab="mine"
+          data-action="click->canvas-editor#switchTemplateTab"
+          data-canvas-editor-tab-param="mine">⭐ マイ</button>
+      </div>
       <div class="studio-template-list" data-canvas-editor-target="templateList"></div>
       <p class="studio-tab-note">今のサイズに合うテンプレを表示しています。読み込んだあとは自由に編集できます</p>
     </div>
@@ -661,6 +673,27 @@
       <span class="studio-trash-icon">🗑</span><span>ここで離すと削除</span>
     </div>
   </footer>
+
+  <!-- ⭐ マイテンプレに保存（ログインしている人ならだれでも） -->
+  <dialog class="studio-save-dialog" data-canvas-editor-target="mySaveDialog">
+    <h2>⭐ マイテンプレに保存</h2>
+    <label>名前
+      <input type="text" maxlength="40" placeholder="例：いつもの配信サムネ" data-canvas-editor-target="mySaveName">
+    </label>
+    <p class="studio-tab-note">今のサイズ（比率）のマイテンプレになります。自分の画像もそのまま残ります。あなただけが使えます</p>
+    <p class="studio-save-status" data-canvas-editor-target="mySaveStatus"></p>
+    <div class="studio-save-actions">
+      <button type="button" class="studio-save-button is-main" hidden
+        data-canvas-editor-target="mySaveOverwrite"
+        data-action="click->canvas-editor#saveMyTemplate"
+        data-canvas-editor-mode-param="overwrite">⭐ 上書き保存</button>
+      <button type="button" class="studio-save-button"
+        data-action="click->canvas-editor#saveMyTemplate"
+        data-canvas-editor-mode-param="new">＋ 新しいマイテンプレとして保存</button>
+      <button type="button" class="studio-save-button is-cancel"
+        data-action="click->canvas-editor#closeMySaveDialog">やめる</button>
+    </div>
+  </dialog>
 
   <% if current_user.admin? %>
     <!-- テンプレとして保存（管理者だけ） -->

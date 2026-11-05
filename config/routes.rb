@@ -27,6 +27,8 @@ Rails.application.routes.draw do
 
   # 編集画面のテンプレ一覧（JSON）
   resources :design_templates, only: [:index], defaults: { format: :json }
+  # マイテンプレート（本人のものだけ）
+  resources :user_templates, only: [:index, :create, :update, :destroy], defaults: { format: :json }
 
   resources :templates, only: [:index, :show] do
     get :edit, on: :member
