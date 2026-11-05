@@ -55,7 +55,7 @@ export default class extends Controller {
     "colorKeyAiRow", "colorKeyAiSign", "colorKeySharpRow", "colorKeySharpInput", "colorKeySharpValue",
     "colorKeyFeatherInput", "colorKeyFeatherValue",
     "colorKeyDetails", "colorKeyFoldButton",
-    "loupe"
+    "loupe", "effectsFoldButton"
   ]
   static values = { width: Number, height: Number, materials: Object, editTemplate: Object, mediapipeBase: String }
 
@@ -670,10 +670,21 @@ export default class extends Controller {
       .forEach(panel => { panel.hidden = true })
     this.syncEffectInputs()
     this.effectsPanelTarget.hidden = false
+    this.element.classList.add("is-effects-open")
   }
 
   closeEffectsPanel() {
     this.effectsPanelTarget.hidden = true
+    this.element.classList.remove("is-effects-open")
+  }
+
+  // ▾：フィルター・フレームの中身をしまう（タブとヘッダーだけ残す）
+  toggleEffectsFold() {
+    const folded = this.effectsPanelTarget.classList.toggle("is-folded")
+    const button = this.effectsFoldButtonTarget
+    button.textContent = folded ? "▴" : "▾"
+    button.setAttribute("aria-expanded", String(!folded))
+    button.title = folded ? "中身を出す" : "中身をしまう"
   }
 
   switchEffectTab(event) {
@@ -777,7 +788,9 @@ export default class extends Controller {
     const filters = this.effectObjects("filter")
 
     this.effectToggleTargets.forEach(button => {
-      button.classList.toggle("is-active", filters.some(o => o.effectKey === button.dataset.key))
+      const on = filters.some(o => o.effectKey === button.dataset.key)
+      button.classList.toggle("is-active", on)
+      button.closest(".studio-effect-row")?.classList.toggle("is-on", on)
     })
     filters.forEach(o => {
       const input = this.effectStrengthTargets.find(i => i.dataset.key === o.effectKey)
