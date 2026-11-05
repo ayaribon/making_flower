@@ -55,7 +55,8 @@ export default class extends Controller {
     "colorKeyAiRow", "colorKeyAiSign", "colorKeySharpRow", "colorKeySharpInput", "colorKeySharpValue",
     "colorKeyFeatherInput", "colorKeyFeatherValue",
     "colorKeyDetails", "colorKeyFoldButton",
-    "loupe", "effectsFoldButton"
+    "loupe", "effectsFoldButton",
+    "templateTab", "mySaveDialog", "mySaveName", "mySaveStatus", "mySaveOverwrite"
   ]
   static values = { width: Number, height: Number, materials: Object, editTemplate: Object, mediapipeBase: String }
 
@@ -192,6 +193,46 @@ export default class extends Controller {
     this.templatesPanelTarget.hidden = true
   }
 
+  // ［みんな］［⭐マイ］の切り替え
+  switchTemplateTab(event) {
+    this.templateTab = event.params.tab
+    this.templateTabTargets.forEach(tab => tab.classList.toggle("is-active", tab.dataset.tab === this.templateTab))
+    this.renderTemplates()
+  }
+
+  // マイテンプレの一覧は、保存・削除ですぐ変わるので毎回読む
+  async loadMyTemplates() {
+    const response = await fetch("/user_templates.json", { cache: "no-cache", headers: { Accept: "application/json" } })
+    if (!response.ok) throw new Error(`マイテンプレの読み込みに失敗しました（${response.status}）`)
+    return response.json()
+  }
+
+  // マイテンプレを開く。開いたあとは「上書き保存」できるように番号を覚えておく
+  async openMyTemplate(t) {
+    await this.applyTemplate(t)
+    this.editingMyTemplate = { id: t.id, name: t.label }
+  }
+
+  async deleteMyTemplate(t) {
+    if (!window.confirm(`マイテンプレ「${t.label}」を消しますか？（元に戻せません）`)) return
+    try {
+      const response = await fetch(`/user_templates/${t.id}.json`, {
+        method: "DELETE",
+        headers: { Accept: "application/json", "X-CSRF-Token": this.csrfToken() }
+      })
+      if (!response.ok) throw new Error(`消せませんでした（${response.status}）`)
+      if (this.editingMyTemplate?.id === t.id) this.editingMyTemplate = null
+      await this.renderTemplates()
+    } catch (error) {
+      console.error(error)
+      window.alert(error.message || "消せませんでした")
+    }
+  }
+
+  csrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.content || ""
+  }
+
   // テンプレの一覧は、最初の1回だけ読み込む
   loadTemplates() {
     if (!this.templatesPromise) {
@@ -219,11 +260,15 @@ export default class extends Controller {
     const list = this.templateListTarget
     list.innerHTML = '<p class="studio-tab-note">読み込み中…</p>'
     try {
-      const data = await this.loadTemplates()
+      // ⭐ マイ：自分のマイテンプレ（開くたびに最新を読む）／みんな：共通テンプレ
+      const mine = this.templateTab === "mine"
+      const data = mine ? await this.loadMyTemplates() : await this.loadTemplates()
       const items = data.templates.filter(t => t.ratio === this.ratioKey())
       list.innerHTML = ""
       if (items.length === 0) {
-        list.innerHTML = '<p class="studio-tab-note">この比率のテンプレはまだありません</p>'
+        list.innerHTML = mine
+          ? '<p class="studio-tab-note">この比率のマイテンプレはまだありません。👤メニューの「⭐ マイテンプレに保存」で作れます</p>'
+          : '<p class="studio-tab-note">この比率のテンプレはまだありません</p>'
         return
       }
       items.forEach(t => {
@@ -242,7 +287,20 @@ export default class extends Controller {
         button.innerHTML = '<span class="studio-template-icon"></span><span class="studio-template-label"></span>'
         button.querySelector(".studio-template-icon").textContent = t.icon || "📋"
         button.querySelector(".studio-template-label").textContent = t.visible === false ? `🙈 ${t.label}` : t.label
-        button.addEventListener("click", () => this.applyTemplate(t))
+        if (mine) {
+          // マイテンプレは右上の × で消せる
+          const del = document.createElement("span")
+          del.className = "studio-my-delete"
+          del.title = "このマイテンプレを消す"
+          del.textContent = "×"
+          button.appendChild(del)
+          button.addEventListener("click", (e) => {
+            if (e.target === del) this.deleteMyTemplate(t)
+            else this.openMyTemplate(t)
+          })
+        } else {
+          button.addEventListener("click", () => this.applyTemplate(t))
+        }
         list.appendChild(button)
       })
     } catch (error) {
@@ -290,11 +348,20 @@ export default class extends Controller {
           sourceName: bgMaterial.sourceName, sourceUrl: bgMaterial.sourceUrl
         })
       }
+      // ⭐ マイテンプレの背景が自分の画像のとき。消してあったら背景なしで続ける
+      if (!bgMaterial && bg.imageId) {
+        try {
+          await this.placeBackground(await getImageUrl(bg.imageId), bg.imageId)
+        } catch (e) {
+          console.warn("マイテンプレの背景の画像が見つかりません", e)
+        }
+      }
 
       // 文字・部品・「ここに画像」（書いてある順に下から重ねる）
       for (const item of t.items || []) {
         if (item.type === "text") await this.addTemplateText(item, W, H)
         else if (item.type === "part") await this.addTemplatePart(item, W, H)
+        else if (item.type === "myimage") await this.addTemplateMyImage(item, W, H)
         else if (item.type === "placeholder") await this.addPlaceholder(item, W, H)
       }
 
@@ -359,6 +426,37 @@ export default class extends Controller {
       left: item.x * W,
       top: item.y * H,
       scaleX: scale * (item.stretch || 1),   // stretch：横だけ伸ばしたとき（横の倍率 ÷ 縦の倍率）
+      scaleY: scale,
+      angle: item.angle || 0,
+      flipX: !!item.flipX,
+      flipY: !!item.flipY,
+      opacity: item.opacity ?? 1
+    })
+    if (item.colorKey?.ops?.length) {
+      img.filters = [await ColorKey.fromObject(item.colorKey)]
+      img.applyFilters()
+    }
+    this.canvas.add(img)
+  }
+
+  // ⭐ マイテンプレの中の「自分の画像」。消してあったら飛ばして、ほかは読み込む
+  async addTemplateMyImage(item, W, H) {
+    if (!item.imageId) return
+    let img
+    try {
+      img = await FabricImage.fromURL(await getImageUrl(item.imageId))
+    } catch (e) {
+      console.warn("マイテンプレの画像が見つかりません", e)
+      return
+    }
+    img.set({ imageId: item.imageId })
+    const scale = ((item.h || 0.2) * H) / img.height
+    img.set({
+      originX: "center",
+      originY: "center",
+      left: item.x * W,
+      top: item.y * H,
+      scaleX: scale * (item.stretch || 1),
       scaleY: scale,
       angle: item.angle || 0,
       flipX: !!item.flipX,
@@ -477,7 +575,8 @@ export default class extends Controller {
   }
 
   // 今のキャンバスを、テンプレの中身（JSON）にする
-  buildTemplateData() {
+  // keepMine：⭐マイテンプレのとき。自分の画像を「ここに画像」にしないで、そのまま残す
+  buildTemplateData({ keepMine = false } = {}) {
     const W = this.widthValue
     const H = this.heightValue
     const data = { background: {}, items: [], filters: [], frame: null }
@@ -495,6 +594,7 @@ export default class extends Controller {
     if (bgImg) {
       const ref = this.materialRefOf(bgImg)
       if (ref) Object.assign(data.background, ref)
+      else if (keepMine && bgImg.imageId) data.background.imageId = bgImg.imageId
     }
 
     for (const obj of this.canvas.getObjects()) {
@@ -513,8 +613,10 @@ export default class extends Controller {
       const w = this.round((obj.width * obj.scaleX) / W)
       const h = this.round((obj.height * obj.scaleY) / H)
       const ref = obj.placeholder ? null : this.materialRefOf(obj)
-      if (ref) {
-        const item = { type: "part", ...ref, x, y, h, angle }
+      // ⭐ マイテンプレでは、自分の画像も「myimage」として残す
+      const mineRef = !ref && keepMine && !obj.placeholder && obj.imageId ? { imageId: obj.imageId } : null
+      if (ref || mineRef) {
+        const item = ref ? { type: "part", ...ref, x, y, h, angle } : { type: "myimage", ...mineRef, x, y, h, angle }
         if (obj.flipX) item.flipX = true
         if (obj.flipY) item.flipY = true
         if ((obj.opacity ?? 1) !== 1) item.opacity = this.round(obj.opacity, 2)
@@ -574,13 +676,14 @@ export default class extends Controller {
   }
 
   // テンプレ一覧用の小さい画像（自分の画像と「ここに画像」の枠は写さない）
-  makeTemplateThumbnail() {
+  // keepMine：⭐マイテンプレのときは、自分の画像も写す（「ここに画像」の枠だけ消す）
+  makeTemplateThumbnail({ keepMine = false } = {}) {
     this.canvas.discardActiveObject()
     const hide = this.canvas.getObjects().filter(o => !o.effect && o.visible !== false &&
-      (o.placeholder || (!(o instanceof Textbox) && this.isMyImage(o))))
+      (o.placeholder || (!keepMine && !(o instanceof Textbox) && this.isMyImage(o))))
     hide.forEach(o => o.set("visible", false))
     const bg = this.canvas.backgroundImage
-    const hideBg = bg && this.isMyImage(bg)
+    const hideBg = bg && !keepMine && this.isMyImage(bg)
     if (hideBg) this.canvas.backgroundImage = null
     this.canvas.renderAll()
     try {
@@ -599,6 +702,68 @@ export default class extends Controller {
       hide.forEach(o => o.set("visible", true))
       if (hideBg) this.canvas.backgroundImage = bg
       this.canvas.requestRenderAll()
+    }
+  }
+
+  // ===== ⭐ マイテンプレに保存（ログインしている人ならだれでも） =====
+  openMySaveDialog() {
+    if (!this.hasMySaveDialogTarget) return
+    this.finishColorKey()
+    this.element.querySelector(".studio-user-menu")?.removeAttribute("open")
+    const editing = this.editingMyTemplate
+    this.mySaveNameTarget.value = editing?.name || ""
+    this.mySaveOverwriteTarget.hidden = !editing
+    if (editing) this.mySaveOverwriteTarget.textContent = `⭐ 「${editing.name}」に上書き保存`
+    this.mySaveStatusTarget.textContent = ""
+    this.mySaveDialogTarget.showModal()
+    this.mySaveNameTarget.focus()
+  }
+
+  closeMySaveDialog() {
+    if (this.hasMySaveDialogTarget) this.mySaveDialogTarget.close()
+  }
+
+  // 「新しいマイテンプレとして保存」（mode: new）／「上書き保存」（mode: overwrite）
+  async saveMyTemplate(event) {
+    event?.preventDefault()
+    if (this.savingMyTemplate) return
+    const overwrite = event?.params?.mode === "overwrite" && this.editingMyTemplate
+    const name = this.mySaveNameTarget.value.trim()
+    if (!name) {
+      this.mySaveStatusTarget.textContent = "名前を入れてね"
+      this.mySaveNameTarget.focus()
+      return
+    }
+
+    this.savingMyTemplate = true
+    this.mySaveStatusTarget.textContent = "保存しています…"
+    try {
+      const body = this.buildTemplateData({ keepMine: true })
+      const thumbnail = this.makeTemplateThumbnail({ keepMine: true })
+      const url = overwrite ? `/user_templates/${this.editingMyTemplate.id}.json` : "/user_templates.json"
+      const response = await fetch(url, {
+        method: overwrite ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json", "X-CSRF-Token": this.csrfToken() },
+        body: JSON.stringify({ user_template: { name, ratio: this.ratioKey(), body: JSON.stringify(body), thumbnail } })
+      })
+      if (!response.ok) {
+        let message = `保存できませんでした（${response.status}）`
+        try { message = (await response.json()).error || message } catch (_) {}
+        throw new Error(message)
+      }
+      if (!overwrite) {
+        const saved = await response.json().catch(() => null)
+        if (saved?.id) this.editingMyTemplate = { id: saved.id, name }
+      } else {
+        this.editingMyTemplate = { ...this.editingMyTemplate, name }
+      }
+      this.mySaveStatusTarget.textContent = "⭐ 保存しました（📋テンプレの「⭐ マイ」から開けます）"
+      setTimeout(() => this.closeMySaveDialog(), 900)
+    } catch (error) {
+      console.error(error)
+      this.mySaveStatusTarget.textContent = error.message || "保存できませんでした"
+    } finally {
+      this.savingMyTemplate = false
     }
   }
 

@@ -2210,3 +2210,8 @@ ul.auth-alert { padding-left: 28px; }
 @media (max-width: 420px) {
   .studio-tab-page[data-tab="filter"]:not([hidden]) { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ===== ⭐ マイテンプレート ===== */
+/* テンプレのカードの右上に × を出す（マイ素材の × と同じ見た目） */
+.studio-template-card { position: relative; }
+.studio-template-card .studio-my-delete { z-index: 1; }
