@@ -793,6 +793,8 @@ body {
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(8px);
   border-bottom: 2px dashed var(--c-line);
+  position: relative;
+  z-index: 50;
 }
 
 .studio-logo {
