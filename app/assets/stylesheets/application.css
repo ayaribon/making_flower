@@ -2164,3 +2164,49 @@ ul.auth-alert { padding-left: 28px; }
 .studio-loupe[hidden] { display: none; }
 /* 指が左上にあるときは、右上に逃げる */
 .studio-loupe.is-right { left: auto; right: 10px; }
+
+/* ===== ✨ エフェクトのパネルを小さく＋▾でたためる ===== */
+/* 開いている間は下のバーを消して、パネルをその分だけ下げる。
+   パネルを閉じる処理があちこちにあるので、クラスではなく「パネルが見えているか」で決める */
+.studio:has([data-canvas-editor-target="effectsPanel"]:not([hidden])) .studio-toolbar { display: none; }
+
+/* フィルターはボタンを3列に並べる。ONの行だけ、横いっぱいにしてスライダーを出す */
+.studio-tab-page[data-tab="filter"]:not([hidden]) {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 6px;
+}
+.studio-effect-row { margin-top: 0; }
+.studio-effect-toggle { min-width: 0; width: 100%; padding: 4px 6px; }
+.studio-effect-row input[type="range"],
+.studio-effect-row input[type="color"] { display: none; }
+.studio-effect-row.is-on { grid-column: 1 / -1; }
+.studio-effect-row.is-on .studio-effect-toggle { width: auto; flex: 0 0 auto; }
+.studio-effect-row.is-on input[type="range"],
+.studio-effect-row.is-on input[type="color"] { display: block; }
+.studio-tab-page[data-tab="filter"] .studio-tab-note { grid-column: 1 / -1; margin-top: 2px; font-size: 11px; }
+
+/* ▾ ボタン（タブの右はし） */
+.studio-effects-fold {
+  margin-left: auto;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid var(--c-line, #e5dde0);
+  border-radius: 999px;
+  background: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+}
+/* たたんだら、フィルター・フレームの中身をしまう */
+.studio-panel.is-folded .studio-tab-page { display: none !important; }
+
+/* フレームの一覧も少し小さく */
+.studio-frame-list { margin-top: 6px; }
+.studio-frame-button { width: 60px; padding: 4px 2px; }
+
+/* 狭いスマホはボタンを2列に */
+@media (max-width: 420px) {
+  .studio-tab-page[data-tab="filter"]:not([hidden]) { grid-template-columns: repeat(2, 1fr); }
+}
