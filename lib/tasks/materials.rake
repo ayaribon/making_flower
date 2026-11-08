@@ -117,4 +117,25 @@ namespace :materials do
       puts "✅ テンプレで使う素材は全部そろってます"
     end
   end
+
+  desc "一覧用のサムネがない素材に、サムネをまとめて作る（SVGは作らない）。FORCE=1 で全部作り直す"
+  task thumbs: :environment do
+    force = ENV["FORCE"].present?
+    made = skipped = failed = 0
+    Material.with_attached_image.with_attached_thumb.find_each do |m|
+      if !m.image.attached? || m.image.blob.content_type == "image/svg+xml" || (m.thumb.attached? && !force)
+        skipped += 1
+        next
+      end
+      m.generate_thumb!
+      if m.reload.thumb.attached?
+        made += 1
+        puts "作った：#{m.name}（#{(m.image.blob.byte_size / 1024.0).round}KB → #{(m.thumb.blob.byte_size / 1024.0).round}KB）"
+      else
+        failed += 1
+        puts "⚠️ 作れなかった：#{m.name}（くわしくはログを見てね）"
+      end
+    end
+    puts "✅ 作った #{made} 件／とばした #{skipped} 件／失敗 #{failed} 件"
+  end
 end

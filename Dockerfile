@@ -9,6 +9,7 @@ RUN apt-get update -qq && apt-get install -y \
   nodejs \
   yarn \
   default-mysql-client \
+  libvips42 \
   && rm -rf /var/lib/apt/lists/*
 
 # アプリ実行用ユーザーを作成
