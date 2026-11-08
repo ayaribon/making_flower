@@ -34,5 +34,7 @@ Rails.application.routes.draw do
     get :edit, on: :member
   end
   get "editor", to: "editors#show"
+  # 🎤 歌ってみた（オケ＋歌声を混ぜて動画にする）
+  get "singing", to: "singings#show"
   get "up" => "rails/health#show", as: :rails_health_check
 end

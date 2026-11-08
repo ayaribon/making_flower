@@ -1,0 +1,94 @@
+<%# 🎤 歌ってみた（手順2.5：ずれ直しの自動化＋ノイズ消し） %>
+<style>
+  .singing { max-width: 840px; margin: 0 auto; padding: 16px; font-family: sans-serif; }
+  .singing h1 { font-size: 1.4rem; }
+  .singing-row { display: flex; align-items: center; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+  .singing-row label { min-width: 6em; }
+  .singing-row input[type=range] { flex: 1; }
+  .singing canvas { width: 100%; height: auto; background: #222; border-radius: 8px; }
+  .singing button { padding: 8px 14px; border-radius: 8px; border: 1px solid #ccc; background: #fff; }
+  .singing button:disabled { opacity: .5; }
+  .singing-status { color: #c0397a; min-height: 1.2em; }
+  .singing-note { background: #fff4fb; border: 1px solid #f3c6df; border-radius: 8px; padding: 10px 12px; color: #7a3450; }
+  .offset-pill { display: inline-block; padding: 6px 10px; border-radius: 999px; background: #f4ebff; color: #553c8b; font-weight: bold; }
+  .tiny { font-size: 0.9rem; color: #555; }
+</style>
+
+<div class="singing" data-controller="singing-mixer">
+  <h1>🎤 歌ってみた</h1>
+  <p class="singing-note">
+    オケ・歌声・動画はこのブラウザの中だけで扱います。<br>
+    録音前にマイク使用の許可が必要です。オケはヘッドホンで聴いて、マイクに入らないようにしてください。
+  </p>
+
+  <div class="singing-row">
+    <label>🎼 オケ</label>
+    <input type="file" accept="audio/*" data-action="change->singing-mixer#loadBacking">
+  </div>
+  <div class="singing-row">
+    <label>🎙 歌声</label>
+    <input type="file" accept="audio/*" data-action="change->singing-mixer#loadVocal">
+  </div>
+
+  <div class="singing-row">
+    <button data-singing-mixer-target="micStartButton" data-action="singing-mixer#startMicRecording" disabled>🎙 マイクで録音</button>
+    <button data-singing-mixer-target="micStopButton" data-action="singing-mixer#stopMicRecording" disabled>⏹ 録音停止</button>
+    <button data-singing-mixer-target="resetButton" data-action="singing-mixer#resetVocal" disabled>🔁 歌声を消して録り直す</button>
+  </div>
+  <div class="singing-row">
+    <label><input type="checkbox" checked data-singing-mixer-target="countIn"> カウントインで自動合わせ</label>
+    <span class="tiny">録音の最初は1.5秒静かに → 「1・2・3・4」の4つ目で手拍子 👏</span>
+  </div>
+  <div class="singing-row">
+    <button data-singing-mixer-target="calibrateButton" data-action="singing-mixer#calibrate">📏 遅れを測る</button>
+    <span class="tiny">測った値：<span data-singing-mixer-target="calibrationInfo">まだ測っていません</span></span>
+  </div>
+  <p class="tiny">📏はヘッドホンを外して、スピーカーで測ってね（ピッがマイクに届かないと測れません）</p>
+
+  <div class="singing-row">
+    <span>音ズレ補正</span>
+    <button data-action="singing-mixer#shiftVocalOffset" data-shift-ms="-100">−100ms</button>
+    <button data-action="singing-mixer#shiftVocalOffset" data-shift-ms="-10">−10ms</button>
+    <span class="offset-pill" data-singing-mixer-target="offsetDisplay">+0ms</span>
+    <button data-action="singing-mixer#shiftVocalOffset" data-shift-ms="10">＋10ms</button>
+    <button data-action="singing-mixer#shiftVocalOffset" data-shift-ms="100">＋100ms</button>
+  </div>
+  <p class="tiny">自動補正：<span data-singing-mixer-target="autoLatency">なし</span> → まだずれていたら上のボタンで微調整</p>
+
+  <div class="singing-row">
+    <label>✨ ノイズ消し</label>
+    <input type="range" min="0" max="100" step="1" value="50" disabled
+           data-singing-mixer-target="denoiseStrength"
+           data-action="input->singing-mixer#previewDenoise change->singing-mixer#changeDenoise">
+    <span class="offset-pill" data-singing-mixer-target="denoiseValue">50</span>
+    <button data-singing-mixer-target="rawToggle" data-action="singing-mixer#toggleRaw" disabled>🎧 元の声で聴く</button>
+  </div>
+  <p class="tiny">0＝なし。強くしすぎると声がこもったりロボットっぽくなるので、聴き比べながら調整してね</p>
+
+  <div class="singing-row">
+    <label>オケ音量</label>
+    <input type="range" min="0" max="1.5" step="0.01" value="0.8"
+           data-singing-mixer-target="backingVolume" data-action="input->singing-mixer#changeVolume">
+  </div>
+  <div class="singing-row">
+    <label>声の音量</label>
+    <input type="range" min="0" max="1.5" step="0.01" value="1"
+           data-singing-mixer-target="vocalVolume" data-action="input->singing-mixer#changeVolume">
+  </div>
+
+  <div class="singing-row">
+    <button data-singing-mixer-target="playButton" data-action="singing-mixer#play" disabled>▶ 試聴</button>
+    <button data-singing-mixer-target="stopButton" data-action="singing-mixer#stop" disabled>■ 停止</button>
+    <button data-singing-mixer-target="recordButton" data-action="singing-mixer#record" disabled>🎬 動画で書き出し</button>
+    <button data-singing-mixer-target="audioButton" data-action="singing-mixer#exportAudio" disabled>🎵 音声だけ保存（WAV）</button>
+  </div>
+
+  <p class="singing-status" data-singing-mixer-target="status"></p>
+
+  <canvas width="1280" height="720" data-singing-mixer-target="canvas"></canvas>
+
+  <p>
+    <a data-singing-mixer-target="download" hidden>⬇ 動画をダウンロード</a>
+    <a data-singing-mixer-target="audioDownload" hidden>⬇ 音声（WAV）をダウンロード</a>
+  </p>
+</div>
