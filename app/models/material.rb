@@ -1,3 +1,5 @@
+require "securerandom"
+
 # デフォルト素材（管理者が入れて、みんなが使える部品・背景）
 # ユーザーが自分で入れる画像（UserImage）とは別物。
 class Material < ApplicationRecord
@@ -46,10 +48,14 @@ class Material < ApplicationRecord
   has_one_attached :image
   has_one_attached :image_portrait   # 9:16 用（背景だけ）
   has_one_attached :image_square     # 1:1 用（背景だけ）
+  has_one_attached :thumb            # 一覧用の小さい画像（長い辺256px・PNG）。保存したとき自動で作る
 
   # 管理画面の「この比率の画像を外す」
   attr_accessor :remove_image_portrait, :remove_image_square
   before_save :purge_removed_ratio_images
+  # 元の画像が変わったら、保存が終わったあとにサムネを作り直す
+  before_save { @regenerate_thumb = attachment_changes["image"].present? }
+  after_commit :regenerate_thumb_if_needed, on: [:create, :update]
 
   # その比率で使う画像（比率ごとの画像がなければ、ふつうの画像）
   def image_for(ratio)
@@ -92,6 +98,20 @@ class Material < ApplicationRecord
     used_in_templates.any?
   end
 
+  # 一覧用のサムネを作る。SVGは軽くてキレイなので作らない（一覧でも元の画像を使う）
+  def generate_thumb!
+    return unless image.attached?
+    return if image.blob.content_type == "image/svg+xml"
+    image.blob.open do |file|
+      out = ImageProcessing::Vips.source(file).resize_to_limit(256, 256).convert("png").call
+      thumb.attach(io: File.open(out.path), filename: "thumb.png", content_type: "image/png",
+                   key: "materials/#{id}/thumbs/#{SecureRandom.uuid}")
+    end
+  rescue StandardError => e
+    # サムネが作れなくても、素材の保存は失敗させない（一覧は元の画像で出る）
+    Rails.logger.warn("[material #{id}] サムネを作れませんでした: #{e.class}: #{e.message}")
+  end
+
   private
 
   def image_must_be_valid
@@ -119,6 +139,12 @@ class Material < ApplicationRecord
     RATIO_IMAGES.each_value do |name|
       public_send(name).purge_later if removing?(name) && public_send(name).attached?
     end
+  end
+
+  def regenerate_thumb_if_needed
+    return unless @regenerate_thumb
+    @regenerate_thumb = false   # サムネをつけるときにもう1回保存されるので、くり返さないように
+    generate_thumb!
   end
 
   # テンプレで使っている素材は、キーを変えると見つからなくなる

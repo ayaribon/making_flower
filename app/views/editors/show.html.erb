@@ -385,7 +385,7 @@
               data-canvas-editor-material-id-param="<%= m.id %>"
               data-canvas-editor-source-param="<%= m.source_name %>"
               data-canvas-editor-source-url-param="<%= m.source_url %>">
-              <img src="<%= rails_storage_proxy_path(m.image) %>" alt="<%= m.name %>" loading="lazy">
+              <img src="<%= rails_storage_proxy_path(m.thumb.attached? ? m.thumb : m.image) %>" alt="<%= m.name %>" loading="lazy">
             </button>
           <% end %>
         </div>
@@ -424,7 +424,7 @@
             data-canvas-editor-material-id-param="<%= m.id %>"
             data-canvas-editor-source-param="<%= m.source_name %>"
             data-canvas-editor-source-url-param="<%= m.source_url %>">
-            <img src="<%= rails_storage_proxy_path(m.image) %>" alt="<%= m.name %>" loading="lazy">
+            <img src="<%= rails_storage_proxy_path(m.thumb.attached? ? m.thumb : m.image) %>" alt="<%= m.name %>" loading="lazy">
           </button>
         <% end %>
       </div>
