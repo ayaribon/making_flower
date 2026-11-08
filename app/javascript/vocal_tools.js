@@ -458,36 +458,350 @@ export function normalizeLoudness(buffer, { targetDb = -16, ceiling = 0.89 } = {
   return gain
 }
 
+// ---------- 速さ・音の高さを変える（WSOLA：波形を少しずつ重ねて伸び縮みさせる） ----------
+
+// 速さだけ変える（音の高さはそのまま）。rate＞1 で速く（短く）、rate＜1 でゆっくり（長く）
+// channels＝Float32Array の配列。左右は同じ位置で切り貼りする（ステレオがずれないように）
+export function timeStretchChannels(channels, sr, rate) {
+  const x0 = channels[0]
+  if (Math.abs(rate - 1) < 1e-4) return channels.map((c) => c.slice())
+  const N = Math.max(256, Math.round(sr * 0.04) & ~1) // 1つの切れ端（40ms）
+  const Hs = N / 2                                       // 出力側の間隔
+  const Ha = Hs * rate                                   // 入力側の間隔
+  const delta = Math.round(sr * 0.012)                   // つなぎ目を合わせるために探す幅
+  const outLen = Math.max(1, Math.ceil(x0.length / rate))
+  const win = new Float32Array(N)
+  for (let i = 0; i < N; i++) win[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / N)
+
+  // 探す用のモノラル
+  let mono = x0
+  if (channels.length > 1) {
+    mono = new Float32Array(x0.length)
+    channels.forEach((c) => { for (let i = 0; i < c.length; i++) mono[i] += c[i] / channels.length })
+  }
+  const at = (i) => (i >= 0 && i < mono.length ? mono[i] : 0)
+
+  const outs = channels.map(() => new Float32Array(outLen + N))
+  const norm = new Float32Array(outLen + N)
+  let prev = 0
+  for (let m = 0; m * Hs < outLen; m++) {
+    const target = Math.round(m * Ha)
+    let pos = target
+    if (m > 0) {
+      // 前の切れ端の「自然な続き」と一番よく似ている位置を探す（粗く → 細かく）
+      const nat = prev + Hs
+      const score = (p, step) => {
+        let s = 0
+        for (let i = 0; i < N; i += step) s += at(p + i) * at(nat + i)
+        return s
+      }
+      let best = -Infinity
+      for (let p = target - delta; p <= target + delta; p += 4) {
+        const v = score(p, 8)
+        if (v > best) { best = v; pos = p }
+      }
+      const c0 = pos
+      best = -Infinity
+      for (let p = c0 - 3; p <= c0 + 3; p++) {
+        const v = score(p, 2)
+        if (v > best) { best = v; pos = p }
+      }
+      if (pos < 0) pos = 0
+    }
+    const o = m * Hs
+    for (let c = 0; c < channels.length; c++) {
+      const x = channels[c]
+      const out = outs[c]
+      for (let i = 0; i < N; i++) {
+        const j = pos + i
+        if (j < x.length) out[o + i] += x[j] * win[i]
+      }
+    }
+    for (let i = 0; i < N; i++) norm[o + i] += win[i]
+    prev = pos
+  }
+  return outs.map((out) => {
+    const r = new Float32Array(outLen)
+    for (let i = 0; i < outLen; i++) r[i] = norm[i] > 1e-3 ? out[i] / norm[i] : out[i]
+    return r
+  })
+}
+
+// 読む速さを変えて並べ直す（高さも速さも factor 倍）。長さは length にする
+function resampleChannels(channels, factor, length) {
+  return channels.map((x) => {
+    const out = new Float32Array(length)
+    for (let i = 0; i < length; i++) {
+      const p = i * factor
+      const k = Math.floor(p)
+      if (k + 1 >= x.length) { out[i] = k < x.length ? x[k] : 0; continue }
+      const f = p - k
+      out[i] = x[k] * (1 - f) + x[k + 1] * f
+    }
+    return out
+  })
+}
+
+// キー（半音）と速さ（rate）を一緒に変える。cents で半音より細かく（100セント＝半音）
+// やり方：速さを rate÷高さ に伸び縮み → 高さ倍で読み直す → 高さは「高さ倍」、速さは「rate 倍」になる
+export function changeKeyTempoChannels(channels, sr, { semitones = 0, rate = 1 } = {}) {
+  const f = Math.pow(2, semitones / 12)
+  if (Math.abs(f - 1) < 1e-5) return timeStretchChannels(channels, sr, rate)
+  const stretched = timeStretchChannels(channels, sr, rate / f)
+  const length = Math.max(1, Math.round(channels[0].length / rate))
+  return resampleChannels(stretched, f, length)
+}
+
+export function bufferToChannels(buffer) {
+  const list = []
+  for (let c = 0; c < buffer.numberOfChannels; c++) list.push(buffer.getChannelData(c))
+  return list
+}
+
+export function channelsToBuffer(ctx, channels, sr) {
+  const out = ctx.createBuffer(channels.length, Math.max(1, channels[0].length), sr)
+  channels.forEach((d, c) => out.getChannelData(c).set(d.subarray(0, out.length)))
+  return out
+}
+
+// AudioBuffer 全体のキー・速さを変える（オケのキー変更など）
+export function changeKeyTempo(ctx, buffer, opts) {
+  if ((!opts.semitones || Math.abs(opts.semitones) < 1e-6) && Math.abs((opts.rate || 1) - 1) < 1e-6) return buffer
+  return channelsToBuffer(ctx, changeKeyTempoChannels(bufferToChannels(buffer), buffer.sampleRate, opts), buffer.sampleRate)
+}
+
+// 範囲を切り出す（コピー用）
+export function extractRange(ctx, buffer, startSec, endSec) {
+  const sr = buffer.sampleRate
+  const a = Math.max(0, Math.round(startSec * sr))
+  const b = Math.min(buffer.length, Math.round(endSec * sr))
+  if (b <= a) return null
+  const out = ctx.createBuffer(buffer.numberOfChannels, b - a, sr)
+  for (let c = 0; c < buffer.numberOfChannels; c++) out.getChannelData(c).set(buffer.getChannelData(c).subarray(a, b))
+  return out
+}
+
 // ---------- 声の波形編集（詳細モード・Audacity の「選んで加工」と同じ考え方） ----------
-// edits = [{ type: "silence" | "gain" | "fadeIn" | "fadeOut", startSec, endSec, db }]（声の時間）
+// edits = [{ type, startSec, endSec, ... }]（声の時間。前の編集を反映したあとの時間）
+//   長さが変わらない：silence（無音）/ gain（db）/ fadeIn / fadeOut / pitch（cents：音の高さ）
+//   長さが変わる　　：delete（削除）/ tempo（rate：選んだ所の速さ）/ paste（clip を startSec に差し込む）
+//   長さが変わらない：overwrite（clip で startSec から上書き）
 // 元の buffer は書き換えず、加工したコピーを返す（何回でもやり直せるように）
 export function applyEdits(ctx, buffer, edits) {
   if (!edits || !edits.length) return buffer
   const sr = buffer.sampleRate
-  const out = ctx.createBuffer(buffer.numberOfChannels, buffer.length, sr)
-  for (let c = 0; c < buffer.numberOfChannels; c++) out.getChannelData(c).set(buffer.getChannelData(c))
-  const edge = Math.round(sr * 0.005) // 端は5msかけて変える（プツッと鳴らないように）
+  let ch = bufferToChannels(buffer).map((d) => d.slice())
+  const edge = Math.max(1, Math.round(sr * 0.005)) // つなぎ目は5msかけて（プツッと鳴らないように）
+  const len = () => ch[0].length
+  const idx = (sec) => Math.max(0, Math.min(len(), Math.round(sec * sr)))
+  const clipCh = (clip, c) => clip.getChannelData(Math.min(c, clip.numberOfChannels - 1))
+
+  // a〜b を piece（チャンネルごと）に入れかえる。つなぎ目は短くなめらかに
+  const replace = (a, b, pieces) => {
+    ch = ch.map((d, c) => {
+      const p = pieces[c]
+      const out = new Float32Array(a + p.length + (d.length - b))
+      out.set(d.subarray(0, a), 0)
+      out.set(p, a)
+      out.set(d.subarray(b), a + p.length)
+      // つなぎ目の前後を少しだけ小さく → 段差を目立たなくする
+      ;[a, a + p.length].forEach((j) => {
+        for (let k = -edge; k < edge; k++) {
+          const i = j + k
+          if (i < 0 || i >= out.length) continue
+          out[i] *= Math.min(1, Math.abs(k + 0.5) / edge * 0.7 + 0.3)
+        }
+      })
+      return out
+    })
+  }
+
   edits.forEach((e) => {
-    const a = Math.max(0, Math.round(e.startSec * sr))
-    const b = Math.min(buffer.length, Math.round(e.endSec * sr))
+    const a = idx(e.startSec)
+    const b = e.type === "paste" || e.type === "overwrite" ? a : idx(e.endSec)
+    if (e.type === "paste" && e.clip) {
+      replace(a, a, ch.map((_, c) => clipCh(e.clip, c)))
+      return
+    }
+    if (e.type === "overwrite" && e.clip) {
+      const n = e.clip.length
+      if (a + n > len()) ch = ch.map((d) => { const o = new Float32Array(a + n); o.set(d); return o })
+      ch.forEach((d, c) => {
+        const src = clipCh(e.clip, c)
+        const f = Math.min(Math.round(sr * 0.01), Math.floor(n / 2))
+        for (let k = 0; k < n; k++) {
+          const w = Math.min(1, (k + 1) / f, (n - k) / f) // 10ms で入れかえ
+          d[a + k] = d[a + k] * (1 - w) + src[k] * w
+        }
+      })
+      return
+    }
     if (b <= a) return
+    if (e.type === "delete") {
+      replace(a, b, ch.map(() => new Float32Array(0)))
+      return
+    }
+    if (e.type === "tempo") {
+      replace(a, b, timeStretchChannels(ch.map((d) => d.slice(a, b)), sr, e.rate || 1))
+      return
+    }
+    if (e.type === "pitch") {
+      // 前後に少し余分を付けて計算 → つなぎ目は10msで元の声と入れかえ
+      const m = Math.round(sr * 0.05)
+      const a0 = Math.max(0, a - m)
+      const b0 = Math.min(len(), b + m)
+      const shifted = changeKeyTempoChannels(ch.map((d) => d.slice(a0, b0)), sr, { semitones: (e.cents || 0) / 100 })
+      const f = Math.max(1, Math.min(Math.round(sr * 0.01), Math.floor((b - a) / 2)))
+      ch.forEach((d, c) => {
+        const s = shifted[c]
+        for (let i = a; i < b; i++) {
+          const w = Math.min(1, (i - a + 1) / f, (b - i) / f)
+          d[i] = d[i] * (1 - w) + (s[i - a0] || 0) * w
+        }
+      })
+      return
+    }
     const n = b - a
     const target = e.type === "silence" ? 0 : e.type === "gain" ? Math.pow(10, (e.db || 0) / 20) : 1
-    for (let c = 0; c < out.numberOfChannels; c++) {
-      const d = out.getChannelData(c)
+    ch.forEach((d) => {
       for (let i = a; i < b; i++) {
         const k = i - a
         let g
         if (e.type === "fadeIn") g = k / n
         else if (e.type === "fadeOut") g = 1 - k / n
-        else {
-          // 端だけなめらかに target へ
-          const w = Math.min(1, k / edge, (b - i) / edge)
-          g = 1 + (target - 1) * w
-        }
+        else g = 1 + (target - 1) * Math.min(1, k / edge, (b - i) / edge)
         d[i] *= g
       }
-    }
+    })
   })
-  return out
+  return channelsToBuffer(ctx, ch, sr)
+}
+
+// 長さが変わる編集か（このあとの録り直しの位置がずれるので、録り直す前に確定する）
+export const SHIFTING_EDITS = Object.freeze(["delete", "tempo", "paste"])
+
+// ---------- 🥁 拍（ビート）とテンポを見つける（MV の演出用・4c） ----------
+// 戻り値 { bpm, beats: [秒], energy: Float32Array（0〜1・盛り上がり）, energyHop: 秒, confidence: 0〜1 }
+// テンポが一定の曲（オケ）を前提にした、軽い見つけ方：
+//   音が大きくなった瞬間の並び → 自己相関で拍の間隔（60〜180 BPM）→ 一番そろう位置に拍を並べる
+export function analyzeBeats(buffer) {
+  const x = toMono(buffer)
+  const sr = buffer.sampleRate
+  const size = Math.round(sr * 0.01)
+  const hop = size / sr // 1コマの本当の長さ（約10ms。丸めたぶんもそのまま使う → テンポがずれない）
+  const n = Math.floor(x.length / size)
+  // 低い音（キック・ベース）を強めに見る：簡単なローパスを足す
+  const a = Math.exp((-2 * Math.PI * 150) / sr)
+  let lp = 0
+  const full = new Float32Array(n)
+  const low = new Float32Array(n)
+  for (let f = 0; f < n; f++) {
+    let s = 0
+    let sl = 0
+    for (let i = f * size; i < (f + 1) * size; i++) {
+      const v = x[i]
+      lp = a * lp + (1 - a) * v
+      s += v * v
+      sl += lp * lp
+    }
+    full[f] = Math.log(1e-6 + Math.sqrt(s / size))
+    low[f] = Math.log(1e-6 + Math.sqrt(sl / size))
+  }
+  const onset = new Float32Array(n)
+  for (let f = 1; f < n; f++) onset[f] = Math.max(0, full[f] - full[f - 1]) + 1.5 * Math.max(0, low[f] - low[f - 1])
+  // 平均を引いて、目立つ所だけ残す
+  let mean = 0
+  for (let f = 0; f < n; f++) mean += onset[f]
+  mean /= n || 1
+  for (let f = 0; f < n; f++) onset[f] = Math.max(0, onset[f] - mean)
+
+  // 盛り上がり（0.1秒ごと・2秒でならす・上から5%を1とする）
+  const eStep = Math.round(0.1 / hop)
+  const eHop = eStep * hop
+  const en = Math.floor(n / eStep)
+  const raw = new Float32Array(en)
+  for (let i = 0; i < en; i++) {
+    let s = 0
+    for (let f = i * eStep; f < (i + 1) * eStep; f++) s += Math.exp(full[f])
+    raw[i] = s / eStep
+  }
+  const energy = new Float32Array(en)
+  const w = 10
+  for (let i = 0; i < en; i++) {
+    let s = 0
+    let c = 0
+    for (let j = Math.max(0, i - w); j < Math.min(en, i + w); j++) { s += raw[j]; c++ }
+    energy[i] = s / (c || 1)
+  }
+  const sorted = Array.from(energy).sort((p, q) => p - q)
+  const top = sorted[Math.floor(sorted.length * 0.95)] || 1
+  for (let i = 0; i < en; i++) energy[i] = Math.min(1, energy[i] / (top || 1))
+
+  const empty = { bpm: null, beats: [], energy, energyHop: eHop, confidence: 0 }
+  if (n < 500) return empty // 5秒より短い
+
+  // 自己相関（曲の真ん中あたり最大90秒で）
+  const from = Math.max(0, Math.floor(n / 2) - 4500)
+  const to = Math.min(n, from + 9000)
+  const minLag = Math.round(60 / 180 / hop)
+  const maxLag = Math.round(60 / 60 / hop)
+  let bestLag = 0
+  let best = -Infinity
+  let zero = 0
+  for (let f = from; f < to; f++) zero += onset[f] * onset[f]
+  const scores = new Float32Array(maxLag + 2)
+  for (let lag = minLag; lag <= maxLag; lag++) {
+    let s = 0
+    for (let f = from; f < to - lag; f++) s += onset[f] * onset[f + lag]
+    scores[lag] = s
+    // 120 BPM くらいを少しだけ選びやすく（倍・半分のテンポにまちがえにくくする）
+    const bpm = 60 / (lag * hop)
+    const prior = Math.exp(-0.5 * Math.pow(Math.log2(bpm / 120) / 0.9, 2))
+    if (s * prior > best) { best = s * prior; bestLag = lag }
+  }
+  if (!bestLag || !zero) return empty
+  // となりの値で、拍の間隔を細かく（小数）に
+  const y0 = scores[bestLag - 1] || 0
+  const y1 = scores[bestLag]
+  const y2 = scores[bestLag + 1] || 0
+  const den = y0 - 2 * y1 + y2
+  const lag = bestLag + (den !== 0 ? Math.max(-0.5, Math.min(0.5, (0.5 * (y0 - y2)) / den)) : 0)
+  const confidence = Math.max(0, Math.min(1, scores[bestLag] / zero))
+
+  // 拍の位置：一番そろうずらし方を探す
+  let bestPhase = 0
+  let bestPhaseScore = -Infinity
+  for (let p = 0; p < Math.ceil(lag); p++) {
+    let s = 0
+    for (let k = 0; p + k * lag < n; k++) {
+      const f = Math.round(p + k * lag)
+      s += onset[f] + 0.5 * ((onset[f - 1] || 0) + (onset[f + 1] || 0))
+    }
+    if (s > bestPhaseScore) { bestPhaseScore = s; bestPhase = p }
+  }
+  // 仕上げ：拍ごとに近くの一番強い所を探して、まっすぐな線を引き直す（間隔の小さなずれがたまらないように）
+  let phase = bestPhase
+  let period = lag
+  for (let iter = 0; iter < 2; iter++) {
+    const win = Math.max(2, Math.round(period * 0.15))
+    let sk = 0, st = 0, skk = 0, skt = 0, sw = 0
+    for (let k = 0; phase + k * period < n; k++) {
+      const c = Math.round(phase + k * period)
+      let m = 0
+      let at = -1
+      for (let f = Math.max(0, c - win); f <= Math.min(n - 1, c + win); f++) if (onset[f] > m) { m = onset[f]; at = f }
+      if (at < 0 || m <= 0) continue
+      sw += m; sk += m * k; st += m * at; skk += m * k * k; skt += m * k * at
+    }
+    const d = sw * skk - sk * sk
+    if (sw <= 0 || d === 0) break
+    period = (sw * skt - sk * st) / d
+    phase = (st - period * sk) / sw
+    if (!(period > minLag * 0.9 && period < maxLag * 1.1)) { period = lag; phase = bestPhase; break }
+  }
+  while (phase - period >= 0) phase -= period
+  while (phase < 0) phase += period
+  const beats = []
+  for (let k = 0; phase + k * period < n; k++) beats.push((phase + k * period) * hop)
+  return { bpm: 60 / (period * hop), beats, energy, energyHop: eHop, confidence }
 }

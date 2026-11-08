@@ -1,12 +1,16 @@
 import { Controller } from "@hotwired/stimulus"
 import {
   toMono, rmsOf, findOnset, estimateLag, findQuietRange, trimBuffer, denoise,
-  spliceTake, waveformPeaks, analyzeLevels, suggestChoruses, normalizeLoudness, applyEdits
+  spliceTake, waveformPeaks, analyzeLevels, suggestChoruses, normalizeLoudness, applyEdits, analyzeBeats,
+  changeKeyTempo, extractRange, SHIFTING_EDITS
 } from "vocal_tools"
 import {
   DEFAULT_MIX, MIX_PRESETS, createVocalChain, applyMix, createLimiter, reverbTail,
   settingsAt, scheduleMixTimeline, mixParams, SIMPLE_LINKS, GLOBAL_PRO_KEYS, PRO_PARAMS, PRO_GROUPS
 } from "mix_chain"
+import { alignLyrics } from "lyric_align"
+import { fastExportSupported, pickVideoConfig, pickAudioConfig, computeFeatureTrack, encodeMp4 } from "mv_export"
+import { MV_TEMPLATES, MV_GRADIENTS, MV_RATIOS, renderFrame, readFeatures, pickColors, gradientColors, lyricIndexAt } from "mv_renderer"
 
 // 🎤 歌ってみた（手順3：ミックス）
 // オケ → gain ─────────────────────────────┐
@@ -33,6 +37,70 @@ const OFFSET_VIEW_SEC = 4 // ずれ補正の波形に何秒ぶん映すか（拡
 const MIC_OPTIONS = { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } }
 const MIX_KEY = "kotobouquet.singing.mix" // 最後に使ったミックス設定（この端末だけ）
 const DETAIL_KEY = "kotobouquet.singing.detail" // 詳細モードを開いているか（この端末だけ）
+const MV_KEY = "kotobouquet.singing.mv"         // MV のテンプレート・歌った人の名前（この端末だけ）
+const TAP_LEAD = 0.2 // 歌詞のタップ：人は少し遅れてタップするので、そのぶん前から出す（秒）
+const AUTO_LEAD = 0.15 // 歌詞の自動合わせ：歌い出しの少し前から出す（秒）
+const FLOW_KEY = "kotobouquet.singing.flow" // ステップで進める／まとめて編集（この端末だけ）
+
+// 🧭 ステップで進めるときの順番と、各ページの案内
+const FLOW_STEPS = [
+  {
+    id: "sg-load", short: "音を入れる", need: "backing",
+    title: "🎼 まずは、オケ（伴奏）のファイルを入れましょう",
+    lead: "歌いたい曲のオケ（カラオケ音源）を選んでね。次のステップで、キー（高さ）を自分に合わせられます。",
+    tips: ["mp3・wav・m4a など、ふつうの音楽ファイルが使えます", "もう録音してある歌声があれば、「歌声ファイル」に入れてもOK（次のステップはとばせます）", "オケの配布元の利用規約（動画での公開・クレジットの書き方）も確認してね"],
+    wait: "オケを入れると次へ進めます"
+  },
+  {
+    id: "sg-key", short: "キー", optional: true,
+    title: "🎹 録音の前に、キー（高さ）を自分に合わせましょう",
+    lead: "♭ −1 / ♯ +1 でキーを選んで「▶ サビで試し聴き」。一緒に口ずさんで、無理なく出る高さを探してね。決まったら「🎹 オケに反映する」。",
+    tips: ["目安：男性が女性の曲なら −3〜−5、女性が男性の曲なら +3〜+5", "サビの一番高い所が楽に出るキーがおすすめ", "原曲キーのままでよければ、そのまま次へ"],
+    wait: ""
+  },
+  {
+    id: "sg-rec", short: "録音", need: "vocal",
+    title: "🎙 次は、歌を録音しましょう",
+    lead: "ヘッドホンをつけて「🎙 マイクで録音」。最初の1.5秒は静かに、カウントの4つ目で手拍子 👏 してから歌ってね。",
+    tips: ["手拍子で、声とオケのずれを自動で直します", "失敗した所だけ「✂️ 途中から録り直す」で録り直せます", "録り終わると、声の大きさがちょうどいいかも教えます"],
+    wait: "歌声を録音（または①でファイルを入れる）と次へ進めます"
+  },
+  {
+    id: "sg-sync", short: "ずれ直し", optional: true,
+    title: "🎚 ずれと雑音を直しましょう",
+    lead: "▶ この辺を試聴 で、声とオケがそろっているか聴いてみてね。ずれていたら、声の波形を左右に動かすだけ。",
+    tips: ["「🔍 おすすめを再計算 → ✅ 採用」で自動で合わせることもできます", "✨ ノイズ消しで、部屋の「サー」という音を減らせます", "そろっていれば、何もしないで次へ進んでOK"],
+    wait: ""
+  },
+  {
+    id: "sg-mix", short: "ミックス", optional: true,
+    title: "🎛 ミックスで、声をきれいに整えましょう",
+    lead: "迷ったら「🪄 おまかせミックス」と「🪄 サビっぽい所を探す」を押すだけ。プロっぽく聴きやすくなります。",
+    tips: ["雰囲気ボタン（🔥盛り上げる・🌙しっとり など）で、曲全体や部分ごとの感じを変えられます", "もっと細かくしたいときは「🛠 詳細モード」", "動画はいらない？ →「🎵 音声だけでいい」で保存へ"],
+    wait: ""
+  },
+  {
+    id: "sg-mv", short: "動画", optional: true,
+    title: "🎬 動画（MV）の見た目を決めましょう",
+    lead: "テンプレートと背景を選んで、曲名と名前を入れるだけ。絵は音に合わせて自動で動きます。",
+    tips: ["横（YouTube）・縦（TikTok・ショート）・正方形を選べます", "サビで光る・拍ではねる「🎆 おまかせ演出」つき", "下の ▶ 試聴 で、動きを確かめてね"],
+    wait: ""
+  },
+  {
+    id: "sg-lyrics", short: "歌詞", optional: true,
+    title: "🎤 歌詞テロップを付けましょう（なくてもOK）",
+    lead: "歌詞を貼り付けて「🪄 歌声から自動で合わせる」。⚠ の行だけ聴いて確かめればOK。",
+    tips: ["ずれた所は ±0.1秒 か「👆 タップで合わせる」で直せます", "「📄 LRC で保存」しておくと、次は合わせ直さなくてOK", "テロップがいらなければ、そのまま次へ"],
+    wait: ""
+  },
+  {
+    id: "sg-save", short: "保存",
+    title: "🎉 完成！ 保存しましょう",
+    lead: "動画は「⚡ 速く書き出す（MP4）」、音声だけなら「🎵 音声だけ保存（WAV）」。できたら ⬇ から保存してね。",
+    tips: ["書き出し中は、このタブを開いたままにしてね", "あとから直したくなったら、← 戻る で前のステップへ", "作ったものは、この端末の中だけ（サーバーには送っていません）"],
+    wait: ""
+  }
+]
 
 export default class extends Controller {
   static targets = [
@@ -51,8 +119,23 @@ export default class extends Controller {
     "mixTimeline", "sectionList", "sectionName", "sectionInfo", "editingLabel",
     "addSectionButton", "deleteSectionButton", "playSectionButton",
     "guide", "detailToggle", "proPanel", "normalizeExport",
-    "editView", "editStart", "editEnd", "editGainDb", "editInfo", "editUndoButton", "editClearButton"
+    "editView", "editStart", "editEnd", "editGainDb", "editInfo", "editUndoButton", "editClearButton",
+    "editCents", "editTempo", "clipInfo",
+    "keyValue", "tempoSlider", "tempoValue", "keyTempoApply", "keyFollow",
+    "mvTemplateButton", "mvTemplateHint", "mvBgList", "mvBgCredit", "mvTitle", "mvArtist", "mvCredit",
+    "mvDim", "mvDimValue", "mvSeek", "mvSeekValue", "mvIntro", "mvOutro", "mvProgress",
+    "lyricsText", "lyricList", "lyricInfo", "tapPanel", "tapButton", "tapCurrent", "tapNext", "tapCount",
+    "karaoke", "lrcButton",
+    "fxStrength", "fxStrengthValue", "fxBeat", "fxChorus", "fxSparkle", "fxInfo",
+    "mvRatioButton", "mvSafe", "mvFrame",
+    "fastButton", "fastNote", "exportQuality", "exportProgress",
+    "autoAlignButton", "undoAlignButton",
+    "flowHeader", "flowNav", "flowButton",
+    "keyPreviewButton"
   ]
+
+  // KotoBouquet の背景素材（サーバーが一覧を入れる）
+  static values = { backgrounds: { type: Array, default: [] } }
 
   connect() {
     this.ctx = null
@@ -62,6 +145,7 @@ export default class extends Controller {
     this.takes = []
     this.edits = []
     this.editSel = null
+    this.editCursor = null
     this.vocalBuffer = null
     this.noiseRange = null
     this.lastLatencySec = null
@@ -98,10 +182,19 @@ export default class extends Controller {
     this.editSel = null   // 選んでいる範囲（曲の時間）
     this.editZoom = null  // 拡大して映している範囲（曲の時間）。null＝全体
     this.editDrag = null
+    this.editCursor = null // 貼り付ける位置（曲の時間）。範囲を選ばずに1回押した所
+    this.clipboard = null  // コピーした声（AudioBuffer）
+    this.backingOriginal = null // キー・速さを変える前のオケ
+    this.backingKey = 0         // 反映ずみのキー（半音）
+    this.backingRate = 1        // 反映ずみの速さ
+    this.pendingKey = 0         // 画面で選んでいるキー（まだ反映していないかも）
     this.detail = this.loadDetail()
     this.buildProPanel()
     this.applyDetailMode()
     this.updateMixControls()
+    this.setupMv()
+    this.setupFastExport()
+    this.setupFlow()
     this.drawWaveform()
     this.updateOffsetDisplay()
     this.updateCalibrationInfo()
@@ -559,6 +652,7 @@ export default class extends Controller {
   }
 
   updateSectionControls() {
+    if (this.fxPrefs) this.updateFxInfo()
     if (!this.hasSectionListTarget) return
     const s = this.editingSection
     // 編集先のタブ
@@ -744,7 +838,8 @@ export default class extends Controller {
     else if (!this.backingBuffer) text = "まずは ① で 🎼オケ（伴奏）のファイルを入れよう"
     else if (!this.vocalBase) text = "次は ② の「🎙 マイクで録音」。ヘッドホンをつけて、カウントの4つ目で手拍子 👏"
     else if (!this.sections.length && this.mixPreset === "recommended") text = "④ の「🪄 おまかせミックス」を押すと、声とオケを分析していい感じに整えます"
-    else text = "▶ 試聴して気に入ったら ⑤ で保存。もっと細かくしたいときは ④ の「🛠 詳細モード」"
+    else if (!this.mv?.title) text = "⑤ で動画のテンプレート・背景を選んで、曲名を入れよう（▶試聴で動きを確かめられます）"
+    else text = "▶ 試聴して気に入ったら ⑥ で保存。もっと細かくしたいときは ④ の「🛠 詳細モード」"
     if (this.guideTarget.textContent !== text) this.guideTarget.textContent = text
   }
 
@@ -767,6 +862,7 @@ export default class extends Controller {
     const t = this.editTimeAt(event)
     this.editDrag = { from: t }
     this.editSel = { startSec: t, endSec: t }
+    this.editCursor = t
     this.editViewTarget.setPointerCapture?.(event.pointerId)
     this.updateEditControls()
   }
@@ -804,18 +900,204 @@ export default class extends Controller {
     this.editZoom = null
   }
 
+  // 選んだ範囲（曲の時間）→ 声の時間
+  get editSelVocal() {
+    if (!this.editSel) return null
+    const o = this.vocalOffsetMs / 1000
+    return { startSec: Math.max(0, this.editSel.startSec - o), endSec: Math.max(0, this.editSel.endSec - o) }
+  }
+
   async applyEdit(event) {
     if (!this.editSel || !this.vocalBase || this.mode !== "idle") return
-    const type = event.currentTarget.dataset.editType
-    const offsetSec = this.vocalOffsetMs / 1000
-    const db = type === "gain" ? Number(event.currentTarget.dataset.editDb ?? this.editGainDbTarget.value) : 0
-    if (type === "gain" && !Number.isFinite(db)) return
-    // 選んだのは曲の時間 → 声の時間に直して覚える（あとでずれ補正を変えても、声と一緒に動く）
-    this.edits.push({ type, startSec: this.editSel.startSec - offsetSec, endSec: this.editSel.endSec - offsetSec, db })
-    await this.rebuildVocal()
-    const names = { silence: "無音にしました", gain: `音量を ${db > 0 ? "+" : ""}${db}dB 変えました`, fadeIn: "フェードインにしました", fadeOut: "フェードアウトにしました" }
-    this.setStatus(`✂️ ${this.formatSec(this.editSel.startSec)}〜${this.formatSec(this.editSel.endSec)} を${names[type]}（↩ 編集を戻す でやり直せます）`)
+    const el = event.currentTarget
+    const type = el.dataset.editType
+    const sel = this.editSelVocal
+    const edit = { type, ...sel }
+    let name = ""
+    if (type === "gain") {
+      edit.db = Number(el.dataset.editDb ?? this.editGainDbTarget.value)
+      if (!Number.isFinite(edit.db)) return
+      name = `音量を ${edit.db > 0 ? "+" : ""}${edit.db}dB 変えました`
+    } else if (type === "pitch") {
+      edit.cents = Number(el.dataset.editCents ?? this.editCentsTarget.value)
+      if (!Number.isFinite(edit.cents) || !edit.cents) return
+      name = `音の高さを ${edit.cents > 0 ? "+" : ""}${edit.cents}セント 変えました（100セント＝半音）`
+    } else if (type === "tempo") {
+      const pct = Number(el.dataset.editTempo ?? this.editTempoTarget.value)
+      if (!Number.isFinite(pct) || pct < 25 || pct > 400 || pct === 100) return
+      edit.rate = pct / 100
+      name = `速さを ${pct}% にしました（後ろの声もずれます）`
+    } else if (type === "delete") {
+      name = "削除しました（後ろの声が前に詰まります）"
+    } else {
+      name = { silence: "無音にしました", fadeIn: "フェードインにしました", fadeOut: "フェードアウトにしました" }[type] || ""
+    }
+    const label = `${this.formatSec(this.editSel.startSec)}〜${this.formatSec(this.editSel.endSec)}`
+    await this.pushEdit(edit)
+    if (SHIFTING_EDITS.includes(type)) this.editSel = null
+    this.setStatus(`✂️ ${label} を${name}（↩ 編集を戻す でやり直せます）`)
     this.updateEditControls()
+  }
+
+  async pushEdit(edit) {
+    this.edits.push(edit)
+    await this.rebuildVocal()
+  }
+
+  // 📋 コピー：今の声（編集のあと・ノイズ消しの前）から切り出す
+  copySel() {
+    const sel = this.editSelVocal
+    if (!sel || !this.vocalForMatch) return null
+    this.clipboard = extractRange(this.ctx, this.vocalForMatch, sel.startSec, sel.endSec)
+    this.updateEditControls()
+    if (this.clipboard) this.setStatus(`📋 ${this.clipboard.duration.toFixed(2)}秒ぶんコピーしました。貼り付けたい所を押して「貼り付け」`)
+    return this.clipboard
+  }
+
+  // ✂️ 切り取り：コピーしてから削除
+  async cutSel() {
+    if (!this.editSel || this.mode !== "idle" || !this.copySel()) return
+    const sel = this.editSelVocal
+    await this.pushEdit({ type: "delete", ...sel })
+    this.editCursor = this.editSel.startSec
+    this.editSel = null
+    this.setStatus(`✂️ ${this.clipboard.duration.toFixed(2)}秒ぶん切り取りました（後ろの声が前に詰まります）。貼り付けたい所を押して「貼り付け」`)
+    this.updateEditControls()
+  }
+
+  // 📥 貼り付け：insert＝差し込む（後ろがずれる）／ overwrite＝上書き（後ろはずれない。サビの声を別のサビに使うとき）
+  async pasteClip(event) {
+    if (!this.clipboard || this.mode !== "idle" || !this.vocalBase) return
+    const mode = event.currentTarget.dataset.pasteMode === "overwrite" ? "overwrite" : "paste"
+    const songAt = this.editSel ? this.editSel.startSec : this.editCursor
+    if (songAt === null || songAt === undefined) {
+      this.setStatus("貼り付ける位置を、声の波形を押して選んでね")
+      return
+    }
+    const at = Math.max(0, songAt - this.vocalOffsetMs / 1000)
+    await this.pushEdit({ type: mode, startSec: at, endSec: at + this.clipboard.duration, clip: this.clipboard })
+    this.editSel = { startSec: songAt, endSec: songAt + this.clipboard.duration }
+    this.setStatus(`📥 ${this.formatSec(songAt)} に${mode === "overwrite" ? "上書きで" : "差し込んで"}貼り付けました${mode === "overwrite" ? "" : "（後ろの声がずれます）"}`)
+    this.updateEditControls()
+  }
+
+  // 途中から録り直す前に、これまでの波形編集を元の声に確定する（録り直しの位置がずれないように）
+  bakeEdits() {
+    if (!this.edits.length) return false
+    let buffer = this.vocalBase
+    this.takes.forEach((t) => { buffer = spliceTake(this.ctx, buffer, t.raw, t.startSec, t.endSec) })
+    this.vocalBase = applyEdits(this.ctx, buffer, this.edits)
+    this.takes = []
+    this.edits = []
+    return true
+  }
+
+  // ---------- 🎹 オケのキー・速さ ----------
+
+  shiftKey(event) {
+    const d = Number(event.currentTarget.dataset.keyShift || 0)
+    this.pendingKey = d === 0 ? 0 : Math.max(-12, Math.min(12, this.pendingKey + d))
+    this.updateKeyTempoControls()
+  }
+
+  changeTempoSlider() {
+    this.updateKeyTempoControls()
+  }
+
+  get pendingRate() {
+    return this.hasTempoSliderTarget ? Number(this.tempoSliderTarget.value) / 100 : 1
+  }
+
+  updateKeyTempoControls() {
+    if (!this.hasKeyValueTarget) return
+    const k = this.pendingKey
+    this.keyValueTarget.textContent = k === 0 ? "原曲キー" : `${k > 0 ? "+" : ""}${k}（${k > 0 ? "高く" : "低く"}）`
+    this.tempoValueTarget.textContent = `${Math.round(this.pendingRate * 100)}%`
+    const changed = k !== this.backingKey || Math.abs(this.pendingRate - this.backingRate) > 1e-6
+    this.keyTempoApplyTarget.disabled = !(changed && this.backingOriginal && this.mode === "idle")
+    this.keyTempoApplyTarget.textContent = changed ? "🎹 オケに反映する" : "反映ずみ"
+  }
+
+  async applyKeyTempo() {
+    if (!this.backingOriginal || this.mode !== "idle") return
+    const key = this.pendingKey
+    const rate = this.pendingRate
+    const oldRate = this.backingRate
+    this.setMode("processing")
+    this.setStatus("🎹 オケのキー・速さを変えています…（長い曲だと数秒〜十数秒かかります）")
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    try {
+      this.backingBuffer = changeKeyTempo(this.ctx, this.backingOriginal, { semitones: key, rate })
+      this.backingPeaks = waveformPeaks(this.backingBuffer, 1000)
+      if (rate !== oldRate) this.analyzeBacking() // 速さが変わると拍の位置も変わる
+      this.backingKey = key
+      this.backingRate = rate
+      // 部分ごとのミックスは、曲の時間を速さに合わせて伸び縮みさせる
+      if (rate !== oldRate) {
+        const k = oldRate / rate
+        this.sections.forEach((sec) => { sec.startSec *= k; sec.endSec *= k })
+      }
+      const keyText = key === 0 ? "原曲キー" : `キー ${key > 0 ? "+" : ""}${key}`
+      let note = ""
+      if (this.vocalBase && rate !== oldRate) note = " ⚠ 速さを変えたので、録った声とはずれます。この速さで録り直してね"
+      else if (this.vocalBase && key !== 0 && !this.keyFollowTarget.checked) note = " 録った声のキーも変えたいときは「声も同じだけキーを変える」にチェック"
+      this.setMode("idle")
+      if (this.vocalBase && this.keyFollowTarget.checked) await this.rebuildVocal()
+      this.setStatus(`🎹 オケを ${keyText}・速さ ${Math.round(rate * 100)}% にしました。${note}`)
+    } catch (e) {
+      console.error(e)
+      this.setMode("idle")
+      this.setStatus("キー・速さを変えられませんでした")
+    }
+    this.updateKeyTempoControls()
+  }
+
+  // ▶ 試し聴き：15秒だけ、選んでいるキー・速さに変えて流す（曲全部を変えるより、ずっと早い）
+  async previewKey(event) {
+    if (!this.backingOriginal || this.mode !== "idle") return
+    this.ensureContext()
+    await this.ctx.resume()
+    const src = this.backingOriginal
+    const where = event.currentTarget.dataset.keyPreview
+    const len = 15
+    let from = 0
+    if (where === "chorus") {
+      const c = this.autoChoruses && this.autoChoruses[0]
+      from = c ? c.startSec : Math.max(0, src.duration * 0.35)
+    }
+    from = Math.max(0, Math.min(from, src.duration - len))
+    const piece = extractRange(this.ctx, src, from, Math.min(src.duration, from + len / Math.max(0.5, this.pendingRate)))
+    if (!piece) return
+    this.setMode("processing")
+    this.setStatus("🎹 試し聴き用に変えています…")
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    let shifted = piece
+    try {
+      shifted = changeKeyTempo(this.ctx, piece, { semitones: this.pendingKey, rate: this.pendingRate })
+    } catch (e) {
+      console.error(e)
+    }
+    this.setMode("idle")
+    this.stopSources()
+    const node = this.ctx.createBufferSource()
+    node.buffer = shifted
+    node.connect(this.backingGain)
+    node.start(this.ctx.currentTime + 0.05)
+    this.sources.push(node)
+    this.setMode("playing")
+    const k = this.pendingKey
+    this.setStatus(`▶ ${k === 0 ? "原曲キー" : `キー ${k > 0 ? "+" : ""}${k}`}・速さ ${Math.round(this.pendingRate * 100)}% で試し聴き中…（よければ「🎹 オケに反映する」）`)
+    this.endTimer = setTimeout(() => {
+      this.stopSources()
+      this.setMode("idle")
+      this.setStatus(`試し聴きおわり。このキーでよければ「🎹 オケに反映する」を押してね`)
+    }, (shifted.duration + 0.2) * 1000)
+  }
+
+  async changeKeyFollow() {
+    if (!this.vocalBase || this.mode !== "idle" || this.backingKey === 0) return
+    await this.rebuildVocal()
+    this.setStatus(this.keyFollowTarget.checked ? `声のキーも ${this.backingKey > 0 ? "+" : ""}${this.backingKey} にしました` : "声のキーを元に戻しました")
   }
 
   async undoEdit() {
@@ -857,6 +1139,9 @@ export default class extends Controller {
       : `声の波形を押したまま横にずらして、加工したい所を選んでね。編集 ${this.edits.length}個`
     const can = !!(sel && this.vocalBase && this.mode === "idle")
     this.element.querySelectorAll("[data-needs-edit-sel]").forEach((el) => { el.disabled = !can })
+    const canPaste = !!(this.clipboard && this.vocalBase && this.mode === "idle" && (sel || this.editCursor !== null))
+    this.element.querySelectorAll("[data-needs-clip]").forEach((el) => { el.disabled = !canPaste })
+    if (this.hasClipInfoTarget) this.clipInfoTarget.textContent = this.clipboard ? `📋 コピー中：${this.clipboard.duration.toFixed(2)}秒` : "📋 まだコピーしていません"
     this.editUndoButtonTarget.disabled = !(this.edits.length && this.mode === "idle")
     this.editClearButtonTarget.disabled = !(this.edits.length && this.mode === "idle")
   }
@@ -917,7 +1202,7 @@ export default class extends Controller {
       // 加工した所（オレンジのふち）
       g.strokeStyle = "rgba(255,170,80,0.9)"
       g.lineWidth = 2 * u
-      this.edits.forEach((e) => {
+      this.edits.filter((e) => e.type !== "delete").forEach((e) => {
         const x = toX(e.startSec + offsetSec)
         g.strokeRect(x, u, Math.max(2, toX(e.endSec + offsetSec) - x), h - 2 * u)
       })
@@ -926,6 +1211,9 @@ export default class extends Controller {
       const x = toX(this.editSel.startSec)
       g.fillStyle = "rgba(255,215,90,0.28)"
       g.fillRect(x, 0, Math.max(1, toX(this.editSel.endSec) - x), h)
+    } else if (this.editCursor !== null) {
+      g.fillStyle = "#ffd75a"
+      g.fillRect(toX(this.editCursor) - u, 0, 2 * u, h) // 貼り付ける位置
     }
     // 目盛り
     g.fillStyle = "rgba(255,255,255,0.6)"
@@ -945,8 +1233,15 @@ export default class extends Controller {
     event.target.value = "" // 同じファイルを選び直しても読み込めるように
     const buffer = await this.decodeFile(file, "オケ")
     if (buffer) {
+      this.backingOriginal = buffer
       this.backingBuffer = buffer
+      this.backingKey = 0
+      this.backingRate = 1
+      this.pendingKey = 0
+      if (this.hasTempoSliderTarget) this.tempoSliderTarget.value = "100"
+      this.updateKeyTempoControls()
       this.backingPeaks = waveformPeaks(buffer, 1000)
+      this.analyzeBacking()
       if (this.sections.length) {
         // 別の曲になったので、部分ごとの指示は消す
         this.sections = []
@@ -1042,6 +1337,13 @@ export default class extends Controller {
     const before = this.mode
     let buffer = this.vocalBase
     this.takes.forEach((t) => { buffer = spliceTake(this.ctx, buffer, t.raw, t.startSec, t.endSec) })
+    // 波形編集（切り取り・貼り付け・音程なども）はノイズ消しの前 → ノイズ消しの強さを変えても編集は残る
+    try {
+      buffer = applyEdits(this.ctx, buffer, this.edits)
+    } catch (e) {
+      console.error(e)
+      this.setStatus("波形の編集に失敗しました")
+    }
     // ノイズ消しは歌っていない所（音もれ・手拍子）も小さくするので、オケと比べるのはこの時点の声
     this.vocalForMatch = buffer
     this.vocalStartSec = this.findVocalStart(buffer)
@@ -1066,8 +1368,13 @@ export default class extends Controller {
         this.setStatus("ノイズ消しに失敗しました。元の声のまま使います")
       }
     }
-    // 波形編集（無音・音量・フェード）は最後にかける → ノイズ消しの強さを変えても編集は残る
-    buffer = applyEdits(this.ctx, buffer, this.edits)
+    // オケのキーを変えたとき、声も同じだけ変える（チェックがあるとき）
+    const follow = this.hasKeyFollowTarget && this.keyFollowTarget.checked ? this.backingKey : 0
+    if (follow) {
+      this.setStatus("🎹 声のキーを変えています…")
+      await new Promise((resolve) => setTimeout(resolve, 30))
+      buffer = changeKeyTempo(this.ctx, buffer, { semitones: follow })
+    }
     this.vocalBuffer = buffer
     this.vocalPeaks = waveformPeaks(buffer, 1000)
     this.setMode(before === "processing" ? "idle" : before)
@@ -1111,6 +1418,9 @@ export default class extends Controller {
     this.playButtonTarget.disabled = !(idle && hasSound)
     this.recordButtonTarget.disabled = !(idle && hasSound)
     this.audioButtonTarget.disabled = !(idle && hasSound)
+    if (this.hasKeyPreviewButtonTarget) this.keyPreviewButtonTargets.forEach((el) => { el.disabled = !(idle && this.backingOriginal) })
+    if (this.hasAutoAlignButtonTarget) this.autoAlignButtonTarget.disabled = !(idle && this.vocalBuffer)
+    if (this.hasFastButtonTarget) this.fastButtonTarget.disabled = !(idle && hasSound && this.fastSupported)
     this.micStartButtonTarget.disabled = !(idle && this.backingBuffer)
     this.micStopButtonTarget.disabled = !(this.mode === "micRecording" || this.mode === "punching")
     this.stopButtonTarget.disabled = !(this.mode === "playing" || this.mode === "exporting")
@@ -1129,7 +1439,10 @@ export default class extends Controller {
     if (this.hasPlayFromButtonTarget) this.playFromButtonTarget.disabled = !(idle && hasSound && this.punchStartSec !== null)
     if (this.sections) this.updateSectionControls()
     if (this.edits) this.updateEditControls()
+    if (this.backingOriginal !== undefined) this.updateKeyTempoControls()
     this.updateGuide()
+    if (this.flow) this.renderFlow() // 「次へ」が押せるようになったかを反映
+    this.updateMvControls()
     this.element.dataset.mode = this.mode // 画面の色（録音中は赤など）を CSS で切り替える
   }
 
@@ -1429,6 +1742,12 @@ export default class extends Controller {
   }
 
   stop() {
+    if (this.mode === "exporting") this.exportCancel = true // 速い書き出しを止める
+    if (this.tapIndex !== null && this.tapIndex !== undefined) {
+      this.tapIndex = null
+      if (this.hasTapPanelTarget) this.tapPanelTarget.hidden = true
+      this.renderLyricList()
+    }
     this.stopSources()
     if (this.recorder && this.recorder.state !== "inactive") this.recorder.stop()
     if (this.micRecorder && this.micRecorder.state !== "inactive") this.micRecorder.stop()
@@ -1716,6 +2035,10 @@ export default class extends Controller {
 
   async startPunch() {
     if (this.punchStartSec === null || !this.vocalBase || !this.backingBuffer) return
+    if (this.bakeEdits()) {
+      await this.rebuildVocal()
+      this.setStatus("波形の編集を確定してから録り直します（編集の ↩ は、ここより前には戻れません）")
+    }
     this.ensureContext()
     await this.ctx.resume()
     const stream = await this.openMic()
@@ -1805,6 +2128,35 @@ export default class extends Controller {
 
   // ---------- 音声だけ保存（WAV） ----------
 
+  // ミックスした音を、一気に計算して作る（WAV と速い書き出しで同じものを使う）
+  // 試聴と同じつなぎ：オケ → 音量 ┐、声 → ミックス → 音量 ┘ → リミッター → 出口
+  async renderMix(sampleRate) {
+    // 響き（リバーブ）の余韻が切れないように、少し長めに作る
+    const length = Math.ceil((this.duration + reverbTail(this.activeMix)) * sampleRate)
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext
+    const off = new OAC(2, length, sampleRate)
+    const backingGain = off.createGain()
+    const vocalGain = off.createGain()
+    const chain = createVocalChain(off)
+    scheduleMixTimeline(chain, this.mixTimeline, 0, 0) // 部分ごとの切りかえも同じように入れる
+    const limiter = createLimiter(off)
+    backingGain.gain.value = parseFloat(this.backingVolumeTarget.value)
+    vocalGain.gain.value = parseFloat(this.vocalVolumeTarget.value)
+    chain.output.connect(vocalGain)
+    backingGain.connect(limiter)
+    vocalGain.connect(limiter)
+    limiter.connect(off.destination)
+    this.scheduleSources(off, 0, backingGain, chain.input)
+    const rendered = await off.startRendering()
+    // 仕上げ：聴きやすい大きさにそろえる（配信サイトの音量に近づける）
+    let loud = ""
+    if (!this.hasNormalizeExportTarget || this.normalizeExportTarget.checked) {
+      const gain = normalizeLoudness(rendered)
+      loud = `・音量そろえ ${gain >= 1 ? "+" : ""}${(20 * Math.log10(gain)).toFixed(1)}dB`
+    }
+    return { rendered, loud }
+  }
+
   async exportAudio() {
     if (!this.backingBuffer && !this.vocalBuffer) return
     this.ensureContext()
@@ -1812,32 +2164,7 @@ export default class extends Controller {
     this.setMode("exporting")
     this.setStatus("音声を作っています…")
     try {
-      const sampleRate = (this.backingBuffer || this.vocalBuffer).sampleRate
-      // 響き（リバーブ）の余韻が切れないように、少し長めに作る
-      const length = Math.ceil((this.duration + reverbTail(this.activeMix)) * sampleRate)
-      const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext
-      const off = new OAC(2, length, sampleRate)
-      // 試聴と同じつなぎ：オケ → 音量 ┐、声 → ミックス → 音量 ┘ → リミッター → 出口
-      const backingGain = off.createGain()
-      const vocalGain = off.createGain()
-      const chain = createVocalChain(off)
-      scheduleMixTimeline(chain, this.mixTimeline, 0, 0) // 部分ごとの切りかえも同じように入れる
-      const limiter = createLimiter(off)
-      backingGain.gain.value = parseFloat(this.backingVolumeTarget.value)
-      vocalGain.gain.value = parseFloat(this.vocalVolumeTarget.value)
-      chain.output.connect(vocalGain)
-      backingGain.connect(limiter)
-      vocalGain.connect(limiter)
-      limiter.connect(off.destination)
-      this.scheduleSources(off, 0, backingGain, chain.input)
-
-      const rendered = await off.startRendering()
-      // 仕上げ：聴きやすい大きさにそろえる（配信サイトの音量に近づける）
-      let loud = ""
-      if (!this.hasNormalizeExportTarget || this.normalizeExportTarget.checked) {
-        const gain = normalizeLoudness(rendered)
-        loud = `・音量そろえ ${gain >= 1 ? "+" : ""}${(20 * Math.log10(gain)).toFixed(1)}dB`
-      }
+      const { rendered, loud } = await this.renderMix((this.backingBuffer || this.vocalBuffer).sampleRate)
       const blob = this.encodeWav(rendered)
       const link = this.audioDownloadTarget
       if (link.href) URL.revokeObjectURL(link.href)
@@ -1850,6 +2177,97 @@ export default class extends Controller {
       this.setStatus("音声の書き出しに失敗しました")
     }
     this.setMode("idle")
+  }
+
+  // ---------- ⚡ 速い書き出し（手順4e：WebCodecs で MP4） ----------
+
+  setupFastExport() {
+    this.fastSupported = fastExportSupported()
+    this.exportCancel = false
+    if (this.hasFastNoteTarget) {
+      this.fastNoteTarget.textContent = this.fastSupported
+        ? "曲を流さずに作るので、曲の長さより早く終わります（PC の Chrome・Edge なら数倍速い）。MP4 なので iPhone や各サイトでそのまま使えます"
+        : "このブラウザは速い書き出しに対応していません。下の「🎬 録画で書き出し」を使ってね（PC の Chrome・Edge なら使えます）"
+    }
+  }
+
+  get exportScale() {
+    return this.hasExportQualityTarget && this.exportQualityTarget.value === "high" ? 1.5 : 1
+  }
+
+  async fastExport() {
+    if (!this.fastSupported || this.mode !== "idle" || (!this.backingBuffer && !this.vocalBuffer)) return
+    this.ensureContext()
+    this.endMixBypass()
+    this.exportCancel = false
+    this.setMode("exporting")
+    this.showExportProgress(0)
+    const r = MV_RATIOS[this.mv.ratio]
+    const scale = this.exportScale
+    const width = Math.round((r.width * scale) / 2) * 2 // 動画は縦横とも偶数にする
+    const height = Math.round((r.height * scale) / 2) * 2
+    const fps = 30
+    const bitrate = scale > 1 ? 10_000_000 : 5_000_000
+    try {
+      this.setStatus("⚡ この端末で使える動画の形式を調べています…")
+      const videoPick = await pickVideoConfig(width, height, fps, bitrate)
+      const audioPick = await pickAudioConfig((this.backingBuffer || this.vocalBuffer).sampleRate)
+      if (!videoPick || !audioPick) {
+        this.setStatus("この端末では MP4 を作れませんでした。「🎬 録画で書き出し」を使ってね")
+        return
+      }
+      this.setStatus("⚡ 音を作っています…")
+      const { rendered, loud } = await this.renderMix(audioPick.config.sampleRate)
+      if (this.exportCancel) throw new Error("cancelled")
+      this.setStatus("⚡ 音に合わせた動きを計算しています…")
+      await new Promise((resolve) => setTimeout(resolve, 30))
+      const track = computeFeatureTrack(rendered, fps)
+      // 絵の材料は最初に1回だけ集める（1コマごとに変わるのは時間と音の値だけ）
+      const base = this.mvScene
+      const duration = rendered.duration
+      const scene = { ...base, duration: base.duration }
+      const started = performance.now()
+      const blob = await encodeMp4({
+        audio: rendered, audioPick, videoPick, width, height, fps, duration,
+        drawFrame: (g, w, h, t, i) => {
+          scene.features = track[Math.min(track.length - 1, i)]
+          renderFrame(g, w, h, t, scene)
+        },
+        onProgress: (p, rest) => {
+          this.showExportProgress(p)
+          this.setStatus(`⚡ 動画を作っています… ${Math.round(p * 100)}%（${rest}）`)
+        },
+        isCancelled: () => this.exportCancel
+      })
+      const sec = (performance.now() - started) / 1000
+      const link = this.downloadTarget
+      if (link.href) URL.revokeObjectURL(link.href)
+      link.href = URL.createObjectURL(blob)
+      const tag = { "16:9": "yoko", "9:16": "tate", "1:1": "square" }[this.mv.ratio] || "yoko"
+      link.download = `utattemita_${tag}${scale > 1 ? "_hq" : ""}.mp4`
+      link.textContent = "⬇ 動画（MP4）をダウンロード"
+      link.hidden = false
+      this.setStatus(`⚡ 書き出し完了（MP4・${width}×${height}・${videoPick.label}／${audioPick.label}・${(blob.size / 1024 / 1024).toFixed(1)}MB・${Math.round(sec)}秒で作成${loud}）。下の ⬇ から保存してね`)
+    } catch (e) {
+      if (e && e.message === "cancelled") this.setStatus("書き出しをやめました")
+      else {
+        console.error(e)
+        this.setStatus("速い書き出しに失敗しました。「🎬 録画で書き出し」を試してね")
+      }
+    } finally {
+      this.hideExportProgress()
+      this.setMode("idle")
+    }
+  }
+
+  showExportProgress(p) {
+    if (!this.hasExportProgressTarget) return
+    this.exportProgressTarget.hidden = false
+    this.exportProgressTarget.value = Math.round(p * 1000)
+  }
+
+  hideExportProgress() {
+    if (this.hasExportProgressTarget) this.exportProgressTarget.hidden = true
   }
 
   // 16bit ステレオの WAV にする
@@ -1928,7 +2346,8 @@ export default class extends Controller {
       const link = this.downloadTarget
       if (link.href) URL.revokeObjectURL(link.href)
       link.href = URL.createObjectURL(blob)
-      link.download = `utattemita.${ext}`
+      link.download = `utattemita_${{ "16:9": "yoko", "9:16": "tate", "1:1": "square" }[this.mv?.ratio] || "yoko"}.${ext}`
+      link.textContent = `⬇ 動画（${ext.toUpperCase()}）をダウンロード`
       link.hidden = false
       this.setMode("idle")
       this.setStatus(`動画の書き出し完了（${ext}・${(blob.size / 1024 / 1024).toFixed(1)}MB）`)
@@ -1945,37 +2364,794 @@ export default class extends Controller {
   // ---------- 描画 ----------
 
   // 動画用の波形（録画にも写る）と、録り直し用のタイムライン（録画には写らない）をずっと描き続ける
+  // ---------- 🎬 MV（手順4a：テンプレート・背景・曲名・プレビュー） ----------
+
+  loadMvPrefs() {
+    try {
+      const v = JSON.parse(window.localStorage.getItem(MV_KEY) || "null")
+      if (v && typeof v === "object") return v
+    } catch (e) {}
+    return {}
+  }
+
+  saveMvPrefs() {
+    // 歌った人の名前・テンプレート・暗さはこの端末に覚える（曲名・クレジットは曲ごとなので覚えない）
+    try {
+      window.localStorage.setItem(MV_KEY, JSON.stringify({ template: this.mv.template, artist: this.mv.artist, dim: this.mv.dim, fx: this.fxPrefs, ratio: this.mv.ratio }))
+    } catch (e) {}
+  }
+
+  setupMv() {
+    const prefs = this.loadMvPrefs()
+    this.mv = {
+      template: MV_TEMPLATES[prefs.template] ? prefs.template : "simple",
+      image: null,
+      gradient: MV_GRADIENTS[0],
+      colors: gradientColors(MV_GRADIENTS[0]),
+      dim: Number.isFinite(prefs.dim) ? prefs.dim : 0.2,
+      title: "",
+      artist: prefs.artist || "",
+      credit: "",
+      bgCredit: "",
+      bgKey: `g:${MV_GRADIENTS[0].id}`,
+      bgSrcs: null, // 背景素材の、向きごとの画像
+      ratio: MV_RATIOS[prefs.ratio] ? prefs.ratio : "16:9",
+      karaoke: true
+    }
+    this.applyMvRatio()
+    this.lyrics = []
+    this.tapIndex = null
+    this.renderLyricList()
+    // 🎆 おまかせ演出（4c）
+    const fx = prefs.fx || {}
+    this.fxPrefs = {
+      strength: Number.isFinite(fx.strength) ? fx.strength : 60,
+      beat: fx.beat !== false,
+      chorus: fx.chorus !== false,
+      sparkle: fx.sparkle !== false
+    }
+    this.beatInfo = null
+    this.autoChoruses = []
+    if (this.hasFxStrengthTarget) {
+      this.fxStrengthTarget.value = String(this.fxPrefs.strength)
+      this.fxBeatTarget.checked = this.fxPrefs.beat
+      this.fxChorusTarget.checked = this.fxPrefs.chorus
+      this.fxSparkleTarget.checked = this.fxPrefs.sparkle
+    }
+    this.updateFxInfo()
+    this.mvSeekSec = 0
+    this.mvFeatures = null
+    if (this.hasMvArtistTarget) this.mvArtistTarget.value = this.mv.artist
+    if (this.hasMvDimTarget) this.mvDimTarget.value = String(Math.round(this.mv.dim * 100))
+    this.buildMvBackgrounds()
+    this.loadMyBackgrounds()
+    this.updateMvControls()
+  }
+
+  // 背景の候補：色（グラデーション）→ KotoBouquet の背景素材 → マイ画像（あとから足す）
+  buildMvBackgrounds() {
+    if (!this.hasMvBgListTarget) return
+    const list = this.mvBgListTarget
+    list.replaceChildren()
+    const add = (key, label, { thumb = null, css = null, data = {} } = {}) => {
+      const b = document.createElement("button")
+      b.type = "button"
+      b.className = "sg-bg"
+      b.title = label
+      b.dataset.bgKey = key
+      b.dataset.action = "singing-mixer#selectMvBackground"
+      Object.entries(data).forEach(([k, v]) => { b.dataset[k] = v })
+      if (thumb) {
+        const img = document.createElement("img")
+        img.src = thumb
+        img.alt = label
+        img.loading = "lazy"
+        b.appendChild(img)
+      } else {
+        b.style.background = css
+        b.textContent = label
+      }
+      list.appendChild(b)
+      return b
+    }
+    MV_GRADIENTS.forEach((gr) => add(`g:${gr.id}`, gr.label, { css: `linear-gradient(135deg, ${gr.stops[0]}, ${gr.stops[1]})`, data: { bgGradient: gr.id } }))
+    this.backgroundsValue.forEach((m) => add(`m:${m.id}`, m.name, {
+      thumb: m.thumb,
+      data: { bgSrc: m.src, bgCredit: m.source || "", bgSrcs: JSON.stringify(m.srcs || {}) }
+    }))
+    this.mySlot = document.createElement("span")
+    this.mySlot.className = "sg-bg-mine"
+    list.appendChild(this.mySlot)
+  }
+
+  // マイ画像（KotoBouquet で入れた背景・部品）。ログインしている本人のものだけ返ってくる
+  async loadMyBackgrounds() {
+    if (!this.mySlot) return
+    try {
+      const res = await fetch("/user_images", { headers: { Accept: "application/json" }, credentials: "same-origin" })
+      if (!res.ok) return
+      const images = await res.json()
+      images.slice(0, 40).forEach((i) => {
+        const b = document.createElement("button")
+        b.type = "button"
+        b.className = "sg-bg"
+        b.title = `マイ画像：${i.name}`
+        b.dataset.bgKey = `u:${i.id}`
+        b.dataset.bgSrc = `/user_images/${i.id}`
+        b.dataset.action = "singing-mixer#selectMvBackground"
+        const img = document.createElement("img")
+        img.src = i.thumb ? `/user_images/${i.id}/thumb` : `/user_images/${i.id}`
+        img.alt = i.name
+        img.loading = "lazy"
+        b.appendChild(img)
+        this.mySlot.appendChild(b)
+      })
+      this.updateMvControls()
+    } catch (e) {
+      console.warn("マイ画像を読み込めませんでした", e)
+    }
+  }
+
+  loadImage(src) {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.decoding = "async"
+      img.onload = () => resolve(img)
+      img.onerror = reject
+      img.src = src
+    })
+  }
+
+  async selectMvBackground(event) {
+    const el = event.currentTarget
+    const key = el.dataset.bgKey
+    if (el.dataset.bgGradient) {
+      const gr = MV_GRADIENTS.find((x) => x.id === el.dataset.bgGradient) || MV_GRADIENTS[0]
+      Object.assign(this.mv, { image: null, gradient: gr, colors: gradientColors(gr), bgCredit: "", bgKey: key, bgSrcs: null })
+      this.updateMvControls()
+      return
+    }
+    try {
+      this.setStatus("🖼 背景を読み込んでいます…")
+      let srcs = null
+      try { srcs = el.dataset.bgSrcs ? JSON.parse(el.dataset.bgSrcs) : null } catch (e) {}
+      const img = await this.loadImage((srcs && srcs[this.mv.ratio]) || el.dataset.bgSrc)
+      Object.assign(this.mv, { image: img, colors: pickColors(img), bgCredit: el.dataset.bgCredit || "", bgKey: key, bgSrcs: srcs, bgSrc: el.dataset.bgSrc })
+      this.setStatus("🖼 背景を変えました。文字や波の色は、背景に合わせて自動で決めています")
+    } catch (e) {
+      this.setStatus("背景の画像を読み込めませんでした")
+    }
+    this.updateMvControls()
+  }
+
+  // 手元の画像（このブラウザの中だけで使う。サーバーには送らない）
+  async loadMvImage(event) {
+    const file = event.target.files[0]
+    event.target.value = ""
+    if (!file) return
+    try {
+      if (this.mvObjectUrl) URL.revokeObjectURL(this.mvObjectUrl)
+      this.mvObjectUrl = URL.createObjectURL(file)
+      const img = await this.loadImage(this.mvObjectUrl)
+      Object.assign(this.mv, { image: img, colors: pickColors(img), bgCredit: "", bgKey: "file", bgSrcs: null })
+      this.setStatus("🖼 手元の画像を背景にしました（サーバーには送っていません）")
+    } catch (e) {
+      this.setStatus("この画像は使えませんでした")
+    }
+    this.updateMvControls()
+  }
+
+  // 📐 動画の向き（4d）：横・縦・正方形
+  async selectMvRatio(event) {
+    const ratio = event.currentTarget.dataset.mvRatio
+    if (!MV_RATIOS[ratio] || this.mode === "exporting") return
+    this.mv.ratio = ratio
+    this.applyMvRatio()
+    this.saveMvPrefs()
+    // 背景素材に、その向き用の画像があれば読み直す
+    const src = this.mv.bgSrcs && (this.mv.bgSrcs[ratio] || this.mv.bgSrc)
+    if (src) {
+      try {
+        const img = await this.loadImage(src)
+        this.mv.image = img
+      } catch (e) {}
+    }
+    this.updateMvControls()
+    const tip = ratio === "9:16" ? "。うすい赤の所は TikTok・ショートでボタンや説明が重なるので、大事な文字は入れていません" : ""
+    this.setStatus(`📐 ${MV_RATIOS[ratio].label} にしました${tip}`)
+  }
+
+  // キャンバスの大きさを向きに合わせる（書き出す動画の大きさもこれ）
+  applyMvRatio() {
+    const r = MV_RATIOS[this.mv.ratio]
+    const c = this.canvasTarget
+    if (c.width !== r.width || c.height !== r.height) {
+      c.width = r.width
+      c.height = r.height
+    }
+    c.style.aspectRatio = `${r.width} / ${r.height}`
+    this.element.dataset.mvRatio = this.mv.ratio
+  }
+
+  toggleMvSafe() {
+    this.element.dataset.mvSafe = this.mvSafeTarget.checked ? "on" : "off"
+  }
+
+  selectMvTemplate(event) {
+    const name = event.currentTarget.dataset.mvTemplate
+    if (!MV_TEMPLATES[name]) return
+    this.mv.template = name
+    this.saveMvPrefs()
+    this.updateMvControls()
+    this.setStatus(`🎬 テンプレート：${MV_TEMPLATES[name].label}（${MV_TEMPLATES[name].hint}）`)
+  }
+
+  changeMvText() {
+    this.mv.title = this.mvTitleTarget.value.trim()
+    this.mv.artist = this.mvArtistTarget.value.trim()
+    this.mv.credit = this.mvCreditTarget.value.trim()
+    this.mv.dim = Number(this.mvDimTarget.value) / 100
+    this.saveMvPrefs()
+    this.updateMvControls()
+  }
+
+  // 止まっているときに、曲のどこの絵かを選んで見る（最初の曲名・最後のクレジットも確かめられる）
+  seekMv() {
+    this.mvSeekSec = (Number(this.mvSeekTarget.value) / 1000) * this.duration
+    this.updateMvControls()
+  }
+
+  mvJump(event) {
+    const where = event.currentTarget.dataset.mvJump
+    const d = this.duration
+    const sec = where === "intro" ? 1.5 : where === "outro" ? Math.max(0, d - 2.5) : d * 0.4
+    this.mvSeekSec = sec
+    if (this.hasMvSeekTarget && d > 0) this.mvSeekTarget.value = String(Math.round((sec / d) * 1000))
+    this.updateMvControls()
+  }
+
+  updateMvControls() {
+    if (!this.mv) return
+    if (this.hasMvTemplateButtonTarget) {
+      this.mvTemplateButtonTargets.forEach((el) => el.setAttribute("aria-pressed", String(el.dataset.mvTemplate === this.mv.template)))
+    }
+    if (this.hasMvRatioButtonTarget) {
+      this.mvRatioButtonTargets.forEach((el) => el.setAttribute("aria-pressed", String(el.dataset.mvRatio === this.mv.ratio)))
+    }
+    if (this.hasMvTemplateHintTarget) this.mvTemplateHintTarget.textContent = MV_TEMPLATES[this.mv.template].hint
+    if (this.hasMvBgListTarget) {
+      this.mvBgListTarget.querySelectorAll("[data-bg-key]").forEach((el) => el.setAttribute("aria-pressed", String(el.dataset.bgKey === this.mv.bgKey)))
+    }
+    if (this.hasMvBgCreditTarget) this.mvBgCreditTarget.textContent = this.mv.bgCredit ? `背景の出典：${this.mv.bgCredit}（最後のクレジットに自動で入ります）` : ""
+    if (this.hasMvDimValueTarget) this.mvDimValueTarget.textContent = `${Math.round(this.mv.dim * 100)}%`
+    if (this.hasMvSeekValueTarget) this.mvSeekValueTarget.textContent = `${this.formatSec(this.mvSeekSec)} / ${this.formatSec(this.duration)}`
+  }
+
+  // ---------- 🎤 歌詞テロップ（手順4b） ----------
+  // this.lyrics = [{ text, startSec }]（曲の時間。startSec が null の行は、まだ時間が決まっていない）
+  // 終わりの時間は「次の行が始まるまで」。間奏などで次の行まで長いときは、6秒で消す
+
+  // 歌詞の欄が変わったとき。同じ行の時間は残す。LRC（[01:23.45]歌詞）なら時間も読む
+  changeLyricsText() {
+    this.lyrics = this.parseLyrics(this.lyricsTextTarget.value, this.lyrics || [])
+    this.renderLyricList()
+  }
+
+  parseLyrics(text, old) {
+    const lrc = /^\[(\d{1,2}):(\d{1,2}(?:[.:]\d{1,3})?)\]\s*(.*)$/
+    const lines = []
+    text.split(/\r?\n/).forEach((raw) => {
+      const line = raw.trim()
+      if (!line) return
+      if (/^\[[a-z]+:.*\]$/i.test(line)) return // [ti:曲名] のような情報の行は飛ばす
+      const m = line.match(lrc)
+      if (m) {
+        const text = m[3].trim()
+        if (text) lines.push({ text, startSec: Number(m[1]) * 60 + Number(m[2].replace(":", ".")) })
+      } else {
+        lines.push({ text: line, startSec: null })
+      }
+    })
+    // 時間が書いていない行は、前と同じ文の行の時間を引きつぐ
+    return lines.map((l, i) => {
+      if (l.startSec !== null) return l
+      const same = old[i] && old[i].text === l.text ? old[i] : null
+      return same ? { ...same } : { text: l.text, startSec: null }
+    })
+  }
+
+  // MV に渡す行（時間が決まっている行だけ・時間順・終わりの時間つき）
+  get timedLyrics() {
+    const list = (this.lyrics || []).filter((l) => l.startSec !== null).sort((a, b) => a.startSec - b.startSec)
+    return list.map((l, i) => {
+      const next = list[i + 1]
+      const gap = next ? next.startSec - l.startSec : Infinity
+      let end = gap > 10 ? l.startSec + 6 : next.startSec - 0.05
+      // 自動で合わせた行は、歌い終わりも分かっている（間奏で早めに消える）
+      if (l.endSec) end = Math.min(l.endSec, next ? next.startSec - 0.05 : l.endSec)
+      return { text: l.text, startSec: l.startSec, endSec: Math.min(end, Math.max(this.duration, l.startSec + 1)) }
+    })
+  }
+
+  // 👆 タップで合わせる：曲を流しながら、歌い始めでタップ（スペースキーでもOK）
+  async startTapSync(event) {
+    if (!this.lyrics?.length) {
+      this.setStatus("先に歌詞を貼り付けてね（1行が1つのテロップになります）")
+      return
+    }
+    if (this.mode !== "idle" || (!this.backingBuffer && !this.vocalBuffer)) return
+    const from = Number(event?.currentTarget?.dataset?.lyricIndex ?? 0)
+    const startLine = this.lyrics[from]
+    // 途中から合わせ直すときは、1つ前の行の少し前から流す
+    const prev = this.lyrics.slice(0, from).reverse().find((l) => l.startSec !== null)
+    const fromSec = from > 0 && prev ? Math.max(0, prev.startSec - 1) : 0
+    this.ensureContext()
+    await this.ctx.resume()
+    this.tapIndex = from
+    this.setMode("playing")
+    this.startSources(() => this.endTapSync("曲が終わりました"), { fromSec })
+    this.tapPanelTarget.hidden = false
+    this.updateTapPanel()
+    this.tapButtonTarget.focus()
+    this.setStatus(`👆 「${startLine.text}」の歌い始めでタップ！（スペースキーでもOK）`)
+  }
+
+  tap(event) {
+    if (this.tapIndex === null || this.tapIndex === undefined) return
+    event?.preventDefault?.()
+    const now = this.songNow
+    if (now === null) return
+    // 人がタップするのは少し遅れるので、0.2秒前から出す
+    Object.assign(this.lyrics[this.tapIndex], { startSec: Math.max(0, now - TAP_LEAD), endSec: null, unsure: false })
+    this.tapIndex++
+    this.renderLyricList()
+    if (this.tapIndex >= this.lyrics.length) {
+      this.stopSources()
+      this.endTapSync("全部の行を合わせました！")
+      return
+    }
+    this.updateTapPanel()
+  }
+
+  // 1つ前の行に戻って、タップし直す
+  tapBack() {
+    if (this.tapIndex === null || this.tapIndex === undefined || this.tapIndex === 0) return
+    this.tapIndex--
+    this.updateTapPanel()
+  }
+
+  // スペース・エンターでタップ（合わせている間だけ）
+  tapKey(event) {
+    if (this.tapIndex === null || this.tapIndex === undefined) return
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(event.target?.tagName || "")) return
+    if (event.key === " " || event.key === "Enter") this.tap(event)
+    else if (event.key === "Backspace") { event.preventDefault(); this.tapBack() }
+  }
+
+  endTapSync(message) {
+    if (this.tapIndex === null || this.tapIndex === undefined) return
+    this.tapIndex = null
+    this.tapPanelTarget.hidden = true
+    this.setMode("idle")
+    this.renderLyricList()
+    this.setStatus(`👆 ${message} 行ごとの ±0.1秒 で細かく直せます。▶試聴で確かめてね`)
+  }
+
+  stopTapSync() {
+    this.stopSources()
+    this.endTapSync("合わせるのをやめました")
+  }
+
+  updateTapPanel() {
+    const cur = this.lyrics[this.tapIndex]
+    const next = this.lyrics[this.tapIndex + 1]
+    this.tapCurrentTarget.textContent = cur ? cur.text : ""
+    this.tapNextTarget.textContent = next ? `次：${next.text}` : "これが最後の行"
+    this.tapCountTarget.textContent = `${this.tapIndex + 1} / ${this.lyrics.length}`
+  }
+
+  // 行ごとに少しずらす・消す・その行から試聴
+  nudgeLyric(event) {
+    const i = Number(event.currentTarget.dataset.lyricIndex)
+    const d = Number(event.currentTarget.dataset.nudge)
+    const l = this.lyrics[i]
+    if (!l || l.startSec === null) return
+    l.startSec = Math.max(0, Math.round((l.startSec + d) * 100) / 100)
+    if (l.endSec) l.endSec = Math.max(l.startSec + 0.3, l.endSec + d)
+    l.unsure = false // 手で直した → 確認ずみ
+    this.renderLyricList()
+  }
+
+  clearLyricTime(event) {
+    const l = this.lyrics[Number(event.currentTarget.dataset.lyricIndex)]
+    if (!l) return
+    l.startSec = null
+    l.endSec = null
+    this.renderLyricList()
+  }
+
+  // 全部の行をまとめてずらす（ぜんぶ少し遅い・早いとき）
+  shiftAllLyrics(event) {
+    const d = Number(event.currentTarget.dataset.nudge)
+    ;(this.lyrics || []).forEach((l) => {
+      if (l.startSec === null) return
+      l.startSec = Math.max(0, Math.round((l.startSec + d) * 100) / 100)
+      if (l.endSec) l.endSec += d
+    })
+    this.renderLyricList()
+    this.setStatus(`テロップを全部 ${d > 0 ? "+" : ""}${d}秒 ずらしました`)
+  }
+
+  async playLyric(event) {
+    const l = this.lyrics[Number(event.currentTarget.dataset.lyricIndex)]
+    if (!l || l.startSec === null || this.mode !== "idle") return
+    this.ensureContext()
+    await this.ctx.resume()
+    this.setMode("playing")
+    this.startSources(() => { this.setMode("idle"); this.setStatus("試聴おわり") }, { fromSec: Math.max(0, l.startSec - 1.5) })
+    this.setStatus(`「${l.text}」の少し前から試聴中…`)
+  }
+
+  renderLyricList() {
+    if (!this.hasLyricListTarget) return
+    const list = this.lyricListTarget
+    const lyrics = this.lyrics || []
+    list.replaceChildren(...lyrics.map((l, i) => {
+      const row = document.createElement("div")
+      row.className = `sg-lyric${l.unsure ? " is-unsure" : ""}`
+      row.dataset.lyricRow = String(i)
+      if (l.unsure) row.title = "自動で合わせたけど自信がない行。▶で聴いて確かめてね"
+      const time = l.startSec === null ? "--:--.-" : this.formatSec(l.startSec)
+      const btn = (label, action, extra = {}, cls = "") => {
+        const b = document.createElement("button")
+        b.type = "button"
+        b.className = `sg-lyric__btn ${cls}`
+        b.textContent = label
+        b.dataset.action = `singing-mixer#${action}`
+        b.dataset.lyricIndex = String(i)
+        Object.entries(extra).forEach(([k, v]) => { b.dataset[k] = v })
+        return b
+      }
+      const t = document.createElement("span")
+      t.className = `sg-lyric__time${l.startSec === null ? " is-empty" : ""}`
+      t.textContent = time
+      const text = document.createElement("span")
+      text.className = "sg-lyric__text"
+      text.textContent = l.unsure ? `⚠ ${l.text}` : l.text
+      row.append(
+        btn("−0.1", "nudgeLyric", { nudge: "-0.1" }), t, btn("+0.1", "nudgeLyric", { nudge: "0.1" }),
+        text,
+        btn("▶", "playLyric", {}, "is-icon"), btn("👆ここから", "startTapSync", {}, "is-tap"), btn("✖", "clearLyricTime", {}, "is-icon")
+      )
+      row.querySelectorAll("button").forEach((b) => {
+        if (b.dataset.action !== "singing-mixer#startTapSync") b.disabled = l.startSec === null
+      })
+      return row
+    }))
+    const timed = lyrics.filter((l) => l.startSec !== null).length
+    if (this.hasLyricInfoTarget) {
+      this.lyricInfoTarget.textContent = lyrics.length
+        ? `${lyrics.length}行（時間が決まっている行 ${timed}）`
+        : "歌詞を貼り付けると、ここに行ごとに並びます"
+    }
+    if (this.hasLrcButtonTarget) this.lrcButtonTarget.disabled = timed === 0
+    if (this.hasUndoAlignButtonTarget) this.undoAlignButtonTarget.disabled = !this.lyricsBackup
+    this.lastLyricRow = -2
+  }
+
+  // 再生中の行を、一覧で光らせる（変わったときだけ）
+  highlightLyricRow(t) {
+    if (!this.hasLyricListTarget || !this.lyrics?.length) return
+    const timed = this.timedLyrics
+    const k = lyricIndexAt(timed, t)
+    const idx = k >= 0 ? this.lyrics.findIndex((l) => l.startSec === timed[k].startSec && l.text === timed[k].text) : -1
+    if (idx === this.lastLyricRow) return
+    this.lastLyricRow = idx
+    this.lyricListTarget.querySelectorAll("[data-lyric-row]").forEach((el) => el.classList.toggle("is-now", Number(el.dataset.lyricRow) === idx))
+  }
+
+  // 🪄 歌声と歌詞の長さから、自動で時間を合わせる（方式A）
+  async autoAlignLyrics() {
+    if (!this.lyrics?.length) {
+      this.setStatus("先に歌詞を貼り付けてね")
+      return
+    }
+    if (!this.vocalBuffer || this.mode !== "idle") {
+      if (!this.vocalBuffer) this.setStatus("自動で合わせるには、先に歌声を録音（またはファイルで入れて）ね")
+      return
+    }
+    this.setMode("processing")
+    this.setStatus("🪄 歌声を聴いて、歌詞を合わせています…")
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    try {
+      const r = alignLyrics(this.lyrics.map((l) => l.text), toMono(this.vocalBuffer), this.vocalBuffer.sampleRate)
+      if (!r.lines) {
+        this.setStatus(`🪄 自動で合わせられませんでした（${r.reason}）。👆タップで合わせてね`)
+      } else {
+        this.lyricsBackup = this.lyrics.map((l) => ({ ...l }))
+        const offset = this.vocalOffsetMs / 1000 // 声の時間 → 曲の時間
+        r.lines.forEach((a, i) => {
+          Object.assign(this.lyrics[i], {
+            startSec: Math.max(0, a.startSec + offset - AUTO_LEAD),
+            endSec: a.endSec + offset + 0.4,
+            unsure: !a.sure
+          })
+        })
+        const unsure = r.lines.filter((a) => !a.sure).length
+        this.setStatus(`🪄 ${r.lines.length}行を自動で合わせました${unsure ? `（⚠の${unsure}行は自信なし。▶で聴いて ±0.1秒 で直してね）` : ""}。▶試聴で確かめてね`)
+      }
+    } catch (e) {
+      console.error(e)
+      this.setStatus("🪄 自動で合わせるのに失敗しました。👆タップで合わせてね")
+    }
+    this.setMode("idle")
+    this.renderLyricList()
+  }
+
+  undoAutoAlign() {
+    if (!this.lyricsBackup) return
+    this.lyrics = this.lyricsBackup
+    this.lyricsBackup = null
+    this.renderLyricList()
+    this.setStatus("自動で合わせる前に戻しました")
+  }
+
+  // 📄 LRC（時間つき歌詞）で保存。ほかのアプリでも使える形式
+  exportLrc() {
+    const timed = this.timedLyrics
+    if (!timed.length) return
+    const two = (n) => String(n).padStart(2, "0")
+    const stamp = (sec) => {
+      const m = Math.floor(sec / 60)
+      const s = sec - m * 60
+      return `[${two(m)}:${two(Math.floor(s))}.${two(Math.floor((s % 1) * 100))}]`
+    }
+    const head = [this.mv.title && `[ti:${this.mv.title}]`, this.mv.artist && `[ar:${this.mv.artist}]`].filter(Boolean)
+    const body = timed.map((l) => `${stamp(l.startSec)}${l.text}`)
+    const blob = new Blob([[...head, ...body].join("\n") + "\n"], { type: "text/plain" })
+    const a = document.createElement("a")
+    a.href = URL.createObjectURL(blob)
+    a.download = `${this.mv.title || "lyrics"}.lrc`
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000)
+    this.setStatus("📄 時間つきの歌詞（LRC）を保存しました。次からはそのファイルを読み込めば、合わせ直さなくてOK")
+  }
+
+  async importLrc(event) {
+    const file = event.target.files[0]
+    event.target.value = ""
+    if (!file) return
+    const text = await file.text()
+    this.lyricsTextTarget.value = text
+    this.lyrics = this.parseLyrics(text, [])
+    this.renderLyricList()
+    const timed = this.lyrics.filter((l) => l.startSec !== null).length
+    this.setStatus(`📄 歌詞を読み込みました（${this.lyrics.length}行・時間つき ${timed}行）`)
+  }
+
+  toggleKaraoke() {
+    this.mv.karaoke = this.karaokeTarget.checked
+  }
+
+  // ---------- 🧭 ステップで進める（1ページずつ案内する）／🗂 まとめて編集 ----------
+
+  setupFlow() {
+    let saved = null
+    try { saved = window.localStorage.getItem(FLOW_KEY) } catch (e) {}
+    this.flow = saved === "all" ? "all" : "wizard" // はじめての人は、ステップで進めるのがおすすめ
+    this.flowStep = 0
+    this.applyFlow()
+  }
+
+  selectFlow(event) {
+    this.flow = event.currentTarget.dataset.flow === "all" ? "all" : "wizard"
+    try { window.localStorage.setItem(FLOW_KEY, this.flow) } catch (e) {}
+    this.applyFlow()
+    this.setStatus(this.flow === "wizard" ? "🧭 ステップで進めます。画面の案内にそって、次へ →" : "🗂 全部の機能を1ページで編集できます")
+  }
+
+  goStep(event) {
+    const i = Number(event.currentTarget.dataset.step)
+    if (!Number.isFinite(i)) return
+    this.showStep(i)
+  }
+
+  nextStep() {
+    const step = FLOW_STEPS[this.flowStep]
+    if (step && !this.stepReady(step)) return
+    // キーを選んだのに反映していないときは、知らせる（そのまま録音するとオケは元のキー）
+    if (step.id === "sg-key" && (this.pendingKey !== this.backingKey || Math.abs(this.pendingRate - this.backingRate) > 1e-6)) {
+      this.setStatus("🎹 選んだキー・速さが、まだオケに反映されていません。「🎹 オケに反映する」を押してから次へ進んでね")
+      return
+    }
+    this.showStep(this.flowStep + 1)
+  }
+
+  prevStep() {
+    this.showStep(this.flowStep - 1)
+  }
+
+  // 「音声だけでいい」：動画・歌詞をとばして保存へ
+  skipToSave() {
+    this.showStep(FLOW_STEPS.findIndex((s) => s.id === "sg-save"))
+  }
+
+  showStep(i) {
+    this.flowStep = Math.max(0, Math.min(FLOW_STEPS.length - 1, i))
+    this.applyFlow()
+    if (this.flow === "wizard") window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  stepReady(step) {
+    if (step.need === "backing") return !!this.backingBuffer
+    if (step.need === "vocal") return !!this.vocalBase
+    return true
+  }
+
+  applyFlow() {
+    this.element.dataset.flow = this.flow
+    const active = FLOW_STEPS[this.flowStep]
+    FLOW_STEPS.forEach((s) => {
+      const card = this.element.querySelector(`#${s.id}`)
+      if (card) card.classList.toggle("is-active", s === active)
+    })
+    if (this.hasFlowButtonTarget) {
+      this.flowButtonTargets.forEach((el) => el.setAttribute("aria-pressed", String(el.dataset.flow === this.flow)))
+    }
+    this.renderFlow()
+  }
+
+  // 上の「ステップ ◯ / 7」と、下の「← 戻る・次へ →」
+  renderFlow() {
+    if (!this.hasFlowHeaderTarget || !this.hasFlowNavTarget || this.flow !== "wizard") return
+    const i = this.flowStep
+    const step = FLOW_STEPS[i]
+    const ready = this.stepReady(step)
+    const dots = FLOW_STEPS.map((s, k) => {
+      const done = k < i
+      const cls = k === i ? "is-now" : done ? "is-done" : ""
+      return `<button type="button" class="sg-dot ${cls}" data-step="${k}" data-action="singing-mixer#goStep" aria-label="ステップ${k + 1}：${s.short}"${k === i ? ' aria-current="step"' : ""}><span>${done ? "✓" : k + 1}</span><small>${s.short}</small></button>`
+    }).join("")
+    const html = `
+      <div class="sg-dots">${dots}</div>
+      <p class="sg-flow__count">ステップ ${i + 1} / ${FLOW_STEPS.length}${step.optional ? "（とばしてもOK）" : ""}</p>
+      <h2 class="sg-flow__title">${step.title}</h2>
+      <p class="sg-flow__lead">${step.lead}</p>
+      <ul class="sg-flow__tips">${step.tips.map((t) => `<li>${t}</li>`).join("")}</ul>`
+    if (this.flowHeaderHtml !== html) {
+      this.flowHeaderTarget.innerHTML = html
+      this.flowHeaderHtml = html
+    }
+    const next = FLOW_STEPS[i + 1]
+    const nav = `
+      <button type="button" class="sg-btn" data-action="singing-mixer#prevStep"${i === 0 ? " disabled" : ""}>← 戻る</button>
+      ${step.id === "sg-mix" ? '<button type="button" class="sg-btn sg-btn--ghost" data-action="singing-mixer#skipToSave">🎵 音声だけでいい → 保存へ</button>' : ""}
+      ${next
+        ? `<button type="button" class="sg-btn sg-btn--primary sg-flow__next${ready ? " is-ready" : ""}" data-action="singing-mixer#nextStep"${ready ? "" : " disabled"}>次へ：${next.short} →</button>`
+        : '<span class="sg-help">🎉 おつかれさま！ 気になる所はいつでも ← 戻る で直せます</span>'}
+      ${ready ? "" : `<p class="sg-help sg-flow__wait">${step.wait}</p>`}`
+    if (this.flowNavHtml !== nav) {
+      this.flowNavTarget.innerHTML = nav
+      this.flowNavHtml = nav
+    }
+  }
+
+  // ---------- 🎆 おまかせ演出（手順4c） ----------
+
+  // オケから拍（テンポ）と盛り上がりを調べる。オケを入れたとき・キーや速さを変えたときに1回だけ
+  async analyzeBacking() {
+    if (!this.backingBuffer) return
+    this.beatInfo = null
+    this.updateFxInfo("🥁 オケのリズムを調べています…")
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    try {
+      this.beatInfo = analyzeBeats(this.backingBuffer)
+      this.autoChoruses = suggestChoruses(this.backingBuffer)
+    } catch (e) {
+      console.error(e)
+      this.beatInfo = null
+    }
+    this.updateFxInfo()
+  }
+
+  changeFx() {
+    this.fxPrefs = {
+      strength: Number(this.fxStrengthTarget.value),
+      beat: this.fxBeatTarget.checked,
+      chorus: this.fxChorusTarget.checked,
+      sparkle: this.fxSparkleTarget.checked
+    }
+    this.saveMvPrefs()
+    this.updateFxInfo()
+  }
+
+  // サビの場所：ミックスで付けた部分（名前に「サビ」）を使う。なければ自動で見つけた所
+  get fxSections() {
+    const mine = (this.sections || [])
+      .filter((s) => s.name.includes("サビ"))
+      .map((s) => ({ startSec: s.startSec, endSec: s.endSec, kind: s.name === "落ちサビ" ? "calm" : "chorus" }))
+    if (mine.some((s) => s.kind === "chorus")) return { list: mine, from: "mix" }
+    return { list: mine.concat((this.autoChoruses || []).map((r) => ({ ...r, kind: "chorus" }))), from: "auto" }
+  }
+
+  get mvFx() {
+    if (!this.fxPrefs || this.fxPrefs.strength <= 0) return null
+    const b = this.beatInfo
+    return {
+      beats: b && b.confidence > 0.05 ? b.beats : [],
+      energy: b ? b.energy : null,
+      energyHop: b ? b.energyHop : 0.1,
+      sections: this.fxSections.list,
+      strength: this.fxPrefs.strength / 100,
+      beat: this.fxPrefs.beat,
+      chorus: this.fxPrefs.chorus,
+      sparkle: this.fxPrefs.sparkle
+    }
+  }
+
+  updateFxInfo(message = null) {
+    if (this.hasFxStrengthValueTarget && this.fxPrefs) {
+      const v = this.fxPrefs.strength
+      this.fxStrengthValueTarget.textContent = v === 0 ? "なし" : v < 35 ? `ひかえめ（${v}）` : v < 70 ? `ふつう（${v}）` : `はで（${v}）`
+    }
+    if (!this.hasFxInfoTarget) return
+    if (message) { this.fxInfoTarget.textContent = message; return }
+    if (!this.backingBuffer) { this.fxInfoTarget.textContent = "オケを入れると、リズムとサビを自動で調べます"; return }
+    const b = this.beatInfo
+    const beat = b && b.bpm && b.confidence > 0.05 ? `テンポ 約${Math.round(b.bpm)} BPM` : "リズムがはっきりしない曲なので、拍の動きは控えめ"
+    const sec = this.fxSections
+    const choruses = sec.list.filter((s) => s.kind === "chorus").length
+    const chorus = choruses
+      ? sec.from === "mix" ? `サビ：④で付けた ${choruses}か所` : `サビ：自動で見つけた ${choruses}か所（④で「サビ」を付けるとそちらを使います）`
+      : "サビ：見つかりませんでした（④で「サビ」を付けると盛り上がります）"
+    this.fxInfoTarget.textContent = `${beat}・${chorus}`
+  }
+
+  get mvScene() {
+    const show = (t) => !this.hasMvIntroTarget || t.checked
+    return {
+      ...this.mv,
+      duration: this.duration,
+      showIntro: this.hasMvIntroTarget ? show(this.mvIntroTarget) : true,
+      showOutro: this.hasMvOutroTarget ? show(this.mvOutroTarget) : true,
+      showProgress: this.hasMvProgressTarget ? show(this.mvProgressTarget) : true,
+      features: this.mvFeatures,
+      lyrics: this.timedLyrics,
+      fx: this.mvFx
+    }
+  }
+
+  // 1コマ描く。再生中は鳴っている音で動かし、止まっているときは見本の形で見せる
+  drawMv(g, w, h) {
+    const now = this.songNow
+    const playing = now !== null && this.analyser
+    if (playing) {
+      if (!this.mvFreq) {
+        this.mvFreq = new Uint8Array(this.analyser.frequencyBinCount)
+        this.mvTime = new Uint8Array(this.analyser.fftSize)
+      }
+      this.mvFeatures = readFeatures(this.analyser, this.mvFeatures, this.mvFreq, this.mvTime)
+    } else {
+      const n = 64
+      const bands = new Float32Array(n)
+      for (let i = 0; i < n; i++) bands[i] = 0.12 + 0.45 * Math.pow(1 - i / n, 1.5) * (0.7 + 0.3 * Math.sin(i * 0.9))
+      this.mvFeatures = { level: 0.3, bands }
+    }
+    const t = playing ? Math.max(0, now) : this.mvSeekSec
+    renderFrame(g, w, h, t, this.mvScene)
+    this.highlightLyricRow(t)
+  }
+
+  // MV の絵（録画にも写る）と、波形たち（録画には写らない）をずっと描き続ける
   drawWaveform() {
     const canvas = this.canvasTarget
     const g = canvas.getContext("2d")
-    const w = canvas.width
-    const h = canvas.height
-    let data = null
 
     const draw = () => {
-      const bg = g.createLinearGradient(0, 0, 0, h)
-      bg.addColorStop(0, "#0d1b3d")
-      bg.addColorStop(1, "#1d3f8a")
-      g.fillStyle = bg
-      g.fillRect(0, 0, w, h)
-      g.fillStyle = "#ffffff"
-      g.font = "bold 48px sans-serif"
-      g.textAlign = "center"
-      g.fillText("🎤 歌ってみた", w / 2, 100)
-
-      if (this.analyser) {
-        if (!data) data = new Uint8Array(this.analyser.fftSize)
-        this.analyser.getByteTimeDomainData(data)
-        g.strokeStyle = "#7cc8ff"
-        g.lineWidth = 4
-        g.beginPath()
-        for (let i = 0; i < data.length; i++) {
-          const x = (i / (data.length - 1)) * w
-          const y = h / 2 + ((data[i] - 128) / 128) * (h * 0.35)
-          if (i === 0) g.moveTo(x, y)
-          else g.lineTo(x, y)
-        }
-        g.stroke()
+      try {
+        this.drawMv(g, canvas.width, canvas.height)
+      } catch (e) {
+        console.error(e)
       }
       this.drawTimeline()
       this.drawOffsetView()

@@ -12,3 +12,7 @@ pin "color_key_filter"
 pin "ai_cutout"
 pin "vocal_tools"
 pin "mix_chain"
+pin "mv_renderer"
+pin "mp4-muxer" # @5.2.1（vendor/javascript に置いた）
+pin "mv_export"
+pin "lyric_align"
