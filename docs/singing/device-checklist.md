@@ -1,6 +1,6 @@
 # 歌ってみた・実機チェックリスト
 
-対象：iPhone Safari／PC Chrome／PC Edge  
+対象：iPhone Safari／PC Chrome／PC Edge
 記録：端末名・OS／ブラウザのバージョン・確認日もあわせて記録する。各結果欄に `○`（OK）／`×`（NG）と、必要ならメモを書く。
 
 ## 確認前の準備
