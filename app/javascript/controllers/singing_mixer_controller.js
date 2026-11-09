@@ -41,6 +41,7 @@ const MV_KEY = "kotobouquet.singing.mv"         // MV のテンプレート・�
 const TAP_LEAD = 0.2 // 歌詞のタップ：人は少し遅れてタップするので、そのぶん前から出す（秒）
 const AUTO_LEAD = 0.15 // 歌詞の自動合わせ：歌い出しの少し前から出す（秒）
 const FLOW_KEY = "kotobouquet.singing.flow" // ステップで進める／まとめて編集（この端末だけ）
+const MAX_MEDIA_MB = 500 // これより大きいファイルはスマホのメモリが足りず落ちやすいので断る
 
 // 🧭 ステップで進めるときの順番と、各ページの案内
 const FLOW_STEPS = [
@@ -1293,9 +1294,21 @@ export default class extends Controller {
     this.setStatus(`歌声を読み込みました（${this.vocalBuffer.duration.toFixed(1)}秒）。自動補正：${this.autoInfo}${noisyHint}`)
   }
 
+  // 音声ファイルに加えて、動画ファイル（mp4 / mov / webm など）も受け付ける。
+  // 動画は decodeAudioData に渡すと音声トラックだけがデコードされる（映像は捨てる）。
   async decodeFile(file, label) {
     if (!file) return null
-    return this.decodeBlob(file, label)
+    const isVideo = (file.type || "").startsWith("video/") || /\.(mp4|mov|m4v|3gp|webm)$/i.test(file.name || "")
+    const mb = file.size / (1024 * 1024)
+    if (mb > MAX_MEDIA_MB) {
+      this.setStatus(`${label}のファイルが大きすぎます（${Math.round(mb)}MB）。${MAX_MEDIA_MB}MB以下にしてね（動画なら短く切るか画質を下げると小さくなります）`)
+      return null
+    }
+    if (isVideo) this.setStatus(`動画から${label}の音声を取り出しています…`)
+    const buffer = await this.decodeBlob(file, label)
+    if (buffer && isVideo) this.setStatus(`動画から${label}の音声を取り出しました（${buffer.duration.toFixed(1)}秒）`)
+    if (!buffer && isVideo) this.setStatus(`動画から${label}の音声を取り出せませんでした（音声が入っていない動画か、この端末で読めない形式かも）`)
+    return buffer
   }
 
   async decodeBlob(blob, label) {

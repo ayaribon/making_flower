@@ -37,15 +37,15 @@
       <h2 class="sg-card__title"><span class="sg-num">1</span>音を入れる</h2>
       <div class="sg-files">
         <label class="sg-file">
-          <span class="sg-file__label">🎼 オケ（伴奏）</span>
-          <input type="file" accept="audio/*" data-action="change->singing-mixer#loadBacking">
+          <span class="sg-file__label">🎼 オケ（伴奏） <small>（音声・動画どちらでもOK）</small></span>
+          <input type="file" accept="audio/*,video/*,.mp3,.m4a,.aac,.wav,.ogg,.oga,.opus,.flac,.weba,.webm,.mp4,.mov,.m4v,.3gp" data-action="change->singing-mixer#loadBacking">
         </label>
         <label class="sg-file">
-          <span class="sg-file__label">🎙 歌声ファイル <small>（録音済みの声があれば）</small></span>
-          <input type="file" accept="audio/*" data-action="change->singing-mixer#loadVocal">
+          <span class="sg-file__label">🎙 歌声ファイル <small>（録音済みの声があれば・動画も可）</small></span>
+          <input type="file" accept="audio/*,video/*,.mp3,.m4a,.aac,.wav,.ogg,.oga,.opus,.flac,.weba,.webm,.mp4,.mov,.m4v,.3gp" data-action="change->singing-mixer#loadVocal">
         </label>
       </div>
-
+      <p class="sg-help">🎬 動画を選ぶと、音声だけを取り出して使います（映像は使いません）。</p>
     </section>
 
     <!-- ①+ キー・速さ（録音の前に） -->
