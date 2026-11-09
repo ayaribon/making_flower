@@ -695,3 +695,108 @@
   .sg-flow__next { width: 100%; margin-left: 0; }
   .sg-flow__wait { text-align: center; }
 }
+
+/* ==========================
+   📱 スマホの見やすさ調整（11/09）
+   ・文字を小さくしすぎない（最小 13〜14px）
+   ・ボタンの列は 2 列のマス目にそろえる（ばらばらの幅で折り返さない）
+   ・説明文は 1 行まるごと使う
+   ・下の再生バーをコンパクトに
+   ※ ここは一番最後に置く（上のスマホ設定を上書きするため）
+========================== */
+@media (max-width: 640px) {
+  .sg { line-height: 1.65; padding-bottom: calc(132px + env(safe-area-inset-bottom)); }
+  .sg-inner { padding-left: 12px; padding-right: 12px; }
+  .sg-card { padding: 16px 14px; margin-bottom: 14px; border-radius: 12px; }
+  .sg-card__title { font-size: 1.1rem; gap: 8px; margin-bottom: 10px; }
+  .sg-sub { margin-top: 18px; padding-top: 16px; }
+  .sg-sub__title, .sg-group__title { font-size: 1rem; }
+  .sg-mini-title { font-size: 0.95rem; }
+
+  /* 文字の大きさ：小さすぎる所を読める大きさに */
+  .sg-help, .sg-note, .sg-check, .sg-knob label, .sg-pro label, .sg-field { font-size: 0.9rem; }
+  .sg-knob small, .sg-pro small, .sg-check small, .sg-legend, .sg-slider__end { font-size: 0.82rem; }
+  .sg-note { padding: 10px 12px; }
+
+  /* 見出しの右にある「🛠 詳細モード」は、見出しの下に1行で */
+  .sg-card__title .sg-detail-toggle { width: 100%; justify-content: center; margin: 2px 0 0; }
+  .sg-card__title > small { width: 100%; }
+
+  /* ボタンの列：2列のマス目にそろえる。説明文・スライダー・チェックは1行まるごと */
+  .sg-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .sg-row > * { min-width: 0; }
+  .sg-row > .sg-btn { width: 100%; justify-content: center; text-align: center; white-space: normal; line-height: 1.3; }
+  .sg-row > .sg-help,
+  .sg-row > .sg-check,
+  .sg-row > .sg-seg,
+  .sg-row > .sg-select,
+  .sg-row > .sg-pill,
+  .sg-row > .sg-btn--primary:only-child,
+  .sg-row > .sg-btn--magic { grid-column: 1 / -1; }
+  .sg-row > .sg-btn:last-child:nth-child(odd) { grid-column: 1 / -1; } /* 奇数個の最後は横いっぱい */
+  .sg-row > .sg-inline { grid-column: span 1; }
+  .sg-row--center { display: flex; justify-content: center; }
+  .sg-row--tight { display: flex; flex-wrap: wrap; }
+  .sg-row--tight > .sg-seg { width: auto; flex: 1 1 100%; }
+
+  /* 「オケ」「キー」などのラベルが付いた列は、ラベル＋操作で横に並べる */
+  .sg-inline { justify-content: space-between; width: 100%; font-size: 0.9rem; }
+  .sg-num-input { width: 100%; max-width: 8em; }
+
+  /* ±のボタン（くっついたボタン）は均等に */
+  .sg-seg { display: flex; width: 100%; }
+  .sg-seg button { flex: 1 1 0; padding: 8px 4px; font-size: 0.9rem; }
+
+  /* 雰囲気・テンプレ・向き：2列のマス目 */
+  .sg-presets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .sg-chip { width: 100%; padding: 8px 6px; text-align: center; font-size: 0.9rem; }
+  .sg-flow-switch { display: grid; grid-template-columns: 1fr; gap: 6px; }
+  .sg-tabs { display: flex; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+  .sg-tab { flex: 0 0 auto; }
+
+  /* スライダー：左右の文字が場所を取りすぎないように */
+  .sg-slider { gap: 8px; }
+  .sg-slider__end { min-width: 0; }
+  .sg-knob label { gap: 8px; }
+
+  /* おまかせ・部分ごとの指示・書き出しの箱：中の余白を少し小さく */
+  .sg-auto, .sg-sections, .sg-export, .sg-group, .sg-details { padding: 12px; }
+  .sg-auto { display: grid; grid-template-columns: 1fr; }
+
+  /* 波形のキャンバス：横いっぱい＋縦スクロールはできるように（横の動きだけ拾う） */
+  .sg-timeline, .sg-offset-view, .sg-mix-timeline, .sg-edit-view { touch-action: pan-y; }
+
+  /* 歌詞の一覧：文字をつぶさない。時間とボタンは2段目へ */
+  .sg-lyric-list { max-height: 50vh; }
+  .sg-lyric {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-auto-flow: row;
+    row-gap: 4px;
+    padding: 8px;
+    font-size: 0.92rem;
+  }
+  .sg-lyric__text { grid-column: 1 / -1; order: -1; white-space: normal; padding: 0; }
+  .sg-lyric__time { text-align: left; }
+  .sg-lyric__btn { min-height: 36px; min-width: 40px; font-size: 0.82rem; }
+
+  /* 下の再生バー：ボタン3つを1列、時間と状態は小さく1行ずつ */
+  .sg-transport__inner { padding: 8px 10px; }
+  .sg-transport__buttons { display: grid; grid-template-columns: 1.3fr 1fr 0.8fr; gap: 6px; }
+  .sg-transport__buttons .sg-btn { min-height: 44px; padding: 6px 4px; font-size: 0.86rem; line-height: 1.2; white-space: normal; }
+  .sg-time { grid-column: 1 / -1; width: auto; margin: 0; text-align: right; font-size: 0.82rem; }
+  .sg-status { margin-top: 2px; font-size: 0.82rem; line-height: 1.4; max-height: 2.8em; }
+
+  /* タップで合わせるパネルが再生バーに重ならないように */
+  .sg-tap { padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
+  .sg-tap__current { font-size: 1.25rem; }
+}
+
+/* スマホ・タブレット（指で操作）では、マウス用の色の変化を残さない／キーボードの説明を出さない */
+@media (hover: none) {
+  /* ふつうのボタンだけ元の色に戻す（色つきボタン・再生バーのボタンはそのまま） */
+  .sg-card .sg-btn:not(.sg-btn--primary):not(.sg-btn--magic):not(.sg-btn--download):not(.sg-btn--rec):not([aria-pressed="true"]):hover:not(:disabled),
+  .sg-seg button:hover, .sg-chip:not([aria-pressed="true"]):hover, .sg-tab:not([aria-pressed="true"]):hover { background: #fff; border-color: var(--sg-line); }
+  .sg-btn--ghost:not([aria-pressed="true"]):hover:not(:disabled) { background: transparent; }
+  .sg-file:hover { border-color: #b8cbf2; }
+  .sg-offset-help-key { display: none; }
+}

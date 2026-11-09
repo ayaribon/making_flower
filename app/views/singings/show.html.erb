@@ -52,7 +52,7 @@
     <section class="sg-card" id="sg-key">
       <h2 class="sg-card__title"><span class="sg-num">1+</span>キー・速さを決める <small class="sg-help">（録音の前に）</small></h2>
       <p class="sg-help">自分の声に合う高さにすると、ぐっと歌いやすくなります。目安：男性が女性の曲を歌うなら −3〜−5、女性が男性の曲なら +3〜+5。</p>
-        <p class="sg-help">自分の声に合う高さ・歌いやすい速さにできます。速さは録音の前に決めてね（録ったあとに変えると声とずれます）</p>
+        <p class="sg-help">速さは録音の前に決めてね（録ったあとに変えると声とずれます）</p>
         <div class="sg-row">
           <span class="sg-inline">キー</span>
           <div class="sg-seg">
@@ -135,7 +135,7 @@
       <p class="sg-help">自動補正：<span data-singing-mixer-target="autoLatency">なし</span></p>
       <canvas class="sg-canvas sg-offset-view" tabindex="0" data-singing-mixer-target="offsetView"
               data-action="pointerdown->singing-mixer#offsetViewDown pointermove->singing-mixer#offsetViewMove pointerup->singing-mixer#offsetViewUp pointercancel->singing-mixer#offsetViewUp keydown->singing-mixer#offsetKey"></canvas>
-      <p class="sg-help">下の🎙声の波形をつかんで左右に動かすと、ずれ補正が変わります。上の🎼オケをつかむと映す場所が動きます（←→キーで10ms、Shift＋←→で100ms）</p>
+      <p class="sg-help">下の🎙声の波形をつかんで左右に動かすと、ずれ補正が変わります。上の🎼オケをつかむと映す場所が動きます<span class="sg-offset-help-key">（←→キーで10ms、Shift＋←→で100ms）</span></p>
       <div class="sg-slider">
         <span class="sg-slider__end">−1000ms</span>
         <input type="range" min="-1000" max="1000" step="1" value="0" disabled
