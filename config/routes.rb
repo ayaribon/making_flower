@@ -36,5 +36,15 @@ Rails.application.routes.draw do
   get "editor", to: "editors#show"
   # 🎤 歌ってみた（オケ＋歌声を混ぜて動画にする）
   get "singing", to: "singings#show"
+  # 💾 歌ってみたのプロジェクト・画像編集の下書き（アカウントに保存・本人のものだけ・K39）
+  resources :singing_projects, only: [:index, :show, :update, :destroy], defaults: { format: :json } do
+    member do
+      post :files, action: :upload_file
+      post :prune
+    end
+  end
+  resource :editor_draft, only: [:show, :update, :destroy], defaults: { format: :json }
+  # 💾 ミックス設定のテンプレート（アカウントに保存・本人のものだけ・K42）
+  resources :mix_templates, only: [:index, :create, :update, :destroy], defaults: { format: :json }
   get "up" => "rails/health#show", as: :rails_health_check
 end

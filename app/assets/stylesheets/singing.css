@@ -695,3 +695,225 @@
   .sg-flow__next { width: 100%; margin-left: 0; }
   .sg-flow__wait { text-align: center; }
 }
+
+/* 🎙 録音のメーター・声出しチェック・入力ゲイン（K26） */
+.sg .sg-level { margin: 10px 0 14px; padding: 12px; border-radius: 12px; background: rgba(79, 182, 255, 0.06); border: 1px solid rgba(79, 182, 255, 0.18); }
+.sg .sg-meter { margin: 10px 0; }
+.sg .sg-meter[hidden] { display: none; }
+.sg .sg-meter__track { position: relative; height: 18px; border-radius: 9px; overflow: hidden;
+  background: linear-gradient(90deg, rgba(120,140,180,0.25) 0 62.5%, rgba(80,200,120,0.18) 62.5% 87.5%, rgba(240,200,60,0.2) 87.5% 97.9%, rgba(240,80,80,0.25) 97.9% 100%); }
+.sg .sg-meter__bar { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 9px; transition: width 40ms linear; background: #44c77a; }
+.sg .sg-meter__bar[data-zone="yellow"] { background: #f0c03c; }
+.sg .sg-meter__bar[data-zone="red"] { background: #f05050; }
+.sg .sg-meter__peak { position: absolute; top: 0; bottom: 0; width: 3px; margin-left: -1px; background: #fff; box-shadow: 0 0 4px rgba(0,0,0,0.4); left: 0; }
+.sg .sg-meter__mark { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.45); }
+.sg .sg-meter__mark--red { background: rgba(255,90,90,0.9); }
+.sg .sg-meter__legend { display: flex; align-items: center; gap: 10px; margin-top: 4px; font-size: 0.82rem; opacity: 0.85; }
+.sg .sg-meter__db { margin-left: auto; font-variant-numeric: tabular-nums; min-width: 5em; text-align: right; }
+.sg .sg-meter__clip { color: #fff; background: #e03c3c; padding: 2px 8px; border-radius: 999px; font-weight: 700; animation: sg-clip 0.6s ease-in-out 3; }
+.sg .sg-meter__clip[hidden] { display: none; }
+@keyframes sg-clip { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+@media (prefers-reduced-motion: reduce) {
+  .sg .sg-meter__bar { transition: none; }
+  .sg .sg-meter__clip { animation: none; }
+}
+@media (max-width: 640px) {
+  .sg .sg-meter__track { height: 22px; border-radius: 11px; }
+  .sg .sg-meter__legend span:not(.sg-meter__clip) { display: none; }
+}
+
+/* 🔍 ミックスの波形の拡大（K33） */
+.sg .sg-zoombar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0; }
+.sg .sg-zoombar__info { margin-left: auto; font-variant-numeric: tabular-nums; }
+.sg .sg-check--inline { display: inline-flex; align-items: center; gap: 4px; margin: 0; }
+.sg .sg-mix-overview { display: block; width: 100%; height: 26px; margin-top: 4px; border-radius: 6px; cursor: pointer; touch-action: none; }
+.sg .sg-mix-overview[hidden] { display: none; }
+.sg .sg-zoom-help-touch { display: none; }
+@media (hover: none), (pointer: coarse) {
+  .sg .sg-zoom-help-pc { display: none; }
+  .sg .sg-zoom-help-touch { display: inline; }
+}
+@media (max-width: 640px) {
+  .sg .sg-zoombar .sg-btn--small { min-width: 44px; min-height: 40px; }
+  .sg .sg-zoombar__info { width: 100%; margin-left: 0; }
+  .sg .sg-mix-overview { height: 32px; }
+}
+
+/* ✋ 部分の範囲を手で直す（K31） */
+.sg .sg-range { margin: 8px 0; padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.10); }
+.sg .sg-range[hidden] { display: none; }
+.sg .sg-range__row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0; }
+.sg .sg-range__label { min-width: 3.5em; font-weight: 700; }
+.sg .sg-range__time { width: 6em; text-align: center; }
+.sg .sg-range [hidden] { display: none; }
+@media (max-width: 640px) {
+  .sg .sg-range__row { display: grid; grid-template-columns: 3.5em 1fr 1fr; }
+  .sg .sg-range__row .sg-help, .sg .sg-range__row .sg-check { grid-column: 1 / -1; }
+  .sg .sg-range .sg-btn--small { min-height: 40px; }
+}
+
+/* 📍 ミックスの波形のピン（K32） */
+.sg .sg-pins { margin: 6px 0 10px; }
+.sg .sg-pins__bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.sg .sg-pins__info { margin-left: auto; font-variant-numeric: tabular-nums; }
+.sg .sg-btn--pin { border-color: rgba(255, 90, 90, 0.6); }
+.sg .sg-pins__list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.sg .sg-pin { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 10px;
+  border-left: 4px solid var(--pin-color, #ff5a5a); background: rgba(255, 255, 255, 0.04); }
+.sg .sg-pin.is-active { background: rgba(255, 255, 255, 0.10); }
+.sg .sg-pin__time { background: none; border: 0; color: inherit; font: inherit; font-variant-numeric: tabular-nums; cursor: pointer; padding: 4px 2px; min-width: 6.5em; text-align: left; }
+.sg .sg-pin__color { max-width: 9em; }
+.sg .sg-pin__name { flex: 1; min-width: 6em; padding: 6px 8px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.18); background: rgba(0, 0, 0, 0.2); color: inherit; font-size: 1rem; }
+@media (max-width: 640px) {
+  .sg .sg-pins__bar .sg-btn--small { min-height: 40px; }
+  .sg .sg-pins__info { width: 100%; margin-left: 0; }
+  .sg .sg-pin { display: grid; grid-template-columns: 1fr auto auto; }
+  .sg .sg-pin__time { grid-column: 1 / 2; }
+  .sg .sg-pin__color { grid-column: 2 / 4; max-width: none; }
+  .sg .sg-pin__name { grid-column: 1 / 2; }
+  .sg .sg-pin .sg-btn--small { min-width: 44px; min-height: 40px; }
+}
+
+/* 🎛 変わったエフェクト（K34・声だけ） */
+.sg .sg-fx { margin: 10px 0 14px; padding: 12px; border-radius: 12px; background: rgba(140, 120, 255, 0.07); border: 1px solid rgba(140, 120, 255, 0.22); }
+.sg .sg-fx .sg-group__title { margin-top: 0; }
+.sg .sg-fx__types { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+.sg .sg-fx__types .sg-chip[aria-pressed="true"] { background: rgba(140, 120, 255, 0.35); border-color: rgba(170, 150, 255, 0.9); }
+.sg .sg-fx input[type="range"]:disabled { opacity: 0.4; }
+@media (max-width: 640px) {
+  .sg .sg-fx__types { display: grid; grid-template-columns: 1fr 1fr; }
+  .sg .sg-fx__types .sg-chip { min-height: 44px; }
+}
+
+/* 🎞 歌詞のタイムライン・終わりの時間（K27） */
+.sg .sg-lyric-tl { margin-top: 14px; }
+.sg .sg-lyric-timeline { display: block; width: 100%; height: 130px; border-radius: 10px; touch-action: pan-y; }
+.sg .sg-lyric__end { opacity: 0.9; }
+.sg .sg-lyric__endrow { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding-left: 4px; }
+.sg .sg-lyric__end.is-auto { opacity: 0.55; font-style: italic; }
+.sg .sg-lyric__btn.is-end { font-size: 0.78rem; }
+.sg .sg-lyric.is-selected { outline: 2px solid rgba(255, 255, 255, 0.7); outline-offset: -2px; }
+@media (max-width: 640px) {
+  .sg .sg-lyric-timeline { height: 150px; }
+  .sg .sg-lyric__btn.is-end { min-height: 40px; }
+}
+
+/* 💾 プロジェクト保存（K24） */
+.sg .sg-resume { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0; padding: 12px 14px; border-radius: 12px;
+  background: rgba(80, 200, 120, 0.12); border: 1px solid rgba(80, 200, 120, 0.45); font-weight: 600; }
+.sg .sg-resume[hidden] { display: none; }
+.sg .sg-project-bar { margin: 10px 0 14px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--sg-line, rgba(120,140,180,0.3)); }
+.sg .sg-input { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--sg-line, #c8d2e6); font: inherit; min-width: 0; }
+.sg .sg-project-bar__name { flex: 1 1 220px; }
+.sg .sg-project-list { display: grid; gap: 4px; margin-top: 6px; }
+.sg .sg-project { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 6px; padding: 4px 6px; border-bottom: 1px solid var(--sg-line, rgba(120,140,180,0.2)); }
+.sg .sg-project.is-current { background: rgba(79, 182, 255, 0.10); }
+.sg .sg-project__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 640px) {
+  .sg .sg-project { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .sg .sg-project .sg-help { grid-column: 1 / -1; }
+  .sg .sg-project .sg-btn--small, .sg .sg-project-bar .sg-btn--small { min-height: 40px; }
+  .sg .sg-input { font-size: 16px; } /* iPhone で勝手に拡大しないように */
+}
+
+/* 🎞 MV のアニメーション（K30） */
+.sg .sg-anim { display: grid; gap: 6px; margin: 4px 0 6px; }
+.sg .sg-anim__row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.sg .sg-anim__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+@media (max-width: 640px) {
+  .sg .sg-anim__chips { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+  .sg .sg-anim__chips .sg-chip { min-height: 44px; }
+}
+
+/* 🎶 ハモリ・🐸 ケロケロ風（K29） */
+.sg .sg-harmony { margin: 10px 0 14px; padding: 12px; border-radius: 12px; background: rgba(255, 215, 90, 0.07); border: 1px solid rgba(255, 215, 90, 0.3); }
+.sg .sg-harmony .sg-group__title { margin-top: 0; }
+.sg .sg-harmony__part { margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255, 215, 90, 0.35); }
+.sg .sg-harmony .sg-chip[aria-pressed="true"] { background: rgba(255, 215, 90, 0.35); border-color: rgba(255, 215, 90, 0.9); }
+.sg .sg-harmony-guide { display: block; width: 100%; height: 140px; border-radius: 10px; margin: 8px 0 4px; }
+@media (max-width: 640px) {
+  .sg .sg-harmony-guide { height: 160px; }
+  .sg .sg-harmony .sg-chip, .sg .sg-harmony .sg-btn { min-height: 44px; }
+}
+
+/* 🎶 ハモリのトラック（K37）・🎹 ガイドメロディ（K36） */
+.sg .sg-htracks { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.sg .sg-htrack { padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(255, 215, 90, 0.25); background: rgba(255, 215, 90, 0.05); }
+.sg .sg-htrack.is-selected { border-color: rgba(255, 215, 90, 0.9); background: rgba(255, 215, 90, 0.12); }
+.sg .sg-htrack__head, .sg .sg-htrack__range { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.sg .sg-htrack__range { margin-top: 6px; }
+.sg .sg-htrack__name { font-weight: 700; background: none; border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 999px; padding: 4px 10px; color: inherit; cursor: pointer; }
+.sg .sg-htrack__name[aria-pressed="true"] { border-color: rgba(255, 215, 90, 0.9); }
+.sg .sg-htrack__head .sg-help { margin-left: auto; }
+.sg .sg-htrack__knobs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin-top: 6px; }
+.sg .sg-htrack .sg-num-input { width: 6.5em; }
+@media (max-width: 640px) {
+  .sg .sg-htrack__head .sg-help { width: 100%; margin-left: 0; }
+  .sg .sg-htrack__knobs { grid-template-columns: 1fr; }
+  .sg .sg-htrack__name, .sg .sg-htrack .sg-select { min-height: 44px; }
+  .sg .sg-htrack input[type="checkbox"] { width: 24px; height: 24px; }
+}
+
+/* 🎬 もっと編集（K40）：背景の切りかえ・テロップ・色・書き出す範囲・フェード・ロゴ */
+.sg .sg-mvedit { margin-top: 14px; }
+.sg .sg-mvedit > summary { font-weight: 700; font-size: 1rem; }
+.sg .sg-mvedit__group { margin: 14px 0 6px; padding-top: 10px; border-top: 1px dashed var(--sg-line); }
+.sg .sg-mvedit__group:first-of-type { border-top: 0; }
+.sg[data-mv-bg-mode="off"] .sg-mvedit__cycle,
+.sg[data-mv-bg-mode="points"] .sg-mvedit__cycle,
+.sg:not([data-mv-bg-mode="points"]) .sg-mvedit__points-help,
+.sg:not([data-mv-bg-mode="points"]) .sg-slide__where { display: none; }
+.sg .sg-slide-picker { margin: 6px 0; }
+.sg .sg-slide-picker .sg-bg { opacity: 0.92; }
+.sg .sg-slides, .sg .sg-telops, .sg .sg-filter-parts { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.sg .sg-slide { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 10px; background: #f7faff; border: 1px solid var(--sg-line); }
+.sg .sg-slide__thumb { width: 48px; height: 32px; border-radius: 6px; overflow: hidden; flex: 0 0 auto; background: #ccd; }
+.sg .sg-slide__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sg .sg-slide__label { flex: 1 1 140px; font-size: 0.9rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sg .sg-slide__where { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.sg .sg-slide__time, .sg .sg-telop__time { width: 6.5em; }
+.sg .sg-slide__ops { display: inline-flex; gap: 4px; margin-left: auto; }
+.sg .sg-select--small { padding: 4px 8px; font-size: 0.86rem; }
+.sg .sg-btn.is-icon { min-width: 36px; padding-left: 8px; padding-right: 8px; }
+.sg .sg-telop { padding: 8px; border-radius: 10px; background: #f7faff; border: 1px solid var(--sg-line); }
+.sg .sg-telop__text { width: 100%; box-sizing: border-box; padding: 6px 10px; font-size: 1rem; border-radius: 8px; border: 1px solid var(--sg-line); }
+.sg .sg-telop__opts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; }
+.sg .sg-telop__color { width: 40px; height: 32px; padding: 0; border: 1px solid var(--sg-line); border-radius: 6px; background: none; }
+.sg .sg-filter-part { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.9rem; }
+.sg .sg-mvedit__range .sg-num-input { width: 7em; }
+.sg[data-mv-logo-kind="text"] .sg-mvedit__logo-image,
+.sg[data-mv-logo-kind="image"] .sg-mvedit__logo-text { display: none; }
+@media (max-width: 640px) {
+  .sg .sg-slide__label { flex-basis: 100%; white-space: normal; }
+  .sg .sg-slide__ops { margin-left: 0; }
+  .sg .sg-slide .sg-btn, .sg .sg-telop .sg-btn, .sg .sg-select--small { min-height: 44px; }
+  .sg .sg-telop__text, .sg .sg-slide__time, .sg .sg-telop__time { font-size: 16px; } /* iPhone が勝手に拡大しないように */
+  .sg .sg-telop__color { width: 48px; height: 44px; }
+  .sg .sg-filter-part { flex-direction: column; align-items: stretch; }
+}
+
+/* 🪄 部分の名前ごとの演出（K41・11/10） */
+.sg .sg-fxnames { margin: 8px 0 12px; }
+.sg .sg-fxnames__table { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px 12px; margin: 8px 0; }
+.sg .sg-fxname { display: flex; align-items: center; gap: 8px; justify-content: space-between; padding: 4px 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.04); }
+.sg .sg-fxname__name { flex: 0 0 5.5em; opacity: 0.65; }
+.sg .sg-fxname.is-used .sg-fxname__name { opacity: 1; font-weight: 700; }
+.sg .sg-fxname select { flex: 1 1 auto; min-width: 0; }
+@media (max-width: 640px) {
+  .sg .sg-fxnames__table { grid-template-columns: 1fr; }
+  .sg .sg-fxname select { min-height: 44px; font-size: 16px; }
+}
+
+/* 💾 ミックス設定のテンプレート（K42・11/10） */
+.sg .sg-mixtpl { margin: 8px 0 14px; }
+.sg .sg-mixtpl__save { flex-wrap: wrap; gap: 8px; }
+.sg .sg-mixtpl__save .sg-input { flex: 1 1 14em; }
+.sg .sg-mixtpl__title { margin: 12px 0 4px; font-size: 0.95em; }
+.sg .sg-mixtpl__list { display: flex; flex-direction: column; gap: 6px; }
+.sg .sg-mixtpl__row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 6px 8px; border-radius: 8px; background: rgba(127, 127, 127, 0.08); }
+.sg .sg-mixtpl__name { font-weight: 700; flex: 1 1 10em; min-width: 0; overflow-wrap: anywhere; }
+.sg .sg-mixtpl__meta { flex: 1 1 100%; order: 3; margin: 0; }
+@media (max-width: 640px) {
+  .sg .sg-mixtpl__row .sg-btn { min-height: 44px; }
+  .sg .sg-mixtpl__save .sg-btn { flex: 1 1 100%; }
+}
