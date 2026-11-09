@@ -4,6 +4,12 @@ import { STYLES, STYLE_DEFAULTS } from "text_styles"
 import { saveImage, listImages, getImageUrl, deleteImage, getThumbUrl, makeThumb, uploadThumb } from "image_store"
 import { ColorKey } from "color_key_filter"
 import { segmentPoints } from "ai_cutout"
+import { storeSupported, saveDraft, loadDraft } from "project_store"
+import { srvGetDraft, srvPutDraft } from "project_server"
+
+// 💾 編集の下書き（K24 → K39・11/10）：アカウント（サーバー）に自動保存。リロードしても・ほかの端末からも続きから開ける。
+// サーバーにつながらないときは、このブラウザの中（IndexedDB）に一時保存する（開くときは新しいほうを使う）
+const EDITOR_DRAFT_KEY = "editor:last"
 
 // 選べる比率とキャンバスの実寸
 const RATIOS = {
@@ -153,7 +159,66 @@ export default class extends Controller {
       this.ratioPickerTarget.hidden = true
       this.ratioChosen = true
       this.openTemplateForEdit(this.editTemplateValue)
+    } else {
+      this.offerDraft() // 💾 前回の編集の続きがあれば聞く（K24）
     }
+  }
+
+  // ===== 💾 編集の下書き（K24・K39）：見た目・操作はそのまま。「戻す」用に覚えている状態を、アカウントにも保存するだけ =====
+
+  async offerDraft() {
+    let d = null
+    // アカウントの下書きと、この端末の一時保存のうち、新しいほう
+    let server = null
+    try {
+      const r = await srvGetDraft()
+      server = r && r.draft && r.draft.state ? r.draft : null
+    } catch (e) {
+      console.error(e)
+    }
+    let local = null
+    if (storeSupported()) {
+      try { local = await loadDraft(EDITOR_DRAFT_KEY) } catch (e) { local = null }
+    }
+    d = [server, local].filter((x) => x && x.state).sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0))[0] || null
+    if (!d || !d.state) return
+    let count = 0
+    try { count = (JSON.parse(d.state).canvas?.objects || []).length } catch (e) { return }
+    if (!count) return
+    const t = new Date(d.savedAt || Date.now())
+    const two = (n) => String(n).padStart(2, "0")
+    const when = `${t.getMonth() + 1}/${t.getDate()} ${two(t.getHours())}:${two(t.getMinutes())}`
+    if (!window.confirm(`前回の編集の続きがあります（${when}・${count}個）。\n続きから開きますか？\n（キャンセルで新しく始めます）`)) return
+    try {
+      if (this.hasRatioPickerTarget) this.ratioPickerTarget.hidden = true
+      this.ratioChosen = true
+      await this.restore(d.state)
+      // 開いた状態を「最初の状態」にする
+      this.undoStack = []
+      this.redoStack = []
+      this.lastState = this.serialize()
+      this.updateHistoryButtons()
+    } catch (e) {
+      console.error(e)
+      window.alert("前回の編集を開けませんでした（画像が読み込めなかったのかも）")
+    }
+  }
+
+  // 変わってから少し待って保存（打っている最中に何度も保存しない）
+  scheduleDraftSave() {
+    clearTimeout(this.draftTimer)
+    this.draftTimer = setTimeout(async () => {
+      const draft = { state: this.lastState, savedAt: Date.now() }
+      try {
+        await srvPutDraft(draft) // ☁ アカウントに保存
+        this.draftPending = false
+      } catch (e) {
+        console.error(e)
+        this.draftPending = true
+        // つながらない・大きすぎるときは、この端末に一時保存（次に保存できたら、こちらは古くなるだけ）
+        if (storeSupported()) saveDraft(EDITOR_DRAFT_KEY, draft).catch((err) => console.error(err))
+      }
+    }, 1500)
   }
 
   async openTemplateForEdit(t) {
@@ -1255,6 +1320,7 @@ export default class extends Controller {
     this.redoStack = []
     this.lastState = state
     this.updateHistoryButtons()
+    this.scheduleDraftSave() // 💾 K24
   }
 
   async undo() {
@@ -1306,6 +1372,7 @@ export default class extends Controller {
     this.textPanelTarget.hidden = true
     this.partPanelTarget.hidden = true
     this.updateHistoryButtons()
+    this.scheduleDraftSave() // 💾 戻す・やり直すも下書きに（K24）
   }
 
   // 全部消して、まっさらに戻す（比率はそのまま）

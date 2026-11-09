@@ -805,3 +805,306 @@ export function analyzeBeats(buffer) {
   for (let k = 0; phase + k * period < n; k++) beats.push((phase + k * period) * hop)
   return { bpm: 60 / (period * hop), beats, energy, energyHop: eHop, confidence }
 }
+
+// ---------- 🪄 曲の構成を推測する（K41・11/10） ----------
+// オケの「大きさ」と「音の色（12音のクロマ）のくり返し」から、
+// イントロ／Aメロ／Bメロ／サビ／Cメロ／間奏／落ちサビ／ラスサビ／アウトロ の【目安】を出す。
+// オケだけでは本当のサビは確実には分からない（あとで手で直す前提）。歌声があれば、声が無い所を間奏などの手がかりにする。
+// 戻り値 [{ startSec, endSec, name, confidence }]（曲の時間・時間順・すき間なし）
+
+// 2 の累乗の長さの FFT（その場で書きかえる）
+function fftInPlace(re, im) {
+  const n = re.length
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1
+    for (; j & bit; bit >>= 1) j ^= bit
+    j ^= bit
+    if (i < j) {
+      let t = re[i]; re[i] = re[j]; re[j] = t
+      t = im[i]; im[i] = im[j]; im[j] = t
+    }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = (-2 * Math.PI) / len
+    const wr = Math.cos(ang)
+    const wi = Math.sin(ang)
+    for (let i = 0; i < n; i += len) {
+      let cr = 1
+      let ci = 0
+      for (let k = 0; k < len / 2; k++) {
+        const a = i + k
+        const b = a + len / 2
+        const tr = re[b] * cr - im[b] * ci
+        const ti = re[b] * ci + im[b] * cr
+        re[b] = re[a] - tr; im[b] = im[a] - ti
+        re[a] += tr; im[a] += ti
+        const ncr = cr * wr - ci * wi
+        ci = cr * wi + ci * wr
+        cr = ncr
+      }
+    }
+  }
+}
+
+// 1つの時間の「12音のどれが鳴っているか」（C=0 … B=11）
+function chromaAt(x, sr, center, N, win, out) {
+  const re = new Float32Array(N)
+  const im = new Float32Array(N)
+  const o = Math.max(0, Math.min(x.length - N, Math.round(center - N / 2)))
+  for (let i = 0; i < N; i++) re[i] = (x[o + i] || 0) * win[i]
+  fftInPlace(re, im)
+  for (let k = 1; k < N / 2; k++) {
+    const f = (k * sr) / N
+    if (f < 80 || f > 5000) continue
+    const midi = 69 + 12 * Math.log2(f / 440)
+    const pc = ((Math.round(midi) % 12) + 12) % 12
+    out[pc] += Math.log(1 + Math.hypot(re[k], im[k]))
+  }
+}
+
+export function estimateStructure(backing, { beats = null, vocal = null, vocalOffsetSec = 0, debug = false } = {}) {
+  if (!backing) return []
+  const x = toMono(backing)
+  const sr = backing.sampleRate
+  const dur = backing.duration
+  if (dur < 30) return [] // 短すぎる曲は分けない
+
+  // 1) 小さな区切り：1秒ずつ（長い曲は2秒）。拍の見つけ方がずれていても崩れないように、拍は最後に切れ目を合わせるときだけ使う
+  const step = dur > 420 ? 2 : 1
+  const grid = []
+  for (let t = 0; t < dur - 0.5; t += step) grid.push(t)
+  grid.push(dur)
+  const nb = grid.length - 1
+  if (nb < 16) return []
+
+  // 2) 小節ごとの音の色（クロマ）と大きさ
+  const N = sr > 32000 ? 4096 : 2048
+  const win = new Float32Array(N)
+  for (let i = 0; i < N; i++) win[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (N - 1))
+  const chroma = []
+  const energy = new Float32Array(nb)
+  for (let b = 0; b < nb; b++) {
+    const a0 = Math.floor(grid[b] * sr)
+    const a1 = Math.min(x.length, Math.floor(grid[b + 1] * sr))
+    const c = new Float32Array(12)
+    for (let q = 1; q <= 2; q++) chromaAt(x, sr, a0 + ((a1 - a0) * q) / 3, N, win, c)
+    let s = 0
+    let m = 0
+    for (let i = a0; i < a1; i += 4) { s += x[i] * x[i]; m++ }
+    energy[b] = Math.sqrt(s / (m || 1))
+    chroma.push(c)
+  }
+  // 曲全体の平均の色を引いて、違いが分かりやすいようにする（同じキーの曲は全部似てしまうので）
+  const mean = new Float32Array(12)
+  chroma.forEach((c) => {
+    const n = Math.hypot(...c) || 1
+    for (let i = 0; i < 12; i++) { c[i] /= n; mean[i] += c[i] / nb }
+  })
+  chroma.forEach((c) => {
+    for (let i = 0; i < 12; i++) c[i] -= mean[i]
+    const n = Math.hypot(...c) || 1
+    for (let i = 0; i < 12; i++) c[i] /= n
+  })
+  const sim = (i, j) => { let s = 0; for (let k = 0; k < 12; k++) s += chroma[i][k] * chroma[j][k]; return s }
+  const sortedE = Array.from(energy).sort((p, q) => p - q)
+  const eTop = sortedE[Math.floor(sortedE.length * 0.95)] || 1
+  const en = Array.from(energy, (v) => Math.min(1, v / (eTop || 1)))
+
+  // 歌声があれば、声が出ている割合（声が無い所＝イントロ・間奏・アウトロの手がかり。声が出る・止まる所は切れ目の手がかり）
+  let voiced = null
+  const vbar = new Float32Array(nb)
+  if (vocal) {
+    const vx = toMono(vocal)
+    const vr = rmsFrames(vx, vocal.sampleRate, 0.1)
+    const vs = Array.from(vr).sort((p, q) => p - q)
+    const th = Math.max(0.005, (vs[Math.floor(vs.length * 0.95)] || 0) * 0.12)
+    voiced = (a, b) => {
+      let on = 0
+      let all = 0
+      for (let t = a; t < b; t += 0.1) {
+        const f = Math.floor((t - vocalOffsetSec) / 0.1)
+        all++
+        if (f >= 0 && f < vr.length && vr[f] > th) on++
+      }
+      return all ? on / all : 0
+    }
+    for (let b = 0; b < nb; b++) vbar[b] = voiced(grid[b], grid[b + 1])
+  }
+
+  // 3) 切れ目：音の色が変わる所（チェッカーボード）＋大きさが変わる所（＋声が出る・止まる所）
+  // 見る幅は8秒（コードが2秒ごとに変わっても、部分の中では切れ目にしないように）
+  const K = Math.max(4, Math.round(8 / step))
+  const enl = en.map((v) => Math.log(v + 0.05)) // 大きさの変わり方は「何倍になったか」で見る（静か→ふつう も 大きい→もっと大きい も同じように）
+  const nov = new Float32Array(nb)
+  const ej = new Float32Array(nb)
+  const vj = new Float32Array(nb)
+  for (let i = 2; i < nb - 1; i++) {
+    let s = 0
+    let c = 0
+    for (let a = -K; a < K; a++) {
+      for (let b2 = -K; b2 < K; b2++) {
+        const p = i + a
+        const q = i + b2
+        if (p < 0 || q < 0 || p >= nb || q >= nb || p === q) continue
+        s += ((a < 0) === (b2 < 0) ? 1 : -1) * sim(p, q)
+        c++
+      }
+    }
+    nov[i] = c ? Math.max(0, s / c) : 0
+    let l = 0, r = 0, nl = 0, nr = 0, vl = 0, vrr = 0
+    for (let a = 1; a <= K; a++) {
+      if (i - a >= 0) { l += enl[i - a]; vl += vbar[i - a]; nl++ }
+      if (i + a - 1 < nb) { r += enl[i + a - 1]; vrr += vbar[i + a - 1]; nr++ }
+    }
+    ej[i] = Math.abs(r / (nr || 1) - l / (nl || 1))
+    vj[i] = Math.abs(vrr / (nr || 1) - vl / (nl || 1))
+  }
+  const norm = (arr) => { const m = Math.max(...arr) || 1; return Array.from(arr, (v) => v / m) }
+  const nn = norm(nov)
+  const ne = norm(ej)
+  const nvj = vocal ? norm(vj) : null
+  const score = nn.map((v, i) => v + 1.2 * ne[i] + (nvj ? 0.6 * nvj[i] : 0))
+  const avg = score.reduce((p, q) => p + q, 0) / nb
+  const sd = Math.sqrt(score.reduce((p, q) => p + (q - avg) * (q - avg), 0) / nb)
+  const minGap = Math.max(4, Math.round(8 / ((dur / nb) || 2))) // だいたい8秒以上
+  // 切れ目の数の目安：ふつうの曲は1つの部分が14秒前後なので、それくらいまで（強い順に選ぶ）
+  const maxSegs = Math.max(4, Math.round(dur / 14) + 1)
+  const maxScore = Math.max(...score) || 1
+  // 切れ目の候補：まわり（±3秒）で一番高い所だけ。曲の頭・終わりのすぐそばは見ない（見る幅が足りないので）
+  const edge = Math.max(3, Math.round(K / 2))
+  const isPeak = (i) => { for (let j = Math.max(0, i - 3); j <= Math.min(nb - 1, i + 3); j++) if (score[j] > score[i]) return false; return true }
+  const cand = score.map((v, i) => ({ i, v }))
+    .filter((c) => c.i >= edge && c.i <= nb - edge && c.v > Math.min(avg, maxScore * 0.25) && isPeak(c.i))
+    .sort((p, q) => q.v - p.v)
+  const cuts = []
+  for (const c of cand) {
+    if (cuts.length >= maxSegs - 1) break
+    if (cuts.every((k) => Math.abs(k - c.i) >= minGap)) cuts.push(c.i)
+  }
+  cuts.sort((p, q) => p - q)
+  const bounds = [0, ...cuts, nb]
+  let segs = []
+  for (let k = 0; k < bounds.length - 1; k++) segs.push({ b0: bounds[k], b1: bounds[k + 1] })
+
+  // 4) 似ている部分どうしをまとめる（同じ記号＝くり返し）
+  segs.forEach((s) => {
+    s.startSec = grid[s.b0]
+    s.endSec = grid[s.b1]
+    let e = 0
+    for (let k = s.b0; k < s.b1; k++) e += en[k]
+    s.energy = e / (s.b1 - s.b0)
+  })
+  // 2つの部分がどれだけ似ているか：頭から1秒ずつ並べた音の色（少しずらしても見る）＋大きさが近いか
+  const chromaDiag = (s, t) => {
+    const n = Math.min(s.b1 - s.b0, t.b1 - t.b0)
+    let diag = -1
+    for (let off = -2; off <= 2; off++) {
+      let v = 0
+      let c = 0
+      for (let k = 0; k < n; k++) {
+        const p = s.b0 + k
+        const q = t.b0 + k + off
+        if (q < t.b0 || q >= t.b1) continue
+        v += sim(p, q)
+        c++
+      }
+      if (c >= n * 0.6) diag = Math.max(diag, v / c)
+    }
+    return diag
+  }
+  const segSim = (s, t) => {
+    const ratio = Math.min(s.energy, t.energy) / (Math.max(s.energy, t.energy) || 1)
+    return ratio < 0.7 ? -1 : chromaDiag(s, t) // 大きさがかなり違えば、同じ部分とはみなさない
+  }
+  const groups = []
+  segs.forEach((s, si) => {
+    let best = -1
+    let bestV = 0.5
+    groups.forEach((g, gi) => { const v = segSim(s, segs[g[0]]); if (v > bestV) { bestV = v; best = gi } })
+    s.group = best >= 0 ? best : groups.length
+    if (best >= 0) groups[best].push(si)
+    else groups.push([si])
+  })
+  // 切れ目を、近くの拍（0.4秒以内）に合わせる（拍が分かっているときだけ）
+  if (Array.isArray(beats) && beats.length > 16) {
+    const snap = (t) => {
+      let best = t
+      let bd = 0.4
+      for (const b of beats) { const d = Math.abs(b - t); if (d < bd) { bd = d; best = b } }
+      return best
+    }
+    for (let k = 1; k < segs.length; k++) {
+      const t = snap(segs[k].startSec)
+      if (t > segs[k - 1].startSec + 2 && t < segs[k].endSec - 2) { segs[k].startSec = t; segs[k - 1].endSec = t }
+    }
+  }
+  segs.forEach((s) => { s.voice = voiced ? voiced(s.startSec, s.endSec) : null })
+  if (debug) return { segs, groups, score: Array.from(score), cuts, en }
+
+  // 5) 名前をつける
+  const sung = (s) => s.voice === null || s.voice >= 0.2
+  const gE = groups.map((g) => g.reduce((p, i) => p + segs[i].energy, 0) / g.length)
+  let chorusG = -1
+  let bestE = -1
+  groups.forEach((g, gi) => {
+    const members = g.filter((i) => sung(segs[i]))
+    if (members.length >= 2 && gE[gi] > bestE) { bestE = gE[gi]; chorusG = gi }
+  })
+  const loudest = Math.max(...segs.map((s) => s.energy))
+  // くり返していても、曲の中で一番大きいグループよりかなり小さければサビとは言いにくい
+  if (chorusG >= 0 && bestE < loudest * 0.7) chorusG = -1
+  const names = segs.map(() => null)
+  segs.forEach((s, i) => {
+    if (chorusG >= 0 ? s.group === chorusG : s.energy >= loudest * 0.85 && sung(s)) names[i] = "サビ"
+  })
+  const choruses = names.map((n, i) => (n === "サビ" ? i : -1)).filter((i) => i >= 0)
+  const chorusE = choruses.length ? choruses.reduce((p, i) => p + segs[i].energy, 0) / choruses.length : loudest
+  choruses.forEach((i, k) => {
+    if (segs[i].energy < chorusE * 0.72 && k > 0) names[i] = "落ちサビ"
+  })
+  const realChoruses = choruses.filter((i) => names[i] === "サビ")
+  // 落ちサビ：サビと同じ音の並びなのに、ずっと静かな所（最初のサビより後）
+  if (choruses.length) {
+    const ref = segs[choruses[0]]
+    segs.forEach((s, i) => {
+      if (names[i] || i <= choruses[0] || !sung(s)) return
+      if (s.energy < chorusE * 0.72 && chromaDiag(s, ref) >= 0.5) names[i] = "落ちサビ"
+    })
+  }
+  if (realChoruses.length >= 2) names[realChoruses[realChoruses.length - 1]] = "ラスサビ"
+  const first = segs[0]
+  const last = segs[segs.length - 1]
+  if (!names[0] && (first.voice !== null ? first.voice < 0.2 : first.energy < chorusE * 0.75 && first.endSec <= 30)) names[0] = "イントロ"
+  if (!names[segs.length - 1] && segs.length > 2 && (last.voice !== null ? last.voice < 0.2 : last.energy < chorusE * 0.75 && last.endSec - last.startSec <= 30)) names[segs.length - 1] = "アウトロ"
+  segs.forEach((s, i) => { if (!names[i] && s.voice !== null && s.voice < 0.15) names[i] = "間奏" })
+  // 声が分からないとき：サビとサビのあいだの、短くて静かで1回しか出てこない所は間奏の目安
+  segs.forEach((s, i) => {
+    if (names[i] || s.voice !== null) return
+    const before = names.slice(0, i).some((n) => n && n.includes("サビ"))
+    const after = names.slice(i + 1).some((n) => n && n.includes("サビ"))
+    const len = s.endSec - s.startSec
+    const isChorus = (n) => !!n && n.includes("サビ")
+    if (before && after && len <= 14 && s.energy < chorusE * 0.6 && groups[s.group].length === 1 && isChorus(names[i - 1])) names[i] = "間奏"
+  })
+  const secondChorus = choruses.length > 1 ? choruses[1] : segs.length
+  segs.forEach((s, i) => {
+    if (names[i]) return
+    const next = names[i + 1]
+    if (next === "サビ" || next === "ラスサビ" || next === "落ちサビ") {
+      // サビの直前：その前が Aメロなら Bメロ。イントロやサビのすぐ後なら Aメロ
+      names[i] = i > 0 && names[i - 1] === "Aメロ" ? "Bメロ" : "Aメロ"
+      return
+    }
+    if (i > secondChorus && groups[s.group].length === 1) { names[i] = "Cメロ"; return }
+    names[i] = "Aメロ"
+  })
+  // 同じ名前がとなり合っていたら1つにまとめる
+  const out = []
+  segs.forEach((s, i) => {
+    const prev = out[out.length - 1]
+    const conf = names[i] === "サビ" || names[i] === "ラスサビ" ? Math.min(1, s.energy / (loudest || 1)) : 0.5
+    if (prev && prev.name === names[i]) { prev.endSec = s.endSec; return }
+    out.push({ startSec: Math.round(s.startSec * 100) / 100, endSec: Math.round(s.endSec * 100) / 100, name: names[i], confidence: Math.round(conf * 100) / 100 })
+  })
+  return out
+}

@@ -1,5 +1,5 @@
 # 🎤 歌ってみた画面
-# オケと歌声はブラウザの中だけで扱う（サーバーには送らない）
+# 音の計算（ミックス・ハモリなど）はブラウザの中でする。プロジェクトは SingingProjectsController でアカウントに保存する（K39・11/10）
 # ログイン必須は ApplicationController の require_login がかかる
 class SingingsController < ApplicationController
   def show
