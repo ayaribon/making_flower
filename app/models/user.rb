@@ -8,6 +8,11 @@ class User < ApplicationRecord
   # ユーザーを消したら、その人の画像（S3のファイルも）一緒に消す
   has_many :user_images, dependent: :destroy
   has_many :user_templates, dependent: :destroy
+  # 💾 歌ってみたのプロジェクト・画像編集の下書き（K39）。ユーザーを消したら一緒に消す（S3 のファイルも）
+  has_many :singing_projects, dependent: :destroy
+  has_one :editor_draft, dependent: :destroy
+  # 💾 ミックス設定のテンプレート（K42）
+  has_many :mix_templates, dependent: :destroy
 
   # 見間違えやすい文字（0 o 1 l i）は使わない
   CODE_CHARS = "abcdefghjkmnpqrstuvwxyz23456789".chars.freeze

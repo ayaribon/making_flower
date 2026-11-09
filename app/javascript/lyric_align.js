@@ -133,6 +133,7 @@ function assign(weights, segs, rate) {
       if (k > a) {
         const gap = segs[k].start - segs[k - 1].end
         if (gap > 0.35) gapPenalty += (gap - 0.35) * 1.2 // 行の途中に長い息つぎがあるのは不自然
+        if (gap > 1.8) gapPenalty += 8 // 間奏（長い無音）をまたいで1行にはしない（K35 案2）
       }
     }
     const expect = weights[i] * rate
@@ -226,4 +227,89 @@ export function alignLyrics(texts, data, sr) {
     rate,
     segments: segs.length
   }
+}
+
+// ---------- 手で直した行を目印にして、残りだけ合わせ直す（K35 案1） ----------
+// anchors[i]：固定した行の { startSec, endSec|null }（声の時間）。null の行だけ合わせ直す。
+// 固定した行と固定した行のあいだの声だけを使って、あいだの行を割り当てる → 1か所のずれが後ろに広がらない
+export function alignLyricsAnchored(texts, data, sr, anchors) {
+  if (!anchors || !anchors.some(Boolean)) return alignLyrics(texts, data, sr)
+  const weights = texts.map(lineWeight)
+  const found = findVoiceSegments(data, sr)
+  const all = softSplit(found.segments, found.db, found.frame)
+  if (!all.length) return { lines: null, reason: "声が見つかりませんでした" }
+
+  // 固定した行の終わりが分からないとき（👆タップで合わせた行）：始まりから、息つぎ（0.35秒）までの声を1行とみなす
+  const guessEnd = (start, limit) => {
+    let end = start + 0.3
+    let prev = null
+    for (const s of all) {
+      if (s.end <= start - 0.05) continue
+      if (s.start >= limit) break
+      if (prev && s.start - prev.end > 0.35) break
+      end = Math.min(limit, s.end)
+      prev = s
+    }
+    return end
+  }
+  const fixed = anchors.map((a, i) => {
+    if (!a) return null
+    const next = anchors.slice(i + 1).find(Boolean)
+    const limit = next ? next.startSec : Infinity
+    return { startSec: a.startSec, endSec: a.endSec ?? guessEnd(a.startSec, limit) }
+  })
+
+  // 歌う速さ：全体の声の長さ ÷ 歌詞の長さ（あとで区間ごとに見積もり直す）
+  const totalW = weights.reduce((a, b) => a + b, 0)
+  const voiced = all.reduce((a, s) => a + (s.end - s.start), 0)
+  const rate0 = voiced / totalW
+
+  const out = new Array(texts.length).fill(null)
+  let i = 0
+  let failed = 0
+  while (i < texts.length) {
+    if (fixed[i]) {
+      out[i] = { startSec: fixed[i].startSec, endSec: fixed[i].endSec, cost: 0, sure: true, locked: true }
+      i++
+      continue
+    }
+    let j = i
+    while (j < texts.length && !fixed[j]) j++
+    const lo = i > 0 && fixed[i - 1] ? fixed[i - 1].endSec : -Infinity
+    const hi = j < texts.length ? fixed[j].startSec : Infinity
+    const segs = all
+      .filter((s) => s.end > lo + 0.02 && s.start < hi - 0.02)
+      .map((s) => ({ ...s, start: Math.max(s.start, lo), end: Math.min(s.end, hi) }))
+      .filter((s) => s.end - s.start >= 0.05)
+    const n = j - i
+    let guard = 0
+    while (segs.length < n && guard++ < n * 2) {
+      if (!splitLongest(segs, found.db, found.frame)) break
+    }
+    let r = null
+    if (segs.length >= n) {
+      const w = weights.slice(i, j)
+      const sw = w.reduce((a, b) => a + b, 0)
+      const sv = segs.reduce((a, s) => a + (s.end - s.start), 0)
+      // 区間の中の声の長さから速さを決める（全体の速さとかけ離れないように平均する）
+      let rate = sv > 0 ? (sv / sw + rate0) / 2 : rate0
+      for (let iter = 0; iter < 3; iter++) {
+        const t = assign(w, segs, rate)
+        if (!t) break
+        r = t
+        let sum = 0
+        t.lines.forEach((l) => { sum += l.dur })
+        const next = sum / sw
+        if (Math.abs(next - rate) / rate < 0.02) break
+        rate = next
+      }
+    }
+    if (!r) {
+      failed += n // 合わせられなかった行は、時間を変えない
+    } else {
+      r.lines.forEach((l, k) => { out[i + k] = { startSec: l.start, endSec: l.end, cost: l.cost, sure: l.cost <= 0.3 } })
+    }
+    i = j
+  }
+  return { lines: out, failed, anchored: fixed.filter(Boolean).length }
 }

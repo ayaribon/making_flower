@@ -1,12 +1,16 @@
 // 🎚 歌ってみた：ミックス（手順3・F3-3）
-// 声 → ローカット → 低音 → 中低音（こもり）→ 中高音（抜け）→ 高音 → ハイカット → コンプ → 戻し → 左右（パン）
+// 声 → ローカット → 低音 → 中低音（こもり）→ 中高音（抜け）→ 高音 → ハイカット → コンプ → 戻し
+//    → 🎛 変わったエフェクト（K34：元の声 fxDry ＋ 歪み／電話／ローファイ／ノイズ／コーラス／ロボ を並べて混ぜる）→ 左右（パン）
 //      ├→ dry ───────────────────────────────┐
 //      ├→ プリディレイ → リバーブ（響き）→ wet ───┼→ 出口
 //      └→ エコー（ディレイ ⇄ フィードバック）→ echoWet ┘
 // 試聴（AudioContext）と WAV 書き出し（OfflineAudioContext）で同じ作りを使う。
+// 🎛 エフェクトは6種類ぶんの道を最初から全部作っておき、選んだ道の量だけ上げる（K34）。
+//   → 種類を切りかえても「量を下げる・上げる」だけなので、部分の境目でもプツッと鳴らない
 //
 // 設定（MixSettings）の持ち方：
 //   かんたん用の値（lowCut / mudCut / air / comp / reverb は 0〜100、reverbLength は秒）
+//   ＋ fx（エフェクトの種類："none" など）と fxAmount（かかり具合 0〜100）（K34）
 //   ＋ pro（詳細モードで直接いじった本物の値。あればかんたん用の値より優先）
 // → かんたん用スライダーを動かすと、それに関係する pro の値は消える（かんたんの値が効くように）
 
@@ -15,8 +19,27 @@ export const DEFAULT_MIX = Object.freeze({
   mudCut: 40,
   air: 40,
   comp: 50,
-  reverb: 30,
-  reverbLength: 1.8
+  reverb: 20,
+  reverbLength: 1.8,
+  fx: "none",
+  fxAmount: 50
+})
+
+// 🎛 変わったエフェクトの種類（K34・声だけにかける）
+export const FX_TYPES = Object.freeze({
+  none: { label: "なし", hint: "エフェクトをかけない" },
+  distortion: { label: "🔥 歪み", hint: "ガリッとしたロックっぽい声" },
+  phone: { label: "📻 電話・ラジオ風", hint: "電話の向こう・古いラジオの声" },
+  lofi: { label: "📼 ローファイ", hint: "古いゲーム機・カセットのような粗い音" },
+  noise: { label: "🌫 ノイズを足す", hint: "サーッという音とレコードのプチプチ。歌っている所にだけ乗る" },
+  chorus: { label: "🌀 コーラス", hint: "声がゆらいで広がる・ふわっとした感じ" },
+  robot: { label: "🤖 ロボ声", hint: "機械っぽい声（大きくかけると言葉が聞き取りにくくなる）" }
+})
+
+// 種類 → その道の量の名前（mixParams が決める）
+const FX_SENDS = Object.freeze({
+  distortion: "fxSendDist", phone: "fxSendPhone", lofi: "fxSendLofi",
+  noise: "fxSendNoise", chorus: "fxSendChorus", robot: "fxSendRobot"
 })
 
 // 雰囲気ボタン（K20）。曲全体にも、部分ごと（K19〜K21）にも使える
@@ -55,7 +78,8 @@ export const SIMPLE_LINKS = Object.freeze({
 })
 
 // 響きの元（インパルス応答）に関わる値は、曲全体で共通（途中で作り直すと音が途切れるため）
-export const GLOBAL_PRO_KEYS = Object.freeze(["reverbLength", "reverbPreDelay", "reverbDamp"])
+// ローファイの段数（fxBits）も、作り直すと一瞬音が変わるので曲全体で共通（K34）
+export const GLOBAL_PRO_KEYS = Object.freeze(["reverbLength", "reverbPreDelay", "reverbDamp", "fxBits"])
 
 // 詳細モードのつまみ一覧（画面はこの表から作る）
 export const PRO_PARAMS = Object.freeze([
@@ -88,13 +112,26 @@ export const PRO_PARAMS = Object.freeze([
   { group: "space", key: "echoMix", label: "エコーの量", unit: "", min: 0, max: 1, step: 0.01, help: "やまびこのような繰り返し" },
   { group: "space", key: "echoTime", label: "エコーの間隔", unit: "ms", min: 20, max: 1500, step: 1 },
   { group: "space", key: "echoFeedback", label: "エコーの繰り返し", unit: "", min: 0, max: 0.9, step: 0.01, help: "大きいほど長く続く" },
-  { group: "space", key: "echoTone", label: "エコーの明るさ", unit: "Hz", min: 800, max: 16000, step: 10, log: true }
+  { group: "space", key: "echoTone", label: "エコーの明るさ", unit: "Hz", min: 800, max: 16000, step: 10, log: true },
+
+  // 🎛 変わったエフェクト（K34）。どれも「種類」で選んだものだけに効く
+  { group: "fx", key: "fxDrive", label: "🔥 歪みの強さ", unit: "倍", min: 1, max: 50, step: 0.5, log: true, help: "大きいほどガリガリ" },
+  { group: "fx", key: "fxPhoneLowHz", label: "📻 電話風 下の音", unit: "Hz", min: 100, max: 1500, step: 10, log: true, help: "これより低い音を切る" },
+  { group: "fx", key: "fxPhoneHighHz", label: "📻 電話風 上の音", unit: "Hz", min: 1500, max: 8000, step: 10, log: true, help: "これより高い音を切る" },
+  { group: "fx", key: "fxBits", label: "📼 ローファイ 段数", unit: "bit", min: 2, max: 12, step: 1, global: true, help: "小さいほど粗い音" },
+  { group: "fx", key: "fxLofiToneHz", label: "📼 ローファイ 明るさ", unit: "Hz", min: 800, max: 16000, step: 10, log: true, help: "これより高い音を切る" },
+  { group: "fx", key: "fxHiss", label: "🌫 サーッの量", unit: "", min: 0, max: 1, step: 0.01 },
+  { group: "fx", key: "fxCrackle", label: "🌫 プチプチの量", unit: "", min: 0, max: 1, step: 0.01 },
+  { group: "fx", key: "fxChorusRate", label: "🌀 ゆれの速さ", unit: "Hz", min: 0.1, max: 6, step: 0.05 },
+  { group: "fx", key: "fxChorusDepth", label: "🌀 ゆれの深さ", unit: "ms", min: 0, max: 10, step: 0.1 },
+  { group: "fx", key: "fxRobotHz", label: "🤖 ロボの高さ", unit: "Hz", min: 20, max: 500, step: 1, log: true, help: "低いとガタガタ、高いと金属っぽい" }
 ])
 
 export const PRO_GROUPS = Object.freeze({
   eq: "🔊 イコライザー（6バンド）",
   comp: "📏 コンプレッサー",
-  space: "🌊 空間（パン・リバーブ・エコー）"
+  space: "🌊 空間（パン・リバーブ・エコー）",
+  fx: "🎛 変わったエフェクト（選んだ種類だけに効く）"
 })
 
 const clamp01 = (v) => Math.max(0, Math.min(100, Number(v) || 0)) / 100
@@ -132,11 +169,39 @@ export function mixParams(settings) {
     echoMix: 0,
     echoTime: 300,
     echoFeedback: 0.3,
-    echoTone: 6000
+    echoTone: 6000,
+    // 🎛 変わったエフェクトの細かい値（K34）
+    fxDrive: 12,
+    fxPhoneLowHz: 300,
+    fxPhoneHighHz: 3000,
+    fxBits: 6,
+    fxLofiToneHz: 4000,
+    fxHiss: 0.35,
+    fxCrackle: 0.5,
+    fxChorusRate: 1.2,
+    fxChorusDepth: 3,
+    fxRobotHz: 90
   }
   Object.entries(s.pro || {}).forEach(([k, v]) => { if (k in p && Number.isFinite(Number(v))) p[k] = Number(v) })
   // 範囲の外に出ないように
   PRO_PARAMS.forEach((d) => { p[d.key] = Math.max(d.min, Math.min(d.max, p[d.key])) })
+
+  // 🎛 変わったエフェクト：選んだ種類の道だけ量を上げる。元の声（fxDry）は種類ごとに減らし方を変える
+  const fx = FX_TYPES[s.fx] ? s.fx : "none"
+  const a = fx === "none" ? 0 : clamp01(s.fxAmount ?? DEFAULT_MIX.fxAmount)
+  p.fx = fx
+  p.fxAmount = a
+  Object.values(FX_SENDS).forEach((k) => { p[k] = 0 })
+  p.fxDry = 1
+  if (fx === "noise") {
+    p.fxSendNoise = a // ノイズは足すだけ（元の声は減らさない）
+  } else if (fx === "chorus") {
+    p.fxDry = 1 - a * 0.4 // ゆれた声と元の声を重ねる
+    p.fxSendChorus = a * 0.7
+  } else if (fx !== "none") {
+    p.fxDry = 1 - a // かかり具合 100 ならエフェクトの音だけ
+    p[FX_SENDS[fx]] = a
+  }
   return p
 }
 
@@ -167,6 +232,73 @@ function biquad(ctx, type, freq, q) {
   if (q !== undefined) f.Q.value = q
   return f
 }
+
+// ---------- 🎛 変わったエフェクトの部品（K34） ----------
+
+// 種（seed）を決めた乱数。同じ種なら毎回同じ並び → 試聴・WAV・⚡MP4 で同じノイズになる
+function seededRandom(seed) {
+  let a = seed >>> 0
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0
+    let t = a
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+// サーッという音（ホワイトノイズを少しだけ丸めたもの）
+function makeHissBuffer(ctx, seconds = 2.5) {
+  const sr = ctx.sampleRate
+  const len = Math.round(sr * seconds)
+  const buf = ctx.createBuffer(1, len, sr)
+  const d = buf.getChannelData(0)
+  const rnd = seededRandom(20261110)
+  let lp = 0
+  for (let i = 0; i < len; i++) { lp = lp * 0.4 + (rnd() * 2 - 1) * 0.6; d[i] = lp }
+  return buf
+}
+
+// レコードのプチプチ（短い「パチッ」をまばらに置く。1秒に6回くらい）
+function makeCrackleBuffer(ctx, seconds = 7.3) {
+  const sr = ctx.sampleRate
+  const len = Math.round(sr * seconds)
+  const buf = ctx.createBuffer(1, len, sr)
+  const d = buf.getChannelData(0)
+  const rnd = seededRandom(19700101)
+  const perSample = 6 / sr
+  for (let i = 0; i < len; i++) {
+    if (rnd() >= perSample) continue
+    const amp = (0.3 + rnd() * 0.7) * (rnd() < 0.5 ? -1 : 1)
+    const n = Math.round(sr * (0.0004 + rnd() * 0.0012))
+    for (let j = 0; j < n && i + j < len; j++) d[i + j] += amp * Math.exp(-6 * j / n) * (j % 2 ? -0.6 : 1)
+  }
+  return buf
+}
+
+// 歪みの形（なめらかに頭打ちにする）
+function softClipCurve(n = 2048) {
+  const c = new Float32Array(n)
+  for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; c[i] = Math.tanh(x * 3) / Math.tanh(3) }
+  return c
+}
+
+// ローファイの形：音の大きさを bits 段に丸める（ビット数を落とした感じ）
+function bitCrushCurve(bits, n = 4096) {
+  const steps = Math.pow(2, Math.max(1, bits - 1))
+  const c = new Float32Array(n)
+  for (let i = 0; i < n; i++) { const x = (i / (n - 1)) * 2 - 1; c[i] = Math.round(x * steps) / steps }
+  return c
+}
+
+// 声の大きさを取り出す形（|x|）。ノイズを声に合わせて出すのに使う
+function absCurve(n = 1025) {
+  const c = new Float32Array(n)
+  for (let i = 0; i < n; i++) c[i] = Math.abs((i / (n - 1)) * 2 - 1)
+  return c
+}
+
+const gainNode = (ctx, v) => { const g = ctx.createGain(); g.gain.value = v; return g }
 
 // 声のミックスのつなぎを作る。input に声をつなぎ、output を音量（vocalGain）へつなぐ
 export function createVocalChain(ctx) {
@@ -199,7 +331,91 @@ export function createVocalChain(ctx) {
   air.connect(highCut)
   highCut.connect(comp)
   comp.connect(makeup)
-  makeup.connect(panner)
+
+  // 🎛 変わったエフェクト（K34）：makeup → [元の声 fxDry ＋ 6種類の道] → fxOut → panner
+  // 6種類の道はいつも全部つながっていて、選んだ道の量（fxSend…）だけを上げる
+  const fxDry = gainNode(ctx, 1)
+  const fxOut = ctx.createGain()
+  makeup.connect(fxDry)
+  fxDry.connect(fxOut)
+  const send = () => { const g = gainNode(ctx, 0); g.connect(fxOut); return g }
+
+  // 🔥 歪み：大きくしてから頭打ちにする
+  const fxSendDist = send()
+  const distPre = gainNode(ctx, 12)
+  const distShaper = ctx.createWaveShaper()
+  distShaper.curve = softClipCurve()
+  distShaper.oversample = "4x"
+  const distPost = gainNode(ctx, 0.5)
+  makeup.connect(distPre); distPre.connect(distShaper); distShaper.connect(distPost); distPost.connect(fxSendDist)
+
+  // 📻 電話・ラジオ風：狭い帯域だけ残して、少し歪ませる
+  const fxSendPhone = send()
+  const phoneLow1 = biquad(ctx, "highpass", 300, 0.9)
+  const phoneLow2 = biquad(ctx, "highpass", 300, 0.9)
+  const phoneHigh1 = biquad(ctx, "lowpass", 3000, 0.9)
+  const phoneHigh2 = biquad(ctx, "lowpass", 3000, 0.9)
+  const phonePre = gainNode(ctx, 3)
+  const phoneShaper = ctx.createWaveShaper()
+  phoneShaper.curve = softClipCurve()
+  const phonePost = gainNode(ctx, 0.9)
+  makeup.connect(phoneLow1); phoneLow1.connect(phoneLow2); phoneLow2.connect(phoneHigh1); phoneHigh1.connect(phoneHigh2)
+  phoneHigh2.connect(phonePre); phonePre.connect(phoneShaper); phoneShaper.connect(phonePost); phonePost.connect(fxSendPhone)
+
+  // 📼 ローファイ：段々に丸めて、高い音を削る
+  const fxSendLofi = send()
+  const lofiShaper = ctx.createWaveShaper()
+  lofiShaper.curve = bitCrushCurve(6)
+  const lofiTone = biquad(ctx, "lowpass", 4000, Math.SQRT1_2)
+  makeup.connect(lofiShaper); lofiShaper.connect(lofiTone); lofiTone.connect(fxSendLofi)
+
+  // 🌫 ノイズを足す：サーッ＋プチプチを、声の大きさ（envelope）に合わせて出す（歌っていない所では鳴らない）
+  const fxSendNoise = send()
+  const noiseVca = gainNode(ctx, 0) // 声の大きさが gain に足される
+  const hiss = ctx.createBufferSource()
+  hiss.buffer = makeHissBuffer(ctx)
+  hiss.loop = true
+  const crackle = ctx.createBufferSource()
+  crackle.buffer = makeCrackleBuffer(ctx)
+  crackle.loop = true
+  const hissGain = gainNode(ctx, 0)
+  const crackleGain = gainNode(ctx, 0)
+  hiss.connect(hissGain); hissGain.connect(noiseVca)
+  crackle.connect(crackleGain); crackleGain.connect(noiseVca)
+  const envAbs = ctx.createWaveShaper()
+  envAbs.curve = absCurve()
+  const envLp1 = biquad(ctx, "lowpass", 12, Math.SQRT1_2)
+  const envLp2 = biquad(ctx, "lowpass", 12, Math.SQRT1_2)
+  const envGain = gainNode(ctx, 4)
+  makeup.connect(envAbs); envAbs.connect(envLp1); envLp1.connect(envLp2); envLp2.connect(envGain); envGain.connect(noiseVca.gain)
+  noiseVca.connect(fxSendNoise)
+  hiss.start(0)
+  crackle.start(0)
+
+  // 🌀 コーラス：ゆれる短いディレイ
+  const fxSendChorus = send()
+  const chorusDelay = ctx.createDelay(0.1)
+  chorusDelay.delayTime.value = 0.02
+  const lfo = ctx.createOscillator()
+  lfo.type = "sine"
+  lfo.frequency.value = 1.2
+  const lfoDepth = gainNode(ctx, 0.003)
+  lfo.connect(lfoDepth); lfoDepth.connect(chorusDelay.delayTime)
+  makeup.connect(chorusDelay); chorusDelay.connect(fxSendChorus)
+  lfo.start(0)
+
+  // 🤖 ロボ声：声に一定の音を掛け合わせる（リングモジュレーター）
+  const fxSendRobot = send()
+  const ring = gainNode(ctx, 0) // 掛け合わせる音が gain に入る
+  const ringOsc = ctx.createOscillator()
+  ringOsc.type = "sine"
+  ringOsc.frequency.value = 90
+  const robotPost = gainNode(ctx, 1.4)
+  ringOsc.connect(ring.gain)
+  makeup.connect(ring); ring.connect(robotPost); robotPost.connect(fxSendRobot)
+  ringOsc.start(0)
+
+  fxOut.connect(panner)
   panner.connect(dry)
   panner.connect(preDelay)
   preDelay.connect(convolver)
@@ -215,7 +431,12 @@ export function createVocalChain(ctx) {
 
   return {
     ctx, input, output, lowCut, lowShelf, mud, presence, air, highCut, comp, makeup, panner,
-    dry, preDelay, convolver, wet, echo, echoFilter, echoFb, echoWet, irKey: null
+    dry, preDelay, convolver, wet, echo, echoFilter, echoFb, echoWet, irKey: null,
+    // 🎛 変わったエフェクト（K34）
+    fxDry, fxOut, fxSendDist, fxSendPhone, fxSendLofi, fxSendNoise, fxSendChorus, fxSendRobot,
+    distPre, phoneLow1, phoneLow2, phoneHigh1, phoneHigh2, lofiShaper, lofiTone,
+    hissGain, crackleGain, lfo, lfoDepth, ringOsc, bitsKey: 6,
+    sources: [hiss, crackle, lfo, ringOsc] // 止めるときに使う
   }
 }
 
@@ -228,7 +449,13 @@ function chainParams(chain) {
     chain.air.frequency, chain.air.gain, chain.highCut.frequency,
     chain.comp.threshold, chain.comp.ratio, chain.comp.attack, chain.comp.release, chain.comp.knee,
     chain.makeup.gain, chain.dry.gain, chain.wet.gain, chain.preDelay.delayTime,
-    chain.echo.delayTime, chain.echoFilter.frequency, chain.echoFb.gain, chain.echoWet.gain
+    chain.echo.delayTime, chain.echoFilter.frequency, chain.echoFb.gain, chain.echoWet.gain,
+    // 🎛 変わったエフェクト（K34）
+    chain.fxDry.gain, chain.fxSendDist.gain, chain.fxSendPhone.gain, chain.fxSendLofi.gain,
+    chain.fxSendNoise.gain, chain.fxSendChorus.gain, chain.fxSendRobot.gain,
+    chain.distPre.gain, chain.phoneLow1.frequency, chain.phoneLow2.frequency, chain.phoneHigh1.frequency, chain.phoneHigh2.frequency,
+    chain.lofiTone.frequency, chain.hissGain.gain, chain.crackleGain.gain,
+    chain.lfo.frequency, chain.lfoDepth.gain, chain.ringOsc.frequency
   ]
   if (chain.panner.pan) list.push(chain.panner.pan)
   return list
@@ -269,6 +496,31 @@ export function applyMix(chain, settings, { at = null, ramp = 0.05 } = {}) {
   set(chain.echoFilter.frequency, Math.min(p.echoTone, chain.ctx.sampleRate / 2 - 100))
   set(chain.echoFb.gain, p.echoFeedback)
   set(chain.echoWet.gain, p.echoMix)
+  // 🎛 変わったエフェクト（K34）。種類の切りかえも「道の量」を変えるだけなので、部分の境目でも ramp でなめらかに混ざる
+  if (chain.fxDry) {
+    const nyq = chain.ctx.sampleRate / 2 - 100
+    set(chain.fxDry.gain, p.fxDry)
+    set(chain.fxSendDist.gain, p.fxSendDist)
+    set(chain.fxSendPhone.gain, p.fxSendPhone)
+    set(chain.fxSendLofi.gain, p.fxSendLofi)
+    set(chain.fxSendNoise.gain, p.fxSendNoise)
+    set(chain.fxSendChorus.gain, p.fxSendChorus)
+    set(chain.fxSendRobot.gain, p.fxSendRobot)
+    set(chain.distPre.gain, p.fxDrive)
+    const lo = Math.min(p.fxPhoneLowHz, p.fxPhoneHighHz - 100)
+    set(chain.phoneLow1.frequency, lo)
+    set(chain.phoneLow2.frequency, lo)
+    set(chain.phoneHigh1.frequency, Math.min(p.fxPhoneHighHz, nyq))
+    set(chain.phoneHigh2.frequency, Math.min(p.fxPhoneHighHz, nyq))
+    set(chain.lofiTone.frequency, Math.min(p.fxLofiToneHz, nyq))
+    set(chain.hissGain.gain, p.fxHiss * 0.08)
+    set(chain.crackleGain.gain, p.fxCrackle * 0.35)
+    set(chain.lfo.frequency, p.fxChorusRate)
+    set(chain.lfoDepth.gain, p.fxChorusDepth / 1000)
+    set(chain.ringOsc.frequency, p.fxRobotHz)
+    // ローファイの段数は形（curve）を作り直す必要がある → 変わったときだけ（曲全体で共通の値）
+    if (chain.bitsKey !== p.fxBits) { chain.lofiShaper.curve = bitCrushCurve(p.fxBits); chain.bitsKey = p.fxBits }
+  }
   // 響きの長さ・こもりが変わったときだけ作り直す（重いので）
   const key = `${p.reverbLength}|${p.reverbDamp}`
   if (chain.irKey !== key) {
