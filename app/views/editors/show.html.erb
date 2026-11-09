@@ -75,6 +75,7 @@
         <summary class="studio-history-button" title="メニュー">👤<span><%= current_user.name %></span></summary>
         <div class="studio-user-menu-list">
           <p class="studio-user-menu-name">👤 <%= current_user.name %></p>
+          <%= link_to "🏠 メインメニュー", root_path, class: "studio-user-menu-item", data: { turbo: false } %>
           <% if current_user.admin? %>
             <button type="button" class="studio-user-menu-item"
               data-action="click->canvas-editor#openSaveDialog">📋 テンプレとして保存</button>

@@ -1,0 +1,80 @@
+/* 🏠 メインメニュー（homes#show）。.hm の中だけ */
+.hm {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+  background: linear-gradient(160deg, #0e1a33 0%, #1b2f5c 55%, #3a2a6b 100%);
+  color: #fff;
+  font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+}
+.hm-inner { width: 100%; max-width: 880px; }
+
+.hm-header { text-align: center; margin-bottom: 28px; }
+.hm-eyebrow { margin: 0; letter-spacing: 0.2em; font-size: 0.85rem; opacity: 0.75; }
+.hm-title { margin: 6px 0 0; font-size: clamp(1.8rem, 5vw, 2.6rem); }
+.hm-hello { margin: 8px 0 0; opacity: 0.85; }
+
+.hm-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.hm-card {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  min-height: 220px; padding: 24px 16px; border-radius: 24px;
+  text-decoration: none; color: #fff; text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.hm-card--sing { background: linear-gradient(145deg, #2f7dff 0%, #4fb6ff 100%); }
+.hm-card--art { background: linear-gradient(145deg, #ff5fa2 0%, #ffa86b 100%); }
+.hm-card:hover, .hm-card:focus-visible { transform: translateY(-4px); box-shadow: 0 16px 36px rgba(0, 0, 0, 0.32); }
+.hm-card:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.hm-card:active { transform: scale(0.98); }
+.hm-card__icon { font-size: 3.2rem; line-height: 1; }
+.hm-card__title { font-size: 1.35rem; font-weight: 700; }
+.hm-card__desc { font-size: 0.9rem; opacity: 0.9; }
+
+.hm-footer { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 28px; flex-wrap: wrap; }
+.hm-logout { display: inline; margin: 0; }
+.hm-link { color: rgba(255, 255, 255, 0.85); font-size: 0.9rem; text-decoration: underline; }
+.hm-link--button { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; }
+
+/* 移動するときの画像（画面いっぱい） */
+.hm-splash {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  background: #0e1a33;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.hm-splash[hidden] { display: none; }
+.hm-splash.is-show { opacity: 1; }
+/* PC：バナーを画面いっぱいに（はみ出す所は切る） */
+.hm-splash__banner { width: 100%; height: 100%; object-fit: cover; transform: scale(1.06); transition: transform 0.9s ease-out; }
+.hm-splash.is-show .hm-splash__banner { transform: scale(1); }
+.hm-splash__icon { display: none; }
+
+/* スマホ（縦長・小さい画面）：アイコンを真ん中に。背景は画面いっぱいの色 */
+@media (max-width: 640px), (orientation: portrait) and (max-width: 900px) {
+  .hm-menu { grid-template-columns: 1fr; gap: 14px; }
+  .hm-card { min-height: 140px; border-radius: 20px; }
+  .hm-card__icon { font-size: 2.6rem; }
+  .hm-splash__banner { display: none; }
+  .hm-splash__icon {
+    display: block; width: min(56vw, 260px); height: auto; border-radius: 28%;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+    transform: scale(0.7); opacity: 0;
+    transition: transform 0.45s cubic-bezier(0.2, 1.4, 0.4, 1), opacity 0.25s ease;
+  }
+  .hm-splash.is-show .hm-splash__icon { transform: scale(1); opacity: 1; }
+}
+
+@media (hover: none) { .hm-card:hover { transform: none; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); } }
+@media (prefers-reduced-motion: reduce) {
+  .hm-card, .hm-splash, .hm-splash__banner, .hm-splash__icon { transition: none; }
+  .hm-splash__banner, .hm-splash.is-show .hm-splash__banner { transform: none; }
+}
+
+/* 歌ってみた画面の左上の「🏠 メニュー」 */
+.sg .sg-home-link { color: inherit; text-decoration: none; margin-right: 8px; padding: 2px 8px; border-radius: 999px; background: rgba(79, 182, 255, 0.15); }

@@ -1,0 +1,38 @@
+<%# 🏠 メインメニュー（ログイン後のトップ）。見た目は app/assets/stylesheets/home.css %>
+<div class="hm" data-controller="main-menu">
+  <div class="hm-inner">
+    <header class="hm-header">
+      <p class="hm-eyebrow">KotoBouquet</p>
+      <h1 class="hm-title">なにを作る？</h1>
+      <% if current_user %>
+        <p class="hm-hello"><%= current_user.name %> さん、うぇるかむ ✨</p>
+      <% end %>
+    </header>
+
+    <nav class="hm-menu" aria-label="メインメニュー">
+      <a class="hm-card hm-card--sing" href="<%= singing_path %>" data-turbo="false" data-action="main-menu#go">
+        <span class="hm-card__icon" aria-hidden="true">🎤</span>
+        <span class="hm-card__title">歌ってみたを作る</span>
+        <span class="hm-card__desc">録音・ミックス・ハモリ・MV まで</span>
+      </a>
+      <a class="hm-card hm-card--art" href="<%= editor_path %>" data-turbo="false" data-action="main-menu#go">
+        <span class="hm-card__icon" aria-hidden="true">🎨</span>
+        <span class="hm-card__title">サムネ・背景を作る</span>
+        <span class="hm-card__desc">文字・部品・背景で画像を作る</span>
+      </a>
+    </nav>
+
+    <footer class="hm-footer">
+      <% if current_user&.admin? %>
+        <%= link_to "🛠 管理画面", admin_users_path, class: "hm-link" %>
+      <% end %>
+      <%= button_to "ログアウト", logout_path, method: :delete, class: "hm-link hm-link--button", form: { class: "hm-logout" } %>
+    </footer>
+  </div>
+
+  <%# 移動するときに一瞬だけ画面いっぱいに出す画像（PC＝バナー、スマホ＝アイコン。CSS で切りかえ） %>
+  <div class="hm-splash" data-main-menu-target="splash" hidden aria-hidden="true">
+    <%= image_tag "sivaバナー.png", class: "hm-splash__banner", alt: "" %>
+    <%= image_tag "sivaアイコン.png", class: "hm-splash__icon", alt: "" %>
+  </div>
+</div>
