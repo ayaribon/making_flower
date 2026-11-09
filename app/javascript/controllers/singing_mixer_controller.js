@@ -129,7 +129,7 @@ export default class extends Controller {
     "karaoke", "lrcButton",
     "fxStrength", "fxStrengthValue", "fxBeat", "fxChorus", "fxSparkle", "fxInfo",
     "mvRatioButton", "mvSafe", "mvFrame",
-    "fastButton", "fastNote", "exportQuality", "exportProgress",
+    "fastButton", "fastNote", "exportQuality", "exportProgress", "exportBackgroundNotice",
     "autoAlignButton", "undoAlignButton",
     "flowHeader", "flowNav", "flowButton",
     "keyPreviewButton"
@@ -205,6 +205,7 @@ export default class extends Controller {
   }
 
   disconnect() {
+    document.removeEventListener("visibilitychange", this.exportVisibilityHandler)
     this.stop()
     this.stopMicStream()
     if (this.drawId) cancelAnimationFrame(this.drawId)
@@ -1419,6 +1420,14 @@ export default class extends Controller {
   // ---------- ボタンの有効/無効をまとめて切り替える ----------
 
   setMode(mode) {
+    const wasExporting = this.mode === "exporting"
+    if (mode === "exporting" && !wasExporting) {
+      this.exportWasHidden = false
+      if (this.hasExportBackgroundNoticeTarget) this.exportBackgroundNoticeTarget.hidden = true
+      document.addEventListener("visibilitychange", this.exportVisibilityHandler)
+    } else if (mode !== "exporting" && wasExporting) {
+      document.removeEventListener("visibilitychange", this.exportVisibilityHandler)
+    }
     this.mode = mode
     if (mode === "idle") this.playhead = null
     this.updateButtons()
@@ -3325,5 +3334,14 @@ export default class extends Controller {
 
   setStatus(text) {
     this.statusTarget.textContent = text
+  }
+
+  exportVisibilityHandler = () => {
+    if (document.visibilityState === "hidden") {
+      this.exportWasHidden = true
+    } else if (this.exportWasHidden) {
+      this.exportWasHidden = false
+      if (this.hasExportBackgroundNoticeTarget) this.exportBackgroundNoticeTarget.hidden = false
+    }
   }
 }
