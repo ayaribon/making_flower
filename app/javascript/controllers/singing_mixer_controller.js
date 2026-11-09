@@ -179,7 +179,7 @@ export default class extends Controller {
     "keroToggle", "keroAmount", "keroValue",
     "fxStrength", "fxStrengthValue", "fxBeat", "fxChorus", "fxSparkle", "fxInfo",
     "mvRatioButton", "mvSafe", "mvFrame",
-    "fastButton", "fastNote", "exportQuality", "exportProgress",
+    "fastButton", "fastNote", "exportQuality", "exportProgress", "exportBackgroundNotice",
     "autoAlignButton", "undoAlignButton",
     "flowHeader", "flowNav", "flowButton",
     "keyPreviewButton",
@@ -288,6 +288,8 @@ export default class extends Controller {
   }
 
   disconnect() {
+    document.removeEventListener("visibilitychange", this.exportVisibilityHandler)
+    this.exportVisibilityWatching = false
     this.stopProjects()
     this.stop()
     this.stopMeter()
@@ -2609,7 +2611,18 @@ export default class extends Controller {
 
   // ---------- ボタンの有効/無効をまとめて切り替える ----------
 
-  setMode(mode) {
+  setMode(mode, watchVisibility = false) {
+    if (mode === "exporting" && this.mode !== "exporting") {
+      this.exportWasHidden = false
+      if (this.hasExportBackgroundNoticeTarget) this.exportBackgroundNoticeTarget.hidden = true
+      if (watchVisibility) {
+        this.exportVisibilityWatching = true
+        document.addEventListener("visibilitychange", this.exportVisibilityHandler)
+      }
+    } else if (mode !== "exporting" && this.exportVisibilityWatching) {
+      document.removeEventListener("visibilitychange", this.exportVisibilityHandler)
+      this.exportVisibilityWatching = false
+    }
     this.mode = mode
     if (mode === "idle") this.playhead = null
     this.updateButtons()
@@ -3720,7 +3733,7 @@ export default class extends Controller {
     this.ensureContext()
     this.endMixBypass()
     this.exportCancel = false
-    this.setMode("exporting")
+    this.setMode("exporting", true)
     this.showExportProgress(0)
     const r = MV_RATIOS[this.mv.ratio]
     const scale = this.exportScale
@@ -3913,7 +3926,7 @@ export default class extends Controller {
     // ✂️ 書き出す範囲（K40）があれば、その範囲だけ流して録る（🌅 音のフェードは⚡のときだけ）
     const clip = this.mvClipRange
     this.mvClipActive = !!clip
-    this.setMode("exporting")
+    this.setMode("exporting", true)
     this.recorder.start(1000)
     this.startSources(() => {
       if (this.recorder.state !== "inactive") this.recorder.stop()
@@ -7963,5 +7976,14 @@ export default class extends Controller {
 
   setStatus(text) {
     this.statusTarget.textContent = text
+  }
+
+  exportVisibilityHandler = () => {
+    if (document.visibilityState === "hidden") {
+      this.exportWasHidden = true
+    } else if (this.exportWasHidden) {
+      this.exportWasHidden = false
+      if (this.hasExportBackgroundNoticeTarget) this.exportBackgroundNoticeTarget.hidden = false
+    }
   }
 }
