@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_11_05_130000) do
+ActiveRecord::Schema[7.1].define(version: 2026_11_10_040000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -55,6 +55,14 @@ ActiveRecord::Schema[7.1].define(version: 2026_11_05_130000) do
     t.index ["slug"], name: "index_design_templates_on_slug", unique: true
   end
 
+  create_table "editor_drafts", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.json "data"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_editor_drafts_on_user_id", unique: true
+  end
+
   create_table "materials", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.string "name", null: false
     t.string "kind", default: "part", null: false
@@ -69,6 +77,29 @@ ActiveRecord::Schema[7.1].define(version: 2026_11_05_130000) do
     t.string "tags", default: "", null: false
     t.index ["key"], name: "index_materials_on_key", unique: true
     t.index ["kind", "visible", "position"], name: "index_materials_on_kind_and_visible_and_position"
+  end
+
+  create_table "mix_templates", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "name", default: "", null: false
+    t.json "data"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "updated_at"], name: "index_mix_templates_on_user_id_and_updated_at"
+    t.index ["user_id"], name: "index_mix_templates_on_user_id"
+  end
+
+  create_table "singing_projects", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "uid", null: false
+    t.string "name", default: "", null: false
+    t.json "data"
+    t.bigint "size_bytes", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "uid"], name: "index_singing_projects_on_user_id_and_uid", unique: true
+    t.index ["user_id", "updated_at"], name: "index_singing_projects_on_user_id_and_updated_at"
+    t.index ["user_id"], name: "index_singing_projects_on_user_id"
   end
 
   create_table "templates", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
@@ -116,6 +147,9 @@ ActiveRecord::Schema[7.1].define(version: 2026_11_05_130000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "editor_drafts", "users"
+  add_foreign_key "mix_templates", "users"
+  add_foreign_key "singing_projects", "users"
   add_foreign_key "user_images", "users"
   add_foreign_key "user_templates", "users"
 end

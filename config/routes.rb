@@ -1,5 +1,7 @@
 Rails.application.routes.draw do
-  root "editors#show"
+  # 🏠 ログイン後のトップ＝メインメニュー（🎤歌ってみた／🎨サムネ・背景）。編集画面は /editor
+  root "homes#show"
+  get "home", to: "homes#show"
 
   get    "login",  to: "sessions#new"
   post   "login",  to: "sessions#create"
