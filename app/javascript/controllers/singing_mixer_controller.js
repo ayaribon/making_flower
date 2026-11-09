@@ -206,6 +206,7 @@ export default class extends Controller {
 
   disconnect() {
     document.removeEventListener("visibilitychange", this.exportVisibilityHandler)
+    this.exportVisibilityWatching = false
     this.stop()
     this.stopMicStream()
     if (this.drawId) cancelAnimationFrame(this.drawId)
@@ -1419,14 +1420,17 @@ export default class extends Controller {
 
   // ---------- ボタンの有効/無効をまとめて切り替える ----------
 
-  setMode(mode) {
-    const wasExporting = this.mode === "exporting"
-    if (mode === "exporting" && !wasExporting) {
+  setMode(mode, watchVisibility = false) {
+    if (mode === "exporting" && this.mode !== "exporting") {
       this.exportWasHidden = false
       if (this.hasExportBackgroundNoticeTarget) this.exportBackgroundNoticeTarget.hidden = true
-      document.addEventListener("visibilitychange", this.exportVisibilityHandler)
-    } else if (mode !== "exporting" && wasExporting) {
+      if (watchVisibility) {
+        this.exportVisibilityWatching = true
+        document.addEventListener("visibilitychange", this.exportVisibilityHandler)
+      }
+    } else if (mode !== "exporting" && this.exportVisibilityWatching) {
       document.removeEventListener("visibilitychange", this.exportVisibilityHandler)
+      this.exportVisibilityWatching = false
     }
     this.mode = mode
     if (mode === "idle") this.playhead = null
@@ -2222,7 +2226,7 @@ export default class extends Controller {
     this.ensureContext()
     this.endMixBypass()
     this.exportCancel = false
-    this.setMode("exporting")
+    this.setMode("exporting", true)
     this.showExportProgress(0)
     const r = MV_RATIOS[this.mv.ratio]
     const scale = this.exportScale
@@ -2375,7 +2379,7 @@ export default class extends Controller {
       this.setStatus(`動画の書き出し完了（${ext}・${(blob.size / 1024 / 1024).toFixed(1)}MB）`)
     }
 
-    this.setMode("exporting")
+    this.setMode("exporting", true)
     this.recorder.start(1000)
     this.startSources(() => {
       if (this.recorder.state !== "inactive") this.recorder.stop()
