@@ -15,6 +15,7 @@ pin "mix_chain"
 pin "mv_renderer"
 pin "mp4-muxer" # @5.2.1（vendor/javascript に置いた）
 pin "mv_export"
+pin "mv_templates" # 🪄 MV のテンプレート（かんたん作成）
 pin "lyric_align"
 pin "project_store" # 💾 プロジェクト保存（K24・IndexedDB）
 pin "project_server" # 💾 プロジェクトをアカウントに保存（K39・サーバー）

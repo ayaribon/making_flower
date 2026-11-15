@@ -101,8 +101,13 @@ export const DEFAULT_MV_EDIT = Object.freeze({
   filter: "none", filterAmount: 70, filterParts: {},
   range: null,
   fadeIn: 0, fadeOut: 0, fadeAudio: true,
-  logo: { enabled: false, kind: "text", text: "", corner: "br", size: "m", opacity: 0.8 }
+  logo: { enabled: false, kind: "text", text: "", corner: "br", size: "m", opacity: 0.8 },
+  // 🪄 テンプレート（かんたん作成）・📍 ポイントの演出。どれも最初は空（今までと同じ見た目）
+  tpl: null, pointFx: {}, filterNames: {}, points: []
 })
+
+// 📍 ポイントで起きる演出の名前（mv_templates.js の MV_POINT_FX と同じキー）
+const POINT_FX_KINDS = ["none", "flash", "zoom", "shake", "invert", "glitch", "blackout", "whiteout"]
 
 const num = (v, d, lo, hi) => {
   const n = Number(v)
@@ -138,7 +143,19 @@ export function normalizeMvEdit(e) {
       enabled: !!lg.enabled, kind: lg.kind === "image" ? "image" : "text", text: String(lg.text || "").slice(0, 40),
       corner: MV_LOGO_CORNERS[lg.corner] ? lg.corner : d.logo.corner, size: MV_LOGO_SIZES[lg.size] ? lg.size : d.logo.size,
       opacity: num(lg.opacity, d.logo.opacity, 0.1, 1), hasImage: !!lg.hasImage
-    }
+    },
+    tpl: typeof src.tpl === "string" ? src.tpl.slice(0, 40) : null,
+    pointFx: src.pointFx && typeof src.pointFx === "object" ? Object.fromEntries(Object.entries(src.pointFx)
+      .filter(([, v]) => v && typeof v === "object")
+      .map(([k, v]) => [String(k).slice(0, 20), {
+        start: POINT_FX_KINDS.includes(v.start) ? v.start : "none",
+        end: POINT_FX_KINDS.includes(v.end) ? v.end : "none"
+      }])) : {},
+    filterNames: src.filterNames && typeof src.filterNames === "object" ? Object.fromEntries(Object.entries(src.filterNames).filter(([, v]) => MV_FILTERS[v])) : {},
+    points: Array.isArray(src.points) ? src.points.filter((p) => p && p.id && POINT_FX_KINDS.includes(p.kind)).slice(0, 100).map((p) => ({
+      id: String(p.id), kind: p.kind,
+      anchor: p.anchor && typeof p.anchor === "object" ? { ...p.anchor } : { type: "time", sec: 0 }
+    })) : []
   }
 }
 
@@ -964,6 +981,24 @@ function drawGlitch(g, w, h, dt, k) {
   g.restore()
 }
 
+// ---------- 📍 ポイントの演出（テンプレート・かんたん作成） ----------
+// scene.cues = [{ at: 秒, kind: "flash" | "zoom" | "shake" | "invert" | "glitch" | "blackout" | "whiteout" }]
+// 演出ごとに「いちばん最近のポイントから何秒たったか」を返す（終わった演出は入れない）
+const CUE_LIFE = { flash: 0.9, zoom: 0.8, shake: 0.6, invert: 0.16, glitch: 0.35, blackout: 0.9, whiteout: 1.8 }
+export function cueStates(scene, t) {
+  const out = {}
+  const cues = scene.cues
+  if (!Array.isArray(cues)) return out
+  for (const c of cues) {
+    const life = CUE_LIFE[c.kind]
+    if (!life) continue
+    const dt = t - c.at
+    if (dt < 0 || dt >= life) continue
+    if (out[c.kind] === undefined || dt < out[c.kind]) out[c.kind] = dt
+  }
+  return out
+}
+
 // ---------- 🎬 もっと編集（K40）：描く部品 ----------
 
 // 🖼 背景の切りかえ・スライドショー：曲の t 秒目の背景と、切りかえ中なら前の背景
@@ -1190,8 +1225,21 @@ export function renderFrame(g, w, h, t, scene) {
   // 拍で少しはねる・サビで少し寄る（真ん中を中心に大きく）
   let zoom = 1 + f.pulse * 0.022 + f.chorus * 0.03
   if (dt !== null && anim.transition === "zoom") zoom += 0.12 * Math.exp(-dt / 0.18) // ズームでドン
-  if (zoom !== 1) {
-    g.translate(w / 2, h / 2)
+  // 📍 ポイントの演出（テンプレート）
+  const cue = cueStates(scene, t)
+  if (cue.zoom !== undefined) zoom += 0.12 * Math.exp(-cue.zoom / 0.18)
+  let sx = 0
+  let sy = 0
+  if (cue.shake !== undefined) {
+    // ゆれる：決まった速さの sin でゆらして、だんだん止まる（同じ t なら同じゆれ）
+    const d = cue.shake
+    const a = Math.exp(-d / 0.15) * 16 * k
+    sx = Math.sin(d * 70) * a
+    sy = Math.cos(d * 53) * a * 0.7
+    zoom += 0.04 // ゆらしても端がすき間にならないように
+  }
+  if (zoom !== 1 || sx || sy) {
+    g.translate(w / 2 + sx, h / 2 + sy)
     g.scale(zoom, zoom)
     g.translate(-w / 2, -h / 2)
   }
@@ -1207,8 +1255,35 @@ export function renderFrame(g, w, h, t, scene) {
     g.restore()
   }
   if (dt !== null && anim.transition === "glitch") drawGlitch(g, w, h, dt, k)
+  if (cue.invert !== undefined) {
+    g.save()
+    g.globalCompositeOperation = "difference"
+    g.globalAlpha = 1 - cue.invert / 0.16
+    g.fillStyle = "#ffffff"
+    g.fillRect(0, 0, w, h)
+    g.restore()
+  }
+  if (cue.glitch !== undefined) drawGlitch(g, w, h, cue.glitch, k)
   // 🎨 色のフィルター（K40）：絵だけにかける（歌詞・テロップ・曲名・ロゴにはかけない）
   filtersAt(scene, t).forEach((fl) => applyMvFilter(g, w, h, fl.kind, fl.amount))
+  // 📍 光る・暗くなる演出は、絵の上・歌詞の下に重ねる（歌詞は読めるまま）
+  const cover = (color, alpha) => {
+    if (alpha <= 0.002) return
+    g.save()
+    g.globalAlpha = clamp01(alpha)
+    g.fillStyle = color
+    g.fillRect(0, 0, w, h)
+    g.restore()
+  }
+  if (cue.flash !== undefined) cover("#ffffff", 0.75 * Math.exp(-cue.flash / 0.22))
+  if (cue.whiteout !== undefined) {
+    const d = cue.whiteout
+    cover("#ffffff", d < 0.25 ? 0.85 * smooth(d / 0.25) : 0.85 * (1 - smooth((d - 0.25) / 1.55)))
+  }
+  if (cue.blackout !== undefined) {
+    const d = cue.blackout
+    cover("#000000", d < 0.15 ? 1 : 1 - smooth((d - 0.15) / 0.75))
+  }
   g.save()
   drawGlow(g, w, h, scene, f)
   if (scene.fx?.sparkle) drawSparkles(g, w, h, t, scene, k, Number.isFinite(f.sparkle) ? f.sparkle : Math.max(f.chorus, (scene.fx.strength || 0) * 0.15))
