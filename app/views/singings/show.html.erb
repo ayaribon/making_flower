@@ -572,6 +572,34 @@
       <h2 class="sg-card__title"><span class="sg-num">5</span>動画（MV）を作る</h2>
       <p class="sg-help">テンプレートと背景を選んで、曲名を入れるだけ。絵は音に合わせて自動で動きます。▶試聴（下のバー）で動きを確かめてね</p>
 
+      <%# 🪄 テンプレート（かんたん作成）：画像を入れてテンプレートを選ぶだけ。サビの始まり・終わりなどの「ポイント」で演出が変わる %>
+      <div class="sg-qt">
+        <h3 class="sg-group__title">🪄 テンプレートでかんたん作成</h3>
+        <p class="sg-help">① テンプレートを選ぶ → ② 好きな画像を入れる → ③「✨ この内容で作る」。見た目・動き・色・サビの演出をまとめて決めます（あとから下の設定で1つずつ直せます）</p>
+        <div class="sg-presets sg-qt__list" role="group" aria-label="MVのテンプレート" data-singing-mixer-target="qtList"></div>
+        <p class="sg-help" data-singing-mixer-target="qtHint"></p>
+        <div class="sg-row">
+          <label class="sg-btn sg-btn--small sg-file-btn">📷 画像を選ぶ（何枚でも・5枚まで）
+            <input type="file" accept="image/*" multiple hidden data-action="change->singing-mixer#addQuickImages">
+          </label>
+        </div>
+        <div class="sg-qt__imgs" data-singing-mixer-target="qtImages"></div>
+        <div class="sg-row">
+          <button class="sg-btn sg-btn--magic" data-singing-mixer-target="qtApplyButton" data-action="singing-mixer#applyQuickTemplate">✨ この内容で作る</button>
+          <button class="sg-btn sg-btn--small" data-action="singing-mixer#guessStructure" title="オケから、イントロ・Aメロ・サビ・落ちサビ… の目安を④の部分に入れます。サビ以外のポイントにも演出が付くようになります">🪄 曲の構成を推測（④）</button>
+        </div>
+
+        <details class="sg-details sg-qt__points-box" open>
+          <summary>📍 ポイントと演出（サビの始まり・終わりなど）</summary>
+          <p class="sg-help">④ミックスの部分（なければ自動で見つけたサビ）の「始まり」「終わり」で起きる演出です。同じ名前の部分は全部同じ演出になります。▶ を押すと2秒前から試聴できます</p>
+          <p class="sg-help sg-fx-info" data-singing-mixer-target="qtInfo"></p>
+          <div class="sg-qt__points" data-singing-mixer-target="qtPoints"></div>
+          <div class="sg-row">
+            <button class="sg-btn sg-btn--small" data-action="singing-mixer#addMvPoint" title="再生中は今の位置、止まっているときは「見る所」の位置に足します。④で📍ピンを選んでいれば、そのピンにくっつけます">＋ 今の位置にポイント</button>
+          </div>
+        </details>
+      </div>
+
       <div class="sg-mv-layout">
         <div class="sg-mv-preview">
           <div class="sg-presets sg-ratio" role="group" aria-label="動画の向き">

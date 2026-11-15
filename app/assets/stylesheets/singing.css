@@ -1022,3 +1022,30 @@
   .sg-file:hover { border-color: #b8cbf2; }
   .sg-offset-help-key { display: none; }
 }
+
+/* 🪄 MV のテンプレート（かんたん作成）・📍 ポイントの演出 */
+.sg .sg-qt { margin: 10px 0 16px; padding: 12px 14px; border-radius: 12px; background: #f7faff; border: 1px solid var(--sg-line); }
+.sg .sg-qt__card.is-used:not([aria-pressed="true"]) { border-color: var(--sg-primary); }
+.sg .sg-qt__imgs { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 10px; }
+.sg .sg-qt__img { display: flex; flex-direction: column; gap: 4px; width: 128px; padding: 6px; border-radius: 10px; background: #fff; border: 1px solid var(--sg-line); }
+.sg .sg-qt__img img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 6px; display: block; }
+.sg .sg-qt__slot { font-size: 0.8rem; font-weight: 700; }
+.sg .sg-qt__ops { display: flex; gap: 4px; }
+.sg .sg-qt__points-box { margin-top: 10px; }
+.sg .sg-qt__points { display: flex; flex-direction: column; gap: 6px; margin: 6px 0; }
+.sg .sg-qt__point { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 10px; background: #fff; border: 1px solid var(--sg-line); }
+.sg .sg-qt__point.is-unused { opacity: 0.6; }
+.sg .sg-qt__name { flex: 0 0 5.5em; font-weight: 700; }
+.sg .sg-qt__edges { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.sg .sg-qt__edge { display: inline-flex; align-items: center; gap: 4px; }
+.sg .sg-qt__times { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-left: auto; }
+.sg .sg-qt__own { margin-top: 6px; display: flex; flex-direction: column; gap: 6px; }
+.sg .sg-qt__subtitle { margin: 6px 0 0; font-size: 0.92rem; }
+.sg .sg-slide__thumb.is-main { display: inline-flex; align-items: center; justify-content: center; font-weight: 700; color: var(--sg-ink); background: #e4edff; }
+@media (max-width: 640px) {
+  .sg .sg-qt__img { width: calc(50% - 4px); box-sizing: border-box; }
+  .sg .sg-qt__name { flex-basis: 100%; }
+  .sg .sg-qt__times { margin-left: 0; }
+  .sg .sg-qt .sg-btn, .sg .sg-qt .sg-select--small { min-height: 44px; }
+  .sg .sg-qt .sg-slide__time { font-size: 16px; }
+}
