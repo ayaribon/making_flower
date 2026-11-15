@@ -1,0 +1,84 @@
+<section class="admin-card">
+  <div class="admin-card-head">
+    <h2>🔎 Openverse から素材を取り込む</h2>
+    <%= link_to "← 素材の一覧へ", admin_materials_path, class: "admin-button" %>
+  </div>
+
+  <p class="auth-note">
+    <a href="https://openverse.org/" target="_blank" rel="noopener">Openverse</a> は、自由に使ってよい画像をまとめて探せるサービスです。
+    ここに出るのは<strong>再配布・改変・商用OK</strong>のもの（CC0・パブリックドメイン・CC BY）だけです。
+    取り込むと、引用元とライセンスは自動で入ります。
+  </p>
+  <p class="auth-note">
+    ⚠️ <strong>CC BY は作者の表記が要ります。</strong>書き出したサムネには表記を入れられないので、CC BY の素材は<strong>非表示のまま</strong>取り込みます（MV のクレジットに出せるようになったら使えます）。
+    Openverse のライセンス情報は元のサイトから自動で集めたものです。大事な素材は、元のページでも確かめてください。
+  </p>
+
+  <%= form_with url: admin_material_imports_path, method: :get, local: true, class: "admin-filter" do %>
+    <%= search_field_tag :q, @q, placeholder: "🔍 英語で探すと多く出ます（例：flower, rose, star）", class: "admin-filter-search", required: true %>
+    <%= select_tag :group, options_for_select(OpenverseClient::LICENSE_GROUPS.map { |k, v| [v[:label], k] }, @group) %>
+    <%= select_tag :category, options_for_select(OpenverseClient::CATEGORIES.map { |k, v| ["種類：#{v}", k] }, @category) %>
+    <%= submit_tag "探す", class: "admin-button is-main", name: nil %>
+  <% end %>
+
+  <% if @search %>
+    <p class="auth-note">
+      <%= number_with_delimiter(@search[:total]) %>件見つかりました（<%= @search[:page] %> / <%= @search[:pages] %>ページ）
+    </p>
+
+    <% if @search[:results].empty? %>
+      <p class="auth-note">取り込める素材が見つかりませんでした。ことばや種類を変えてみてください</p>
+    <% end %>
+
+    <ul class="ov-grid">
+      <% @search[:results].each do |item| %>
+        <% imported = @imported[item[:id]] %>
+        <%# 外から来たURLなので、http(s) のものだけ使う（javascript: などを入れられないように） %>
+        <% page_url = item[:foreign_landing_url] if item[:foreign_landing_url].match?(%r{\Ahttps?://}) %>
+        <% thumb_url = [item[:thumbnail], item[:url]].find { |u| u.match?(%r{\Ahttps?://}) } %>
+        <li class="ov-card<%= ' is-imported' if imported %>">
+          <%= link_to (page_url || "#"), target: "_blank", rel: "noopener noreferrer", class: "ov-thumb" do %>
+            <% if thumb_url %><%= image_tag thumb_url, alt: item[:title], loading: "lazy", referrerpolicy: "no-referrer" %><% end %>
+          <% end %>
+
+          <div class="ov-meta">
+            <strong class="ov-title"><%= item[:title].presence || "（題名なし）" %></strong>
+            <div>
+              <span class="admin-badge <%= item[:thumb_ok] ? 'is-tag' : 'is-off' %>"><%= item[:license_label] %></span>
+              <% if item[:filetype].present? %><span class="admin-badge"><%= item[:filetype].upcase %></span><% end %>
+              <% if item[:width].present? %><span class="admin-badge"><%= item[:width] %>×<%= item[:height] %></span><% end %>
+            </div>
+            <small class="admin-source">作者：<%= item[:creator].presence || "不明" %>／<%= item[:provider] %></small>
+          </div>
+
+          <% if imported %>
+            <%= link_to "✅ 取り込み済み（開く）", edit_admin_material_path(imported), class: "admin-button" %>
+          <% elsif item[:filetype].to_s.downcase == "svg" %>
+            <small class="admin-source">SVG は取り込めません</small>
+          <% else %>
+            <%= form_with url: admin_material_imports_path, method: :post, local: true, class: "ov-form" do %>
+              <%= hidden_field_tag :openverse_id, item[:id], id: nil %>
+              <%= text_field_tag :name, item[:title].to_s.truncate(40), maxlength: 40, placeholder: "名前", id: nil %>
+              <%= select_tag :kind, options_for_select(Material::KINDS.map { |k, v| [v, k] }, "part"), id: nil %>
+              <% if item[:thumb_ok] %>
+                <label class="admin-check"><%= check_box_tag :visible, "1", false, id: nil %> すぐエディタに出す</label>
+              <% end %>
+              <%= submit_tag "＋ 取り込む", class: "admin-button is-main", name: nil, data: { turbo_submits_with: "取り込み中…" } %>
+            <% end %>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+
+    <% if @search[:pages] > 1 %>
+      <nav class="admin-filter">
+        <% if @search[:page] > 1 %>
+          <%= link_to "← 前へ", admin_material_imports_path(q: @q, group: @group, category: @category, page: @search[:page] - 1), class: "admin-button" %>
+        <% end %>
+        <% if @search[:page] < @search[:pages] %>
+          <%= link_to "次へ →", admin_material_imports_path(q: @q, group: @group, category: @category, page: @search[:page] + 1), class: "admin-button" %>
+        <% end %>
+      </nav>
+    <% end %>
+  <% end %>
+</section>

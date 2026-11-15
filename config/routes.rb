@@ -21,6 +21,8 @@ Rails.application.routes.draw do
     resources :materials, except: [:show] do
       patch :toggle, on: :member
     end
+    # 🔎 Openverse から素材を探して取り込む
+    resources :material_imports, only: [:index, :create]
     resources :design_templates, only: [:index, :create, :edit, :update, :destroy] do
       patch :toggle, on: :member
       post :duplicate, on: :member
