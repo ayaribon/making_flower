@@ -161,6 +161,13 @@ making_flower は、画像素材を組み合わせてレイアウトを作るた
 - タグ検索、種類絞り込み、並び順変更、比率別画像の削除/更新
 - 画像がテンプレートから使われていればキー変更禁止、テンプレートで使われている場合は削除禁止
 
+### 素材の取り込み（Openverse）
+- `Admin::MaterialImportsController` ＋ `app/services/openverse_client.rb`（画面：管理 → 🎨 素材 → 🔎 Openverse から取り込む）
+- [Openverse API](https://api.openverse.org/v1/)（キーなし）で探し、選んだ画像をサーバーで取ってきて `Material` として保存する
+- 出すのは再配布・改変・商用OK のライセンスだけ：CC0・パブリックドメイン（サムネOK）／CC BY（作者の表記が要るので**必ず非表示で入る**）。SA・NC・ND・SVG は出さない
+- 引用元・ライセンス・クレジット文は `source_name` / `source_url` / `license_note` に自動で入る。`license_note` の `openverse:<ID>` で取り込み済みを見分ける（テーブルは増やさない・N2）
+- 取り込むときは画面から送られた値を信じず、API で取り直す。内側のネットワークのアドレスには取りに行かない
+
 ### テンプレート管理
 - `Admin::DesignTemplatesController`
 - 一覧、公開/非公開切り替え、複製、削除
