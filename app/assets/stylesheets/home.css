@@ -36,6 +36,7 @@
 .hm-card__icon { font-size: 3.2rem; line-height: 1; }
 .hm-card__title { font-size: 1.35rem; font-weight: 700; }
 .hm-card__desc { font-size: 0.9rem; opacity: 0.9; }
+.hm-card__note { font-size: 0.72rem; opacity: 0.6; }
 
 .hm-footer { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 28px; flex-wrap: wrap; }
 .hm-logout { display: inline; margin: 0; }

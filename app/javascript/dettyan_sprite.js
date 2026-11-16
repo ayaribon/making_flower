@@ -42,11 +42,17 @@ export const DETTYAN_COLORS = {
   P: "#3a3a4a"  // ズボン
 }
 
-// Dettyan を描く。eyes："open" | "blink"
-export function drawDettyan(g, ox, oy, { eyes = "open" } = {}) {
+// 歩くときの2コマ目（足のところだけ入れかえる）
+const WALK_LEGS = {
+  22: ".....KPPK..KPPK.....",
+  23: "......KK....KKK....."
+}
+
+// Dettyan を描く。eyes："open" | "blink"、frame：0 | 1（歩くときに交互に）
+export function drawDettyan(g, ox, oy, { eyes = "open", frame = 0 } = {}) {
   const sprite = DETTYAN_SPRITE
   for (let y = 0; y < sprite.length; y++) {
-    const row = sprite[y]
+    const row = frame === 1 && WALK_LEGS[y] ? WALK_LEGS[y] : sprite[y]
     for (let x = 0; x < row.length; x++) {
       let c = row[x]
       if (c === "E" && eyes === "blink") c = y === 11 ? "K" : "S"

@@ -11,6 +11,8 @@ class User < ApplicationRecord
   # 💾 歌ってみたのプロジェクト・画像編集の下書き（K39）。ユーザーを消したら一緒に消す（S3 のファイルも）
   has_many :singing_projects, dependent: :destroy
   has_one :editor_draft, dependent: :destroy
+  # 🧑‍💼 Dettyan 育成ゲームのセーブ（1人1つ）
+  has_one :dettyan_save, dependent: :destroy
   # 💾 ミックス設定のテンプレート（K42）
   has_many :mix_templates, dependent: :destroy
   # ✂️ 切り抜き動画の依頼（ひとり1回1依頼）

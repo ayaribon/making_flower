@@ -3,30 +3,141 @@
   min-height: 100vh;
   min-height: 100dvh;
   display: flex;
-  align-items: center;
   justify-content: center;
-  padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+  padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
   background: linear-gradient(160deg, #2a1c12 0%, #5a3a22 55%, #8a5a33 100%);
   color: #fff;
   font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
 }
-.dt-inner { width: 100%; max-width: 560px; text-align: center; position: relative; }
+.dt-inner { width: 100%; max-width: 640px; }
+
+.dt-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .dt-home-link {
-  position: absolute; top: -8px; left: 0;
-  color: inherit; text-decoration: none; font-size: 0.9rem;
+  color: inherit; text-decoration: none; font-size: 0.9rem; white-space: nowrap;
   padding: 4px 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.15);
 }
-.dt-header { margin: 32px 0 16px; }
-.dt-eyebrow { margin: 0; letter-spacing: 0.2em; font-size: 0.85rem; opacity: 0.75; }
-.dt-title { margin: 6px 0 0; font-size: clamp(1.6rem, 5vw, 2.4rem); }
+.dt-title { flex: 1; margin: 0; font-size: clamp(1.05rem, 4vw, 1.4rem); text-align: center; }
 
-.dt-stage {
-  margin: 0 auto; width: min(70vw, 260px); aspect-ratio: 1;
-  border-radius: 50%; background: rgba(255, 255, 255, 0.12);
-  display: flex; align-items: flex-end; justify-content: center; overflow: hidden;
+.dt-sound { position: relative; }
+.dt-icon-button {
+  width: 40px; height: 40px; border: 0; border-radius: 50%; cursor: pointer;
+  background: rgba(255, 255, 255, 0.15); color: #fff; font-size: 1.2rem;
 }
-.dt-chara { width: 70%; height: auto; image-rendering: crisp-edges; image-rendering: pixelated; animation: dt-bob 2.4s ease-in-out infinite; transform-origin: 50% 100%; }
-.dt-soon { margin: 20px 0 0; line-height: 1.7; opacity: 0.9; }
+.dt-sound-panel {
+  position: absolute; right: 0; top: 46px; z-index: 20;
+  display: flex; flex-direction: column; gap: 6px; padding: 8px;
+  border-radius: 12px; background: #2a1c12; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.dt-sound-panel[hidden] { display: none; }
+.dt-sound-panel button {
+  white-space: nowrap; padding: 8px 12px; border: 0; border-radius: 8px; cursor: pointer;
+  background: rgba(255, 255, 255, 0.12); color: #fff; font: inherit; font-size: 0.9rem; text-align: left;
+}
+.dt-sound-panel button[aria-pressed="false"] { opacity: 0.6; }
 
-@keyframes dt-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4%); } }
-@media (prefers-reduced-motion: reduce) { .dt-chara { animation: none; } }
+.dt-hud { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin-bottom: 8px; font-size: 0.9rem; }
+.dt-money { font-weight: 700; font-size: 1rem; }
+.dt-stat { display: inline-flex; align-items: center; gap: 6px; }
+.dt-meter { display: inline-block; width: 72px; height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.2); overflow: hidden; }
+.dt-meter__fill { display: block; height: 100%; width: 0; transition: width 0.3s ease; }
+.dt-meter__fill--genki { background: #7ed957; }
+.dt-meter__fill--gokigen { background: #ff9ec4; }
+
+.dt-stage { position: relative; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); }
+.dt-room {
+  display: block; width: 100%; height: auto; aspect-ratio: 4 / 3;
+  image-rendering: crisp-edges; image-rendering: pixelated;
+  touch-action: manipulation; cursor: pointer;
+}
+
+.dt-bubble {
+  position: absolute; transform: translate(-50%, -100%);
+  max-width: 70%; padding: 6px 10px; border-radius: 10px;
+  background: #fff; color: #2a1c12; font-size: 0.85rem; font-weight: 700; white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25); pointer-events: none;
+}
+.dt-bubble[hidden] { display: none; }
+
+.dt-start {
+  position: absolute; inset: 0; z-index: 10;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  border: 0; cursor: pointer; color: #fff; font: inherit;
+  background: rgba(20, 12, 6, 0.55);
+}
+.dt-start[hidden] { display: none; }
+.dt-start__text { font-size: 1.3rem; font-weight: 700; animation: dt-pulse 1.6s ease-in-out infinite; }
+.dt-start__note { font-size: 0.78rem; opacity: 0.6; }
+.dt-start__note[hidden] { display: none; }
+
+/* おせわのメニュー（ステージの下に重ねる） */
+.dt-care {
+  position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 6;
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+}
+.dt-care[hidden] { display: none; }
+.dt-care button {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  min-height: 52px; padding: 6px 2px; border: 0; border-radius: 10px; cursor: pointer;
+  background: rgba(42, 28, 18, 0.88); color: #fff; font: inherit; font-size: 1.25rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); touch-action: manipulation;
+}
+.dt-care button span { font-size: 0.78rem; font-weight: 700; }
+.dt-care button:active { transform: translateY(1px); background: rgba(90, 58, 34, 0.95); }
+
+/* ショップ・もちもの（ステージの上に重ねる） */
+.dt-sheet {
+  position: absolute; inset: 0; z-index: 8;
+  display: flex; flex-direction: column;
+  background: rgba(30, 20, 12, 0.94); color: #fff;
+}
+.dt-sheet[hidden] { display: none; }
+.dt-sheet__head { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
+.dt-sheet__title { flex: 1; font-weight: 700; }
+.dt-sheet__money { font-weight: 700; }
+.dt-sheet__close {
+  width: 36px; height: 36px; border: 0; border-radius: 50%; cursor: pointer;
+  background: rgba(255, 255, 255, 0.15); color: #fff; font-size: 1rem;
+}
+.dt-sheet__list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 6px 8px; }
+.dt-sheet__empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px 8px; opacity: 0.9; }
+.dt-item { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.dt-item__icon {
+  width: 40px; height: 40px; flex: none; border-radius: 8px; background: #f6ecd8;
+  image-rendering: crisp-edges; image-rendering: pixelated;
+}
+.dt-item__body { flex: 1; min-width: 0; line-height: 1.35; }
+.dt-item__name { font-weight: 700; }
+.dt-item__effect, .dt-item__sub { font-size: 0.78rem; opacity: 0.75; }
+.dt-item__button {
+  flex: none; min-width: 72px; min-height: 40px; padding: 6px 12px; border: 0; border-radius: 999px; cursor: pointer;
+  background: #ffb347; color: #2a1c12; font: inherit; font-weight: 700; touch-action: manipulation;
+}
+.dt-item__button:disabled { background: rgba(255, 255, 255, 0.18); color: rgba(255, 255, 255, 0.5); cursor: default; }
+
+.dt-toast {
+  position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 9;
+  padding: 6px 14px; border-radius: 999px; white-space: nowrap;
+  background: rgba(42, 28, 18, 0.92); color: #fff; font-size: 0.85rem; font-weight: 700;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); pointer-events: none;
+}
+.dt-toast[hidden] { display: none; }
+
+.dt-pop {
+  position: absolute; transform: translate(-50%, -100%); z-index: 5; pointer-events: none; white-space: nowrap;
+  color: #fff; font-size: 0.8rem; font-weight: 800; text-shadow: 0 1px 0 #2a1c12, 0 0 4px #2a1c12;
+  animation: dt-pop 1.5s ease-out forwards;
+}
+@keyframes dt-pop { from { opacity: 1; margin-top: 0; } to { opacity: 0; margin-top: -28px; } }
+
+.dt-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.dt-actions button {
+  min-height: 48px; border: 0; border-radius: 12px; cursor: pointer;
+  background: rgba(255, 255, 255, 0.16); color: #fff; font: inherit; font-size: 1rem; font-weight: 700;
+  touch-action: manipulation;
+}
+.dt-actions button:active { background: rgba(255, 255, 255, 0.26); }
+
+.dt-help { margin: 12px 0 0; font-size: 0.85rem; opacity: 0.75; text-align: center; line-height: 1.6; }
+
+@keyframes dt-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+@media (prefers-reduced-motion: reduce) { .dt-start__text, .dt-pop { animation: none; } }
