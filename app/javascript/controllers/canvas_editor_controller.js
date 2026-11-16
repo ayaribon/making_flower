@@ -204,10 +204,30 @@ export default class extends Controller {
     }
   }
 
+  // 🏠 メニューへ：まだ保存していない変更があれば、先に保存してから移る（待つのは長くても2秒）
+  async goHome(event) {
+    const href = event.currentTarget.href
+    if (!href) return
+    event.preventDefault()
+    clearTimeout(this.snapshotTimer)
+    this.takeSnapshot()
+    if (this.draftTimer) {
+      clearTimeout(this.draftTimer)
+      this.draftTimer = null
+      const draft = { state: this.lastState, savedAt: Date.now() }
+      const save = srvPutDraft(draft).catch(() => {
+        if (storeSupported()) return saveDraft(EDITOR_DRAFT_KEY, draft).catch(() => {})
+      })
+      await Promise.race([save, new Promise((r) => setTimeout(r, 2000))])
+    }
+    window.location.href = href
+  }
+
   // 変わってから少し待って保存（打っている最中に何度も保存しない）
   scheduleDraftSave() {
     clearTimeout(this.draftTimer)
     this.draftTimer = setTimeout(async () => {
+      this.draftTimer = null
       const draft = { state: this.lastState, savedAt: Date.now() }
       try {
         await srvPutDraft(draft) // ☁ アカウントに保存
@@ -444,6 +464,7 @@ export default class extends Controller {
 
     this.closeTemplatesPanel()
     this.syncEffectInputs()
+    this.dispatch("template") // 🧑‍🎨 ほめてくれる子に知らせる
     this.takeSnapshot()
   }
 
@@ -1139,6 +1160,54 @@ export default class extends Controller {
           `<rect width="${W}" height="${H}" fill="url(#r)"/></svg>`
       }
 
+      case "bokeh": {
+        // 玉ボケ：ふんわりした光の玉（いつも同じ並び）
+        const rand = this.seededRandom(1116)
+        const unit = Math.min(W, H) / 720
+        const cols = ["#ffffff", "#ffe58a", "#ffb3e0", "#b8e8ff"]
+        let d = `<defs><radialGradient id="b"><stop offset="0" stop-color="#fff" stop-opacity="1"/><stop offset="0.7" stop-color="#fff" stop-opacity="0.55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>`
+        cols.forEach((c, i) => { d += `<radialGradient id="b${i}"><stop offset="0" stop-color="${c}" stop-opacity="0.9"/><stop offset="0.75" stop-color="${c}" stop-opacity="0.45"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></radialGradient>` })
+        d += `</defs>`
+        const count = Math.round(10 + 30 * s)
+        for (let i = 0; i < count; i++) {
+          const r = (20 + rand() * 70) * unit
+          d += `<circle cx="${(rand() * W).toFixed(0)}" cy="${(rand() * H).toFixed(0)}" r="${r.toFixed(1)}" fill="url(#b${i % cols.length})" opacity="${(0.35 + 0.5 * s * rand()).toFixed(2)}"/>`
+        }
+        return head + d + `</svg>`
+      }
+
+      case "speedlines": {
+        // 集中線：まわりから真ん中に向かう線（真ん中はあける）
+        const rand = this.seededRandom(777)
+        const cx = W / 2
+        const cy = H / 2
+        const R = Math.hypot(W, H) / 2
+        const inner = R * (0.62 - 0.22 * s)
+        let d = ""
+        const count = Math.round(60 + 90 * s)
+        for (let i = 0; i < count; i++) {
+          const a = (i / count) * Math.PI * 2 + rand() * 0.03
+          const wid = (0.004 + rand() * 0.01) * (0.5 + s)
+          const r0 = inner + rand() * R * 0.18
+          const p = (ang, r) => `${(cx + Math.cos(ang) * r).toFixed(1)},${(cy + Math.sin(ang) * r).toFixed(1)}`
+          d += `M${p(a, r0)} L${p(a - wid, R * 1.05)} L${p(a + wid, R * 1.05)} Z `
+        }
+        return head + `<path d="${d}" fill="#000000" fill-opacity="${(0.35 + 0.45 * s).toFixed(2)}"/></svg>`
+      }
+
+      case "snow": {
+        // 雪：大小の白いつぶ（いつも同じ並び）
+        const rand = this.seededRandom(1224)
+        const unit = Math.min(W, H) / 720
+        let d = ""
+        const count = Math.round(40 + 160 * s)
+        for (let i = 0; i < count; i++) {
+          const r = (1.5 + Math.pow(rand(), 2) * 7) * unit
+          d += `<circle cx="${(rand() * W).toFixed(0)}" cy="${(rand() * H).toFixed(0)}" r="${r.toFixed(1)}" fill="#ffffff" fill-opacity="${(0.5 + rand() * 0.5).toFixed(2)}"/>`
+        }
+        return head + d + `</svg>`
+      }
+
       case "light-leak": {
         // 角から光がもれたような、やわらかい虹色
         return head +
@@ -1264,6 +1333,112 @@ export default class extends Controller {
           `<rect x="${t}" y="${t}" width="${W - t * 2}" height="${H - b - t}" fill="none" stroke="#000" stroke-opacity="0.08" stroke-width="2"/></svg>`
       }
 
+      case "film": {
+        // 映画のフィルム：上下に黒い帯と、四角い穴
+        const b = m * 0.09
+        const hw = m * 0.03
+        const hh = b * 0.42
+        const gap = hw * 2.2
+        let holes = ""
+        for (let x = gap / 2; x < W; x += gap) {
+          holes += `<rect x="${(x - hw / 2).toFixed(1)}" y="${((b - hh) / 2).toFixed(1)}" width="${hw.toFixed(1)}" height="${hh.toFixed(1)}" rx="${(hw * 0.2).toFixed(1)}"/>`
+          holes += `<rect x="${(x - hw / 2).toFixed(1)}" y="${(H - b + (b - hh) / 2).toFixed(1)}" width="${hw.toFixed(1)}" height="${hh.toFixed(1)}" rx="${(hw * 0.2).toFixed(1)}"/>`
+        }
+        return head +
+          `<rect width="${W}" height="${b.toFixed(1)}" fill="#141414"/><rect y="${(H - b).toFixed(1)}" width="${W}" height="${b.toFixed(1)}" fill="#141414"/>` +
+          `<g fill="#f3efe6">${holes}</g></svg>`
+      }
+
+      case "neon": {
+        // ネオン管：光る二重の線
+        const pad = m * 0.04
+        const r = m * 0.05
+        const rect = (c, w, op) =>
+          `<rect x="${pad}" y="${pad}" width="${W - pad * 2}" height="${H - pad * 2}" rx="${r}" fill="none" stroke="${c}" stroke-width="${w.toFixed(1)}" stroke-opacity="${op}"/>`
+        const rect2 = (c, w, op) =>
+          `<rect x="${pad * 1.8}" y="${pad * 1.8}" width="${W - pad * 3.6}" height="${H - pad * 3.6}" rx="${r * 0.8}" fill="none" stroke="${c}" stroke-width="${w.toFixed(1)}" stroke-opacity="${op}"/>`
+        return head +
+          `<filter id="g" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="${(m * 0.008).toFixed(1)}"/></filter>` +
+          `<g filter="url(#g)">${rect("#ff4fd8", m * 0.02, 0.9)}${rect2("#3ad1ff", m * 0.016, 0.9)}</g>` +
+          rect("#ffe3fa", m * 0.006, 1) + rect2("#e3f8ff", m * 0.005, 1) + `</svg>`
+      }
+
+      case "scallop": {
+        // レースのような、波々のフチ
+        const t = m * 0.045
+        const rr = m * 0.03
+        let bumps = ""
+        const nx = Math.max(4, Math.round(W / (rr * 2)))
+        const ny = Math.max(4, Math.round(H / (rr * 2)))
+        const sx = W / nx
+        const sy = H / ny
+        for (let i = 0; i < nx; i++) {
+          const x = sx * (i + 0.5)
+          bumps += `<circle cx="${x.toFixed(1)}" cy="${t.toFixed(1)}" r="${(sx / 2).toFixed(1)}"/><circle cx="${x.toFixed(1)}" cy="${(H - t).toFixed(1)}" r="${(sx / 2).toFixed(1)}"/>`
+        }
+        for (let j = 0; j < ny; j++) {
+          const y = sy * (j + 0.5)
+          bumps += `<circle cx="${t.toFixed(1)}" cy="${y.toFixed(1)}" r="${(sy / 2).toFixed(1)}"/><circle cx="${(W - t).toFixed(1)}" cy="${y.toFixed(1)}" r="${(sy / 2).toFixed(1)}"/>`
+        }
+        return head +
+          `<g fill="#ffffff">${bumps}<rect width="${W}" height="${t.toFixed(1)}"/><rect y="${(H - t).toFixed(1)}" width="${W}" height="${t.toFixed(1)}"/>` +
+          `<rect width="${t.toFixed(1)}" height="${H}"/><rect x="${(W - t).toFixed(1)}" width="${t.toFixed(1)}" height="${H}"/></g>` +
+          `<rect x="${(t + rr * 1.6).toFixed(1)}" y="${(t + rr * 1.6).toFixed(1)}" width="${(W - 2 * (t + rr * 1.6)).toFixed(1)}" height="${(H - 2 * (t + rr * 1.6)).toFixed(1)}" fill="none" stroke="#ffffff" stroke-width="${(m * 0.004).toFixed(1)}" stroke-dasharray="${(m * 0.012).toFixed(1)} ${(m * 0.01).toFixed(1)}"/></svg>`
+      }
+
+      case "flowers": {
+        // 四すみに小さな花のかたまり（KotoBouquet の花束っぽく）
+        const flower = (x, y, r, c) => {
+          let p = ""
+          for (let k = 0; k < 5; k++) {
+            const a = (k / 5) * Math.PI * 2 - Math.PI / 2
+            p += `<circle cx="${(x + Math.cos(a) * r).toFixed(1)}" cy="${(y + Math.sin(a) * r).toFixed(1)}" r="${(r * 0.85).toFixed(1)}" fill="${c}"/>`
+          }
+          return p + `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r * 0.6).toFixed(1)}" fill="#fff3a8"/>`
+        }
+        const leaf = (x, y, r, a) =>
+          `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${(r * 1.4).toFixed(1)}" ry="${(r * 0.6).toFixed(1)}" fill="#7be08a" transform="rotate(${a} ${x.toFixed(1)} ${y.toFixed(1)})"/>`
+        const r = m * 0.042
+        const corner = (x0, y0, dx, dy) => {
+          // 花びらがはみ出さないように、すみから少し内側に
+          const x = x0 + dx * r * 0.6
+          const y = y0 + dy * r * 0.6
+          return (
+          leaf(x + dx * r * 3.4, y + dy * r * 0.8, r, 20 * dx * dy) + leaf(x + dx * r * 0.8, y + dy * r * 3.4, r, 70 * dx * dy) +
+          flower(x + dx * r * 2.6, y + dy * r * 2.4, r * 0.75, "#ffd84a") +
+          flower(x + dx * r * 0.9, y + dy * r * 2.8, r * 0.7, "#5ec8ff") +
+          flower(x + dx * r * 1.4, y + dy * r * 1.2, r, "#ff8ccf"))
+        }
+        const pad = m * 0.02
+        return head +
+          `<rect x="${pad * 2}" y="${pad * 2}" width="${W - pad * 4}" height="${H - pad * 4}" rx="${m * 0.03}" fill="none" stroke="#ffffff" stroke-width="${(m * 0.006).toFixed(1)}" stroke-opacity="0.9"/>` +
+          corner(pad, pad, 1, 1) + corner(W - pad, pad, -1, 1) + corner(pad, H - pad, 1, -1) + corner(W - pad, H - pad, -1, -1) + `</svg>`
+      }
+
+      case "ring":
+      case "ring-dark": {
+        // 🔘 アイコン用：丸く切り取られる所に二重の輪。輪の外（アイコンでは見えない すみ）は色でぬる
+        const dark = key === "ring-dark"
+        const cx = W / 2
+        const cy = H / 2
+        const r = m * 0.46
+        const outer = dark ? "#140b2e" : "#ffe3f1"
+        const ring1 = dark ? "#ff4fd8" : "#ffffff"
+        const ring2 = dark ? "#3ad1ff" : "#ff8ccf"
+        const hole = `M${cx - r},${cy} a${r},${r} 0 1,0 ${r * 2},0 a${r},${r} 0 1,0 ${-r * 2},0 Z`
+        let dots = ""
+        for (let i = 0; i < 24; i++) {
+          const a = (i / 24) * Math.PI * 2
+          dots += `<circle cx="${(cx + Math.cos(a) * r * 1.035).toFixed(1)}" cy="${(cy + Math.sin(a) * r * 1.035).toFixed(1)}" r="${(m * (i % 2 ? 0.004 : 0.007)).toFixed(1)}" fill="${ring2}"/>`
+        }
+        return head +
+          `<path fill-rule="evenodd" fill="${outer}" d="M0,0H${W}V${H}H0Z ${hole}"/>` +
+          (dark ? `<filter id="g"><feGaussianBlur stdDeviation="${(m * 0.01).toFixed(1)}"/></filter><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${ring1}" stroke-width="${(m * 0.03).toFixed(1)}" filter="url(#g)"/>` : "") +
+          `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${ring1}" stroke-width="${(m * 0.022).toFixed(1)}"/>` +
+          `<circle cx="${cx}" cy="${cy}" r="${(r * 0.955).toFixed(1)}" fill="none" stroke="${ring2}" stroke-width="${(m * 0.007).toFixed(1)}"/>` +
+          dots + `</svg>`
+      }
+
       case "tape": {
         // 四すみをマスキングテープで留めたような感じ
         const tw = m * 0.22
@@ -1321,6 +1496,7 @@ export default class extends Controller {
     this.lastState = state
     this.updateHistoryButtons()
     this.scheduleDraftSave() // 💾 K24
+    this.dispatch("changed") // 🧑‍🎨 ほめてくれる子に知らせる（pixel_buddy_controller.js）
   }
 
   async undo() {
@@ -1775,6 +1951,7 @@ export default class extends Controller {
       const blob = await (await fetch(dataUrl)).blob()
       const fileName = `kotobouquet_${this.timestamp()}.png`
       const file = new File([blob], fileName, { type: "image/png" })
+      this.dispatch("exported") // 🧑‍🎨 ほめてくれる子に知らせる
 
       // スマホ・タブレット（指で操作する端末）だけ共有メニューを使う。PCはふつうにダウンロード
       const isTouchDevice = window.matchMedia("(pointer: coarse)").matches

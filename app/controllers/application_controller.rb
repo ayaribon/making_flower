@@ -2,7 +2,7 @@ class ApplicationController < ActionController::Base
   # どの画面もログインが必要（ログイン画面だけは SessionsController で外す）
   before_action :require_login
 
-  helper_method :current_user, :logged_in?
+  helper_method :current_user, :logged_in?, :login_id
 
   private
 
@@ -13,6 +13,11 @@ class ApplicationController < ActionController::Base
 
   def logged_in?
     current_user.present?
+  end
+
+  # ログインごとに変わる番号。前からログインしていた人には、ここで1回だけ作る
+  def login_id
+    session[:login_id] ||= SecureRandom.hex(8)
   end
 
   def require_login

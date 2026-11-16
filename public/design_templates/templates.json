@@ -1317,6 +1317,3082 @@
         }
       ],
       "frame": "stars"
+    },
+    {
+      "id": "utawaku-16x9",
+      "label": "歌枠",
+      "icon": "🎤",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#05030f",
+        "#b84dff"
+      ],
+      "background": {
+        "material": "galaxy"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.76,
+          "y": 0.54,
+          "w": 0.4,
+          "h": 0.9
+        },
+        {
+          "type": "part",
+          "material": "sparkle4",
+          "x": 0.07,
+          "y": 0.14,
+          "h": 0.12,
+          "angle": -10
+        },
+        {
+          "type": "part",
+          "material": "star",
+          "x": 0.55,
+          "y": 0.12,
+          "h": 0.09,
+          "angle": 15
+        },
+        {
+          "type": "text",
+          "text": "〇〇の",
+          "style": "yurukawa",
+          "x": 0.3,
+          "y": 0.2,
+          "w": 0.5,
+          "size": 70,
+          "props": {
+            "fill": "#ffd1f0"
+          }
+        },
+        {
+          "type": "text",
+          "text": "歌枠",
+          "style": "neon",
+          "x": 0.3,
+          "y": 0.45,
+          "w": 0.56,
+          "size": 210
+        },
+        {
+          "type": "text",
+          "text": "リクエスト大歓迎♪",
+          "style": "puffy",
+          "x": 0.3,
+          "y": 0.7,
+          "w": 0.56,
+          "size": 60
+        },
+        {
+          "type": "text",
+          "text": "11.21 Sat 22:00",
+          "style": "news",
+          "x": 0.3,
+          "y": 0.86,
+          "w": 0.5,
+          "size": 40
+        }
+      ],
+      "filters": [
+        {
+          "key": "sparkle",
+          "strength": 0.5
+        },
+        {
+          "key": "vignette",
+          "strength": 0.35
+        }
+      ],
+      "frame": "stars"
+    },
+    {
+      "id": "citypop-16x9",
+      "label": "シティポップ歌枠",
+      "icon": "🌆",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#2a1b5e",
+        "#ffb35c"
+      ],
+      "background": {
+        "material": "sunset-city"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.24,
+          "y": 0.52,
+          "w": 0.38,
+          "h": 0.84
+        },
+        {
+          "type": "text",
+          "text": "CITY NIGHT",
+          "style": "neon",
+          "x": 0.68,
+          "y": 0.3,
+          "w": 0.6,
+          "size": 110,
+          "props": {
+            "fill": "#ffe3f5"
+          }
+        },
+        {
+          "type": "text",
+          "text": "80's 縛り歌枠",
+          "style": "puffy",
+          "x": 0.68,
+          "y": 0.55,
+          "w": 0.56,
+          "size": 76
+        },
+        {
+          "type": "text",
+          "text": "〇月〇日 21:00〜",
+          "style": "news",
+          "x": 0.68,
+          "y": 0.78,
+          "w": 0.5,
+          "size": 44
+        }
+      ],
+      "filters": [
+        {
+          "key": "retro",
+          "strength": 0.35
+        },
+        {
+          "key": "light-leak",
+          "strength": 0.3
+        }
+      ]
+    },
+    {
+      "id": "retrowave-16x9",
+      "label": "レトロウェーブ",
+      "icon": "🌇",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#12002b",
+        "#ff3c8e"
+      ],
+      "background": {
+        "material": "synthwave"
+      },
+      "items": [
+        {
+          "type": "text",
+          "text": "RETRO",
+          "style": "pixel",
+          "x": 0.5,
+          "y": 0.2,
+          "w": 0.8,
+          "size": 150,
+          "props": {
+            "fill": "#ffe66d"
+          }
+        },
+        {
+          "type": "text",
+          "text": "NIGHT STREAM",
+          "style": "neon",
+          "x": 0.5,
+          "y": 0.4,
+          "w": 0.8,
+          "size": 70
+        },
+        {
+          "type": "part",
+          "material": "pixel-cursor",
+          "x": 0.86,
+          "y": 0.82,
+          "h": 0.12
+        },
+        {
+          "type": "text",
+          "text": "〇〇を遊ぶ！",
+          "style": "gaming",
+          "x": 0.5,
+          "y": 0.86,
+          "w": 0.7,
+          "size": 70
+        }
+      ],
+      "filters": [
+        {
+          "key": "scanline",
+          "strength": 0.4
+        }
+      ],
+      "frame": "monitor"
+    },
+    {
+      "id": "newyear-16x9",
+      "label": "お正月配信",
+      "icon": "🎍",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#1d3557",
+        "#e63946"
+      ],
+      "background": {
+        "material": "seigaiha"
+      },
+      "items": [
+        {
+          "type": "text",
+          "text": "謹賀新年",
+          "style": "battle",
+          "x": 0.4,
+          "y": 0.38,
+          "w": 0.72,
+          "size": 170
+        },
+        {
+          "type": "text",
+          "text": "あけましておめでとう配信",
+          "style": "neon",
+          "x": 0.4,
+          "y": 0.62,
+          "w": 0.72,
+          "size": 58
+        },
+        {
+          "type": "text",
+          "text": "2027.1.1 0:00〜",
+          "style": "news",
+          "x": 0.4,
+          "y": 0.8,
+          "w": 0.5,
+          "size": 44
+        },
+        {
+          "type": "part",
+          "material": "sakura",
+          "x": 0.08,
+          "y": 0.14,
+          "h": 0.12,
+          "angle": -15
+        },
+        {
+          "type": "part",
+          "material": "sakura",
+          "x": 0.7,
+          "y": 0.86,
+          "h": 0.1,
+          "angle": 20
+        }
+      ],
+      "filters": [
+        {
+          "key": "vignette",
+          "strength": 0.3
+        }
+      ],
+      "frame": "tape"
+    },
+    {
+      "id": "christmas-16x9",
+      "label": "クリスマス配信",
+      "icon": "🎄",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#0b1a3a",
+        "#e63946"
+      ],
+      "background": {
+        "material": "snow-night"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.76,
+          "y": 0.55,
+          "w": 0.38,
+          "h": 0.86
+        },
+        {
+          "type": "part",
+          "material": "snowflake",
+          "x": 0.08,
+          "y": 0.14,
+          "h": 0.12
+        },
+        {
+          "type": "part",
+          "material": "star",
+          "x": 0.58,
+          "y": 0.1,
+          "h": 0.1,
+          "angle": 12
+        },
+        {
+          "type": "part",
+          "material": "snowflake",
+          "x": 0.6,
+          "y": 0.86,
+          "h": 0.08
+        },
+        {
+          "type": "text",
+          "text": "Merry",
+          "style": "neon",
+          "x": 0.32,
+          "y": 0.24,
+          "w": 0.56,
+          "size": 110,
+          "props": {
+            "fill": "#ffd6d6"
+          }
+        },
+        {
+          "type": "text",
+          "text": "Christmas",
+          "style": "neon",
+          "x": 0.32,
+          "y": 0.43,
+          "w": 0.6,
+          "size": 120,
+          "props": {
+            "fill": "#d6ffe3"
+          }
+        },
+        {
+          "type": "text",
+          "text": "クリスマス歌枠",
+          "style": "yurukawa",
+          "x": 0.32,
+          "y": 0.65,
+          "w": 0.6,
+          "size": 70,
+          "props": {
+            "fill": "#ff6b6b"
+          }
+        },
+        {
+          "type": "text",
+          "text": "12.24 Thu 21:00",
+          "style": "news",
+          "x": 0.32,
+          "y": 0.84,
+          "w": 0.5,
+          "size": 42
+        }
+      ],
+      "filters": [
+        {
+          "key": "sparkle",
+          "strength": 0.55
+        }
+      ],
+      "frame": "stars"
+    },
+    {
+      "id": "halloween-16x9",
+      "label": "ハロウィン配信",
+      "icon": "🎃",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#1a0b2e",
+        "#ff7a1a"
+      ],
+      "background": {
+        "gradient": [
+          "#1a0b2e",
+          "#7a2e00",
+          "vertical"
+        ]
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.24,
+          "y": 0.54,
+          "w": 0.38,
+          "h": 0.86
+        },
+        {
+          "type": "part",
+          "material": "cat-ears",
+          "x": 0.24,
+          "y": 0.1,
+          "h": 0.12
+        },
+        {
+          "type": "part",
+          "material": "paw",
+          "x": 0.92,
+          "y": 0.86,
+          "h": 0.12,
+          "angle": 15
+        },
+        {
+          "type": "text",
+          "text": "HAPPY",
+          "style": "battle",
+          "x": 0.68,
+          "y": 0.24,
+          "w": 0.56,
+          "size": 100
+        },
+        {
+          "type": "text",
+          "text": "HALLOWEEN",
+          "style": "battle",
+          "x": 0.68,
+          "y": 0.43,
+          "w": 0.6,
+          "size": 110
+        },
+        {
+          "type": "text",
+          "text": "仮装して配信するよ",
+          "style": "neon",
+          "x": 0.68,
+          "y": 0.64,
+          "w": 0.56,
+          "size": 54,
+          "props": {
+            "fill": "#ffcf99"
+          }
+        },
+        {
+          "type": "text",
+          "text": "10.31 Sat 21:00",
+          "style": "news",
+          "x": 0.68,
+          "y": 0.82,
+          "w": 0.5,
+          "size": 42
+        }
+      ],
+      "filters": [
+        {
+          "key": "noise",
+          "strength": 0.2
+        },
+        {
+          "key": "vignette",
+          "strength": 0.55
+        }
+      ]
+    },
+    {
+      "id": "birthday-16x9",
+      "label": "誕生日配信",
+      "icon": "🎂",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#ffb6d9",
+        "#fff7a8"
+      ],
+      "background": {
+        "material": "candy-stripe"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.5,
+          "y": 0.5,
+          "w": 0.36,
+          "h": 0.7
+        },
+        {
+          "type": "part",
+          "material": "crown",
+          "x": 0.5,
+          "y": 0.1,
+          "h": 0.14
+        },
+        {
+          "type": "part",
+          "material": "heart",
+          "x": 0.1,
+          "y": 0.82,
+          "h": 0.16,
+          "angle": -12
+        },
+        {
+          "type": "part",
+          "material": "heart",
+          "x": 0.9,
+          "y": 0.2,
+          "h": 0.14,
+          "angle": 14
+        },
+        {
+          "type": "text",
+          "text": "HAPPY",
+          "style": "puffy",
+          "x": 0.17,
+          "y": 0.32,
+          "w": 0.3,
+          "size": 90,
+          "props": {
+            "fill": "#ff5fa2"
+          }
+        },
+        {
+          "type": "text",
+          "text": "BIRTHDAY",
+          "style": "puffy",
+          "x": 0.83,
+          "y": 0.62,
+          "w": 0.3,
+          "size": 80,
+          "props": {
+            "fill": "#ff5fa2"
+          }
+        },
+        {
+          "type": "text",
+          "text": "〇〇の誕生日",
+          "style": "yurukawa",
+          "x": 0.5,
+          "y": 0.92,
+          "w": 0.6,
+          "size": 52,
+          "props": {
+            "fill": "#ffffff"
+          }
+        }
+      ],
+      "filters": [
+        {
+          "key": "sparkle",
+          "strength": 0.6
+        }
+      ],
+      "frame": "hearts"
+    },
+    {
+      "id": "collab-16x9",
+      "label": "コラボ配信",
+      "icon": "🤝",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#ff6a00",
+        "#ffe600"
+      ],
+      "background": {
+        "material": "burst"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.2,
+          "y": 0.5,
+          "w": 0.32,
+          "h": 0.72
+        },
+        {
+          "type": "placeholder",
+          "x": 0.8,
+          "y": 0.5,
+          "w": 0.32,
+          "h": 0.72
+        },
+        {
+          "type": "text",
+          "text": "×",
+          "style": "impact",
+          "x": 0.5,
+          "y": 0.46,
+          "w": 0.2,
+          "size": 200
+        },
+        {
+          "type": "text",
+          "text": "コラボ配信",
+          "style": "impact",
+          "x": 0.5,
+          "y": 0.12,
+          "w": 0.6,
+          "size": 90
+        },
+        {
+          "type": "part",
+          "material": "name-tag",
+          "x": 0.2,
+          "y": 0.9,
+          "h": 0.12
+        },
+        {
+          "type": "part",
+          "material": "name-tag",
+          "x": 0.8,
+          "y": 0.9,
+          "h": 0.12
+        },
+        {
+          "type": "text",
+          "text": "〇〇",
+          "style": "news",
+          "x": 0.2,
+          "y": 0.9,
+          "w": 0.24,
+          "size": 36,
+          "props": {
+            "fill": "#333333"
+          }
+        },
+        {
+          "type": "text",
+          "text": "〇〇",
+          "style": "news",
+          "x": 0.8,
+          "y": 0.9,
+          "w": 0.24,
+          "size": 36,
+          "props": {
+            "fill": "#333333"
+          }
+        }
+      ],
+      "filters": [
+        {
+          "key": "vignette",
+          "strength": 0.3
+        }
+      ]
+    },
+    {
+      "id": "watch-16x9",
+      "label": "同時視聴",
+      "icon": "🎬",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#140308",
+        "#a3172f"
+      ],
+      "background": {
+        "material": "film-stage"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.5,
+          "y": 0.48,
+          "w": 0.5,
+          "h": 0.56
+        },
+        {
+          "type": "text",
+          "text": "同時視聴",
+          "style": "impact",
+          "x": 0.5,
+          "y": 0.11,
+          "w": 0.6,
+          "size": 80,
+          "props": {
+            "fill": "#fff6d6"
+          }
+        },
+        {
+          "type": "part",
+          "material": "telop-band",
+          "x": 0.5,
+          "y": 0.86,
+          "h": 0.14,
+          "stretch": 2.2
+        },
+        {
+          "type": "text",
+          "text": "〇〇をみんなで観る！",
+          "style": "news",
+          "x": 0.5,
+          "y": 0.86,
+          "w": 0.6,
+          "size": 46
+        },
+        {
+          "type": "text",
+          "text": "ネタバレなし",
+          "style": "yurukawa",
+          "x": 0.84,
+          "y": 0.7,
+          "w": 0.24,
+          "size": 36,
+          "angle": -8,
+          "props": {
+            "fill": "#ffe600"
+          }
+        }
+      ],
+      "filters": [
+        {
+          "key": "vignette",
+          "strength": 0.6
+        },
+        {
+          "key": "noise",
+          "strength": 0.12
+        }
+      ]
+    },
+    {
+      "id": "work-16x9",
+      "label": "作業・勉強配信",
+      "icon": "🌿",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#d8f5b0",
+        "#1f4d33"
+      ],
+      "background": {
+        "material": "forest-light"
+      },
+      "items": [
+        {
+          "type": "text",
+          "text": "作業用",
+          "style": "yurukawa",
+          "x": 0.32,
+          "y": 0.3,
+          "w": 0.5,
+          "size": 90,
+          "props": {
+            "fill": "#ffffff"
+          }
+        },
+        {
+          "type": "text",
+          "text": "もくもく配信",
+          "style": "puffy",
+          "x": 0.32,
+          "y": 0.5,
+          "w": 0.58,
+          "size": 110,
+          "props": {
+            "fill": "#fffbe0"
+          }
+        },
+        {
+          "type": "text",
+          "text": "いっしょにがんばろう",
+          "style": "marine",
+          "x": 0.32,
+          "y": 0.7,
+          "w": 0.56,
+          "size": 50
+        },
+        {
+          "type": "part",
+          "material": "light-dots",
+          "x": 0.8,
+          "y": 0.3,
+          "h": 0.3
+        },
+        {
+          "type": "part",
+          "material": "pixel-hourglass",
+          "x": 0.8,
+          "y": 0.7,
+          "h": 0.24
+        }
+      ],
+      "filters": [
+        {
+          "key": "light-leak",
+          "strength": 0.45
+        }
+      ],
+      "frame": "polaroid"
+    },
+    {
+      "id": "rain-16x9",
+      "label": "雨の日雑談",
+      "icon": "☔",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#0b1a2e",
+        "#7cc8ff"
+      ],
+      "background": {
+        "material": "rainy-night"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.76,
+          "y": 0.54,
+          "w": 0.38,
+          "h": 0.86
+        },
+        {
+          "type": "part",
+          "material": "moko-bubble",
+          "x": 0.3,
+          "y": 0.42,
+          "h": 0.56
+        },
+        {
+          "type": "text",
+          "text": "雨の日の",
+          "style": "yurukawa",
+          "x": 0.3,
+          "y": 0.34,
+          "w": 0.4,
+          "size": 60,
+          "props": {
+            "fill": "#5a7aa8"
+          }
+        },
+        {
+          "type": "text",
+          "text": "まったり雑談",
+          "style": "marine",
+          "x": 0.3,
+          "y": 0.5,
+          "w": 0.44,
+          "size": 78
+        },
+        {
+          "type": "text",
+          "text": "おたよりも読むよ",
+          "style": "news",
+          "x": 0.3,
+          "y": 0.84,
+          "w": 0.5,
+          "size": 42
+        }
+      ],
+      "filters": [
+        {
+          "key": "tint",
+          "strength": 0.15,
+          "color": "#5aa0ff"
+        }
+      ]
+    },
+    {
+      "id": "endurance-16x9",
+      "label": "耐久配信",
+      "icon": "⏳",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#05030f",
+        "#2ec5ff"
+      ],
+      "background": {
+        "material": "galaxy"
+      },
+      "items": [
+        {
+          "type": "part",
+          "material": "pixel-hourglass",
+          "x": 0.12,
+          "y": 0.5,
+          "h": 0.36
+        },
+        {
+          "type": "text",
+          "text": "〇〇するまで",
+          "style": "gaming",
+          "x": 0.56,
+          "y": 0.24,
+          "w": 0.72,
+          "size": 90
+        },
+        {
+          "type": "text",
+          "text": "終われない",
+          "style": "impact",
+          "x": 0.56,
+          "y": 0.48,
+          "w": 0.76,
+          "size": 140
+        },
+        {
+          "type": "text",
+          "text": "耐久配信",
+          "style": "neon",
+          "x": 0.56,
+          "y": 0.72,
+          "w": 0.5,
+          "size": 80
+        },
+        {
+          "type": "text",
+          "text": "目標：〇〇",
+          "style": "news",
+          "x": 0.56,
+          "y": 0.88,
+          "w": 0.5,
+          "size": 40
+        }
+      ],
+      "filters": [
+        {
+          "key": "scanline",
+          "strength": 0.25
+        },
+        {
+          "key": "vignette",
+          "strength": 0.45
+        }
+      ],
+      "frame": "monitor"
+    },
+    {
+      "id": "waiting-16x9",
+      "label": "待機画面",
+      "icon": "⏰",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#cfe8ff",
+        "#ffffff"
+      ],
+      "background": {
+        "material": "clouds"
+      },
+      "items": [
+        {
+          "type": "text",
+          "text": "まもなく",
+          "style": "yurukawa",
+          "x": 0.5,
+          "y": 0.3,
+          "w": 0.5,
+          "size": 80
+        },
+        {
+          "type": "text",
+          "text": "はじまります",
+          "style": "puffy",
+          "x": 0.5,
+          "y": 0.5,
+          "w": 0.7,
+          "size": 130,
+          "props": {
+            "fill": "#7ab8f5"
+          }
+        },
+        {
+          "type": "text",
+          "text": "少々お待ちください",
+          "style": "news",
+          "x": 0.5,
+          "y": 0.72,
+          "w": 0.5,
+          "size": 44,
+          "props": {
+            "fill": "#5a6b8a"
+          }
+        },
+        {
+          "type": "part",
+          "material": "pixel-hourglass",
+          "x": 0.86,
+          "y": 0.78,
+          "h": 0.2
+        },
+        {
+          "type": "part",
+          "material": "sparkle4",
+          "x": 0.14,
+          "y": 0.2,
+          "h": 0.12
+        }
+      ],
+      "filters": [
+        {
+          "key": "dots",
+          "strength": 0.15
+        }
+      ],
+      "frame": "ribbon"
+    },
+    {
+      "id": "break-16x9",
+      "label": "休憩中",
+      "icon": "☕",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#ffe3f1",
+        "#c9b8ff"
+      ],
+      "background": {
+        "material": "pastel-dots"
+      },
+      "items": [
+        {
+          "type": "text",
+          "text": "休憩中",
+          "style": "yurukawa",
+          "x": 0.5,
+          "y": 0.42,
+          "w": 0.6,
+          "size": 180
+        },
+        {
+          "type": "text",
+          "text": "すぐ戻ります",
+          "style": "puffy",
+          "x": 0.5,
+          "y": 0.68,
+          "w": 0.5,
+          "size": 70,
+          "props": {
+            "fill": "#9b7bff"
+          }
+        },
+        {
+          "type": "part",
+          "material": "paw",
+          "x": 0.16,
+          "y": 0.8,
+          "h": 0.14,
+          "angle": -18
+        },
+        {
+          "type": "part",
+          "material": "paw",
+          "x": 0.84,
+          "y": 0.22,
+          "h": 0.12,
+          "angle": 20
+        }
+      ],
+      "filters": [],
+      "frame": "hearts"
+    },
+    {
+      "id": "ending-16x9",
+      "label": "おわりの画面",
+      "icon": "👋",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#fff3e0",
+        "#ff8ccf"
+      ],
+      "background": {
+        "material": "gingham"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.24,
+          "y": 0.5,
+          "w": 0.34,
+          "h": 0.74
+        },
+        {
+          "type": "text",
+          "text": "ご視聴",
+          "style": "yurukawa",
+          "x": 0.68,
+          "y": 0.24,
+          "w": 0.56,
+          "size": 90
+        },
+        {
+          "type": "text",
+          "text": "ありがとう！",
+          "style": "yurukawa",
+          "x": 0.68,
+          "y": 0.44,
+          "w": 0.6,
+          "size": 100
+        },
+        {
+          "type": "text",
+          "text": "チャンネル登録・高評価",
+          "style": "news",
+          "x": 0.68,
+          "y": 0.66,
+          "w": 0.6,
+          "size": 44,
+          "props": {
+            "fill": "#555555"
+          }
+        },
+        {
+          "type": "text",
+          "text": "よろしくね",
+          "style": "news",
+          "x": 0.68,
+          "y": 0.76,
+          "w": 0.6,
+          "size": 44,
+          "props": {
+            "fill": "#555555"
+          }
+        },
+        {
+          "type": "part",
+          "material": "arrow",
+          "x": 0.94,
+          "y": 0.9,
+          "h": 0.12,
+          "angle": 90
+        }
+      ],
+      "filters": [],
+      "frame": "ribbon"
+    },
+    {
+      "id": "utawaku-9x16",
+      "label": "歌枠の告知",
+      "icon": "🎤",
+      "ratio": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "preview": [
+        "#05030f",
+        "#b84dff"
+      ],
+      "background": {
+        "material": "galaxy"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.5,
+          "y": 0.58,
+          "w": 0.86,
+          "h": 0.46
+        },
+        {
+          "type": "text",
+          "text": "歌枠",
+          "style": "neon",
+          "x": 0.5,
+          "y": 0.13,
+          "w": 0.86,
+          "size": 200
+        },
+        {
+          "type": "text",
+          "text": "リクエスト大歓迎♪",
+          "style": "puffy",
+          "x": 0.5,
+          "y": 0.25,
+          "w": 0.86,
+          "size": 70
+        },
+        {
+          "type": "text",
+          "text": "11.21 Sat 22:00",
+          "style": "news",
+          "x": 0.5,
+          "y": 0.88,
+          "w": 0.8,
+          "size": 60
+        },
+        {
+          "type": "part",
+          "material": "sparkle4",
+          "x": 0.12,
+          "y": 0.06,
+          "h": 0.05
+        },
+        {
+          "type": "part",
+          "material": "star",
+          "x": 0.88,
+          "y": 0.32,
+          "h": 0.05,
+          "angle": 15
+        }
+      ],
+      "filters": [
+        {
+          "key": "sparkle",
+          "strength": 0.5
+        }
+      ],
+      "frame": "stars"
+    },
+    {
+      "id": "christmas-9x16",
+      "label": "クリスマスの告知",
+      "icon": "🎄",
+      "ratio": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "preview": [
+        "#0b1a3a",
+        "#e63946"
+      ],
+      "background": {
+        "material": "snow-night"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.5,
+          "y": 0.56,
+          "w": 0.84,
+          "h": 0.44
+        },
+        {
+          "type": "text",
+          "text": "Merry Christmas",
+          "style": "neon",
+          "x": 0.5,
+          "y": 0.13,
+          "w": 0.9,
+          "size": 110,
+          "props": {
+            "fill": "#ffd6d6"
+          }
+        },
+        {
+          "type": "text",
+          "text": "クリスマス歌枠",
+          "style": "yurukawa",
+          "x": 0.5,
+          "y": 0.23,
+          "w": 0.86,
+          "size": 80,
+          "props": {
+            "fill": "#ff6b6b"
+          }
+        },
+        {
+          "type": "text",
+          "text": "12.24 Thu 21:00",
+          "style": "news",
+          "x": 0.5,
+          "y": 0.86,
+          "w": 0.8,
+          "size": 60
+        },
+        {
+          "type": "part",
+          "material": "snowflake",
+          "x": 0.12,
+          "y": 0.05,
+          "h": 0.05
+        },
+        {
+          "type": "part",
+          "material": "snowflake",
+          "x": 0.88,
+          "y": 0.94,
+          "h": 0.04
+        }
+      ],
+      "filters": [
+        {
+          "key": "sparkle",
+          "strength": 0.55
+        }
+      ],
+      "frame": "stars"
+    },
+    {
+      "id": "citypop-9x16",
+      "label": "シティポップ",
+      "icon": "🌆",
+      "ratio": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "preview": [
+        "#2a1b5e",
+        "#ffb35c"
+      ],
+      "background": {
+        "material": "sunset-city"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.5,
+          "y": 0.46,
+          "w": 0.8,
+          "h": 0.4
+        },
+        {
+          "type": "text",
+          "text": "CITY NIGHT",
+          "style": "neon",
+          "x": 0.5,
+          "y": 0.12,
+          "w": 0.9,
+          "size": 120,
+          "props": {
+            "fill": "#ffe3f5"
+          }
+        },
+        {
+          "type": "text",
+          "text": "80's 縛り歌枠",
+          "style": "puffy",
+          "x": 0.5,
+          "y": 0.76,
+          "w": 0.86,
+          "size": 90
+        },
+        {
+          "type": "text",
+          "text": "〇月〇日 21:00〜",
+          "style": "news",
+          "x": 0.5,
+          "y": 0.86,
+          "w": 0.8,
+          "size": 56
+        }
+      ],
+      "filters": [
+        {
+          "key": "retro",
+          "strength": 0.35
+        }
+      ]
+    },
+    {
+      "id": "birthday-9x16",
+      "label": "誕生日の告知",
+      "icon": "🎂",
+      "ratio": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "preview": [
+        "#ffb6d9",
+        "#fff7a8"
+      ],
+      "background": {
+        "material": "candy-stripe"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.5,
+          "y": 0.5,
+          "w": 0.8,
+          "h": 0.4
+        },
+        {
+          "type": "part",
+          "material": "crown",
+          "x": 0.5,
+          "y": 0.08,
+          "h": 0.07
+        },
+        {
+          "type": "text",
+          "text": "HAPPY BIRTHDAY",
+          "style": "puffy",
+          "x": 0.5,
+          "y": 0.2,
+          "w": 0.9,
+          "size": 100,
+          "props": {
+            "fill": "#ff5fa2"
+          }
+        },
+        {
+          "type": "text",
+          "text": "〇〇の誕生日配信",
+          "style": "yurukawa",
+          "x": 0.5,
+          "y": 0.8,
+          "w": 0.9,
+          "size": 76,
+          "props": {
+            "fill": "#ffffff"
+          }
+        },
+        {
+          "type": "text",
+          "text": "〇月〇日 21:00",
+          "style": "news",
+          "x": 0.5,
+          "y": 0.88,
+          "w": 0.8,
+          "size": 54,
+          "props": {
+            "fill": "#ff5fa2"
+          }
+        }
+      ],
+      "filters": [
+        {
+          "key": "sparkle",
+          "strength": 0.6
+        }
+      ],
+      "frame": "hearts"
+    },
+    {
+      "id": "newyear-9x16",
+      "label": "お正月の告知",
+      "icon": "🎍",
+      "ratio": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "preview": [
+        "#1d3557",
+        "#e63946"
+      ],
+      "background": {
+        "material": "seigaiha"
+      },
+      "items": [
+        {
+          "type": "text",
+          "text": "謹賀新年",
+          "style": "battle",
+          "x": 0.5,
+          "y": 0.36,
+          "w": 0.9,
+          "size": 190
+        },
+        {
+          "type": "text",
+          "text": "今年もよろしく",
+          "style": "neon",
+          "x": 0.5,
+          "y": 0.5,
+          "w": 0.86,
+          "size": 80
+        },
+        {
+          "type": "text",
+          "text": "おねがいします",
+          "style": "neon",
+          "x": 0.5,
+          "y": 0.57,
+          "w": 0.86,
+          "size": 80
+        },
+        {
+          "type": "part",
+          "material": "sakura",
+          "x": 0.16,
+          "y": 0.8,
+          "h": 0.07,
+          "angle": -15
+        },
+        {
+          "type": "part",
+          "material": "sakura",
+          "x": 0.84,
+          "y": 0.86,
+          "h": 0.05,
+          "angle": 20
+        }
+      ],
+      "filters": [
+        {
+          "key": "vignette",
+          "strength": 0.3
+        }
+      ]
+    },
+    {
+      "id": "schedule-1x1",
+      "label": "今週の予定",
+      "icon": "📅",
+      "ratio": "1:1",
+      "width": 1080,
+      "height": 1080,
+      "preview": [
+        "#fff3e0",
+        "#ff8ccf"
+      ],
+      "background": {
+        "material": "gingham"
+      },
+      "items": [
+        {
+          "type": "text",
+          "text": "今週の予定",
+          "style": "puffy",
+          "x": 0.5,
+          "y": 0.11,
+          "w": 0.86,
+          "size": 96,
+          "props": {
+            "fill": "#ff5fa2"
+          }
+        },
+        {
+          "type": "text",
+          "text": "月　21:00　〇〇",
+          "style": "news",
+          "x": 0.5,
+          "y": 0.25,
+          "w": 0.8,
+          "size": 52,
+          "props": {
+            "fill": "#444444"
+          }
+        },
+        {
+          "type": "text",
+          "text": "火　21:00　〇〇",
+          "style": "news",
+          "x": 0.5,
+          "y": 0.35,
+          "w": 0.8,
+          "size": 52,
+          "props": {
+            "fill": "#444444"
+          }
+        },
+        {
+          "type": "text",
+          "text": "水　21:00　〇〇",
+          "style": "news",
+          "x": 0.5,
+          "y": 0.45,
+          "w": 0.8,
+          "size": 52,
+          "props": {
+            "fill": "#444444"
+          }
+        },
+        {
+          "type": "text",
+          "text": "木　21:00　〇〇",
+          "style": "news",
+          "x": 0.5,
+          "y": 0.55,
+          "w": 0.8,
+          "size": 52,
+          "props": {
+            "fill": "#444444"
+          }
+        },
+        {
+          "type": "text",
+          "text": "金　21:00　〇〇",
+          "style": "news",
+          "x": 0.5,
+          "y": 0.65,
+          "w": 0.8,
+          "size": 52,
+          "props": {
+            "fill": "#444444"
+          }
+        },
+        {
+          "type": "text",
+          "text": "土　21:00　〇〇",
+          "style": "news",
+          "x": 0.5,
+          "y": 0.75,
+          "w": 0.8,
+          "size": 52,
+          "props": {
+            "fill": "#444444"
+          }
+        },
+        {
+          "type": "text",
+          "text": "日　21:00　〇〇",
+          "style": "news",
+          "x": 0.5,
+          "y": 0.8500000000000001,
+          "w": 0.8,
+          "size": 52,
+          "props": {
+            "fill": "#444444"
+          }
+        },
+        {
+          "type": "part",
+          "material": "paw",
+          "x": 0.9,
+          "y": 0.92,
+          "h": 0.08,
+          "angle": 15
+        }
+      ],
+      "filters": [],
+      "frame": "ribbon"
+    },
+    {
+      "id": "thanks-1x1",
+      "label": "ありがとう",
+      "icon": "💐",
+      "ratio": "1:1",
+      "width": 1080,
+      "height": 1080,
+      "preview": [
+        "#d8f5b0",
+        "#1f4d33"
+      ],
+      "background": {
+        "material": "forest-light"
+      },
+      "items": [
+        {
+          "type": "text",
+          "text": "ありがとう",
+          "style": "yurukawa",
+          "x": 0.5,
+          "y": 0.42,
+          "w": 0.9,
+          "size": 150,
+          "props": {
+            "fill": "#ffffff"
+          }
+        },
+        {
+          "type": "text",
+          "text": "〇〇人 達成！",
+          "style": "puffy",
+          "x": 0.5,
+          "y": 0.62,
+          "w": 0.8,
+          "size": 90,
+          "props": {
+            "fill": "#fffbe0"
+          }
+        },
+        {
+          "type": "part",
+          "material": "heart",
+          "x": 0.16,
+          "y": 0.16,
+          "h": 0.14,
+          "angle": -14
+        },
+        {
+          "type": "part",
+          "material": "light-dots",
+          "x": 0.84,
+          "y": 0.84,
+          "h": 0.2
+        }
+      ],
+      "filters": [
+        {
+          "key": "light-leak",
+          "strength": 0.4
+        },
+        {
+          "key": "sparkle",
+          "strength": 0.4
+        }
+      ],
+      "frame": "polaroid"
+    },
+    {
+      "id": "retro-1x1",
+      "label": "レトロな告知",
+      "icon": "🌇",
+      "ratio": "1:1",
+      "width": 1080,
+      "height": 1080,
+      "preview": [
+        "#12002b",
+        "#ff3c8e"
+      ],
+      "background": {
+        "material": "synthwave"
+      },
+      "items": [
+        {
+          "type": "text",
+          "text": "NEW",
+          "style": "pixel",
+          "x": 0.5,
+          "y": 0.18,
+          "w": 0.7,
+          "size": 180,
+          "props": {
+            "fill": "#ffe66d"
+          }
+        },
+        {
+          "type": "text",
+          "text": "〇〇はじめます",
+          "style": "gaming",
+          "x": 0.5,
+          "y": 0.36,
+          "w": 0.9,
+          "size": 90
+        },
+        {
+          "type": "part",
+          "material": "pixel-heart",
+          "x": 0.86,
+          "y": 0.86,
+          "h": 0.1
+        }
+      ],
+      "filters": [
+        {
+          "key": "scanline",
+          "strength": 0.45
+        }
+      ],
+      "frame": "pixel"
+    },
+    {
+      "id": "comingsoon-1x1",
+      "label": "COMING SOON",
+      "icon": "🎬",
+      "ratio": "1:1",
+      "width": 1080,
+      "height": 1080,
+      "preview": [
+        "#140308",
+        "#a3172f"
+      ],
+      "background": {
+        "material": "film-stage"
+      },
+      "items": [
+        {
+          "type": "text",
+          "text": "COMING",
+          "style": "impact",
+          "x": 0.5,
+          "y": 0.38,
+          "w": 0.7,
+          "size": 150,
+          "props": {
+            "fill": "#fff6d6"
+          }
+        },
+        {
+          "type": "text",
+          "text": "SOON",
+          "style": "impact",
+          "x": 0.5,
+          "y": 0.56,
+          "w": 0.7,
+          "size": 150,
+          "props": {
+            "fill": "#fff6d6"
+          }
+        },
+        {
+          "type": "text",
+          "text": "〇月〇日 公開",
+          "style": "news",
+          "x": 0.5,
+          "y": 0.76,
+          "w": 0.7,
+          "size": 54
+        }
+      ],
+      "filters": [
+        {
+          "key": "vignette",
+          "strength": 0.6
+        },
+        {
+          "key": "noise",
+          "strength": 0.15
+        }
+      ]
+    },
+    {
+      "id": "newyear-1x1",
+      "label": "謹賀新年",
+      "icon": "🎍",
+      "ratio": "1:1",
+      "width": 1080,
+      "height": 1080,
+      "preview": [
+        "#1d3557",
+        "#e63946"
+      ],
+      "background": {
+        "material": "seigaiha"
+      },
+      "items": [
+        {
+          "type": "text",
+          "text": "謹賀新年",
+          "style": "battle",
+          "x": 0.42,
+          "y": 0.5,
+          "w": 0.8,
+          "size": 170
+        },
+        {
+          "type": "text",
+          "text": "2027",
+          "style": "neon",
+          "x": 0.42,
+          "y": 0.7,
+          "w": 0.5,
+          "size": 80
+        },
+        {
+          "type": "part",
+          "material": "sakura",
+          "x": 0.14,
+          "y": 0.86,
+          "h": 0.1,
+          "angle": -15
+        }
+      ],
+      "filters": [
+        {
+          "key": "vignette",
+          "strength": 0.3
+        }
+      ],
+      "frame": "tape"
+    },
+    {
+      "id": "newsong-1x1",
+      "label": "新曲・歌ってみた投稿",
+      "icon": "🎵",
+      "ratio": "1:1",
+      "width": 1080,
+      "height": 1080,
+      "preview": [
+        "#05030f",
+        "#ff4fd8"
+      ],
+      "background": {
+        "material": "galaxy"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.5,
+          "y": 0.48,
+          "w": 0.62,
+          "h": 0.5
+        },
+        {
+          "type": "text",
+          "text": "歌ってみた",
+          "style": "neon",
+          "x": 0.5,
+          "y": 0.1,
+          "w": 0.8,
+          "size": 96
+        },
+        {
+          "type": "text",
+          "text": "「〇〇」",
+          "style": "puffy",
+          "x": 0.5,
+          "y": 0.82,
+          "w": 0.86,
+          "size": 80
+        },
+        {
+          "type": "text",
+          "text": "〇月〇日 公開",
+          "style": "news",
+          "x": 0.5,
+          "y": 0.91,
+          "w": 0.7,
+          "size": 44
+        },
+        {
+          "type": "part",
+          "material": "mic",
+          "x": 0.1,
+          "y": 0.62,
+          "h": 0.22,
+          "angle": -12
+        },
+        {
+          "type": "part",
+          "material": "music-notes",
+          "x": 0.88,
+          "y": 0.3,
+          "h": 0.16,
+          "angle": 10
+        }
+      ],
+      "filters": [
+        {
+          "key": "bokeh",
+          "strength": 0.45
+        }
+      ],
+      "frame": "neon"
+    },
+    {
+      "id": "game-9x16",
+      "label": "ゲーム実況の告知",
+      "icon": "🎮",
+      "ratio": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "preview": [
+        "#0d0b1e",
+        "#3ad1ff"
+      ],
+      "background": {
+        "material": "neon-grid"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.5,
+          "y": 0.5,
+          "w": 0.86,
+          "h": 0.36
+        },
+        {
+          "type": "text",
+          "text": "ゲーム実況",
+          "style": "gaming",
+          "x": 0.5,
+          "y": 0.14,
+          "w": 0.9,
+          "size": 140
+        },
+        {
+          "type": "text",
+          "text": "〇〇やるぞ！",
+          "style": "impact",
+          "x": 0.5,
+          "y": 0.24,
+          "w": 0.9,
+          "size": 96
+        },
+        {
+          "type": "part",
+          "material": "gamepad",
+          "x": 0.24,
+          "y": 0.78,
+          "h": 0.08,
+          "angle": -10
+        },
+        {
+          "type": "part",
+          "material": "headphones",
+          "x": 0.78,
+          "y": 0.78,
+          "h": 0.08,
+          "angle": 10
+        },
+        {
+          "type": "text",
+          "text": "〇月〇日 21:00",
+          "style": "news",
+          "x": 0.5,
+          "y": 0.89,
+          "w": 0.8,
+          "size": 56
+        }
+      ],
+      "filters": [
+        {
+          "key": "scanline",
+          "strength": 0.35
+        }
+      ],
+      "frame": "film"
+    },
+    {
+      "id": "bouquet-16x9",
+      "label": "お花の雑談",
+      "icon": "💐",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#fff3e0",
+        "#ff8ccf"
+      ],
+      "background": {
+        "material": "candy-stripe"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.74,
+          "y": 0.52,
+          "w": 0.36,
+          "h": 0.76
+        },
+        {
+          "type": "part",
+          "material": "bouquet",
+          "x": 0.12,
+          "y": 0.6,
+          "h": 0.5,
+          "angle": -8
+        },
+        {
+          "type": "text",
+          "text": "まったり",
+          "style": "yurukawa",
+          "x": 0.36,
+          "y": 0.3,
+          "w": 0.44,
+          "size": 80,
+          "props": {
+            "fill": "#ff5fa2"
+          }
+        },
+        {
+          "type": "text",
+          "text": "お花雑談",
+          "style": "puffy",
+          "x": 0.36,
+          "y": 0.5,
+          "w": 0.48,
+          "size": 120,
+          "props": {
+            "fill": "#ff5fa2"
+          }
+        },
+        {
+          "type": "text",
+          "text": "〇月〇日 21:00〜",
+          "style": "news",
+          "x": 0.36,
+          "y": 0.72,
+          "w": 0.44,
+          "size": 42,
+          "props": {
+            "fill": "#7a4f6a"
+          }
+        },
+        {
+          "type": "part",
+          "material": "bow",
+          "x": 0.36,
+          "y": 0.88,
+          "h": 0.12
+        }
+      ],
+      "filters": [
+        {
+          "key": "light-leak",
+          "strength": 0.35
+        }
+      ],
+      "frame": "flowers"
+    },
+    {
+      "id": "hype-16x9",
+      "label": "大事なお知らせ",
+      "icon": "⚡",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#ff6a00",
+        "#ffe600"
+      ],
+      "background": {
+        "gradient": [
+          "#ffe600",
+          "#ff6a00",
+          "diagonal"
+        ]
+      },
+      "items": [
+        {
+          "type": "text",
+          "text": "大事な",
+          "style": "battle",
+          "x": 0.5,
+          "y": 0.3,
+          "w": 0.6,
+          "size": 110
+        },
+        {
+          "type": "text",
+          "text": "お知らせ",
+          "style": "impact",
+          "x": 0.5,
+          "y": 0.55,
+          "w": 0.8,
+          "size": 190
+        },
+        {
+          "type": "text",
+          "text": "〇月〇日 発表！",
+          "style": "news",
+          "x": 0.5,
+          "y": 0.82,
+          "w": 0.6,
+          "size": 50
+        },
+        {
+          "type": "part",
+          "material": "lightning",
+          "x": 0.12,
+          "y": 0.5,
+          "h": 0.42,
+          "angle": -12
+        },
+        {
+          "type": "part",
+          "material": "lightning",
+          "x": 0.88,
+          "y": 0.5,
+          "h": 0.42,
+          "angle": 12,
+          "flipX": true
+        }
+      ],
+      "filters": [
+        {
+          "key": "speedlines",
+          "strength": 0.55
+        }
+      ]
+    },
+    {
+      "id": "icon-rose-1x1",
+      "label": "アイコン（バラと輪）",
+      "icon": "🔘",
+      "ratio": "1:1",
+      "width": 1080,
+      "height": 1080,
+      "preview": [
+        "#ffe3f1",
+        "#ff8ccf"
+      ],
+      "background": {
+        "material": "pastel-dots"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.5,
+          "y": 0.5,
+          "w": 0.66,
+          "h": 0.66
+        },
+        {
+          "type": "part",
+          "material": "ov-rose-pink",
+          "x": 0.24,
+          "y": 0.72,
+          "h": 0.3,
+          "angle": -18
+        },
+        {
+          "type": "part",
+          "material": "ov-rose-pale",
+          "x": 0.77,
+          "y": 0.73,
+          "h": 0.27,
+          "angle": 16
+        },
+        {
+          "type": "part",
+          "material": "ov-butterfly-blue",
+          "x": 0.74,
+          "y": 0.22,
+          "h": 0.12,
+          "angle": 18
+        }
+      ],
+      "filters": [],
+      "frame": "ring"
+    },
+    {
+      "id": "icon-wave-1x1",
+      "label": "アイコン（北斎の波）",
+      "icon": "🌊",
+      "ratio": "1:1",
+      "width": 1080,
+      "height": 1080,
+      "preview": [
+        "#140b2e",
+        "#3a5aa8"
+      ],
+      "background": {
+        "material": "ov-hokusai-feminine"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.5,
+          "y": 0.46,
+          "w": 0.6,
+          "h": 0.6
+        },
+        {
+          "type": "part",
+          "material": "name-tag",
+          "x": 0.5,
+          "y": 0.8,
+          "h": 0.12
+        },
+        {
+          "type": "text",
+          "text": "〇〇",
+          "style": "news",
+          "x": 0.5,
+          "y": 0.8,
+          "w": 0.36,
+          "size": 56,
+          "props": {
+            "fill": "#333333"
+          }
+        }
+      ],
+      "filters": [
+        {
+          "key": "vignette",
+          "strength": 0.3
+        }
+      ],
+      "frame": "ring-dark"
+    },
+    {
+      "id": "icon-morris-1x1",
+      "label": "アイコン（モリス柄）",
+      "icon": "🌿",
+      "ratio": "1:1",
+      "width": 1080,
+      "height": 1080,
+      "preview": [
+        "#cfe3e0",
+        "#7aa89a"
+      ],
+      "background": {
+        "material": "ov-morris-willow"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.5,
+          "y": 0.54,
+          "w": 0.62,
+          "h": 0.62
+        },
+        {
+          "type": "part",
+          "material": "bow",
+          "x": 0.5,
+          "y": 0.14,
+          "h": 0.13
+        }
+      ],
+      "filters": [],
+      "frame": "ring"
+    },
+    {
+      "id": "icon-initial-1x1",
+      "label": "アイコン（イニシャル）",
+      "icon": "🔤",
+      "ratio": "1:1",
+      "width": 1080,
+      "height": 1080,
+      "preview": [
+        "#2a1a6e",
+        "#ff8ccf"
+      ],
+      "background": {
+        "gradient": [
+          "#2a1a6e",
+          "#ff8ccf",
+          "diagonal"
+        ]
+      },
+      "items": [
+        {
+          "type": "text",
+          "text": "K",
+          "style": "impact",
+          "x": 0.5,
+          "y": 0.46,
+          "w": 0.6,
+          "size": 520,
+          "props": {
+            "fill": "#ffffff"
+          }
+        },
+        {
+          "type": "text",
+          "text": "〇〇〇〇",
+          "style": "neon",
+          "x": 0.5,
+          "y": 0.78,
+          "w": 0.56,
+          "size": 70
+        },
+        {
+          "type": "part",
+          "material": "ov-butterfly-morpho",
+          "x": 0.73,
+          "y": 0.24,
+          "h": 0.16,
+          "angle": 20
+        }
+      ],
+      "filters": [
+        {
+          "key": "sparkle",
+          "strength": 0.4
+        }
+      ],
+      "frame": "ring"
+    },
+    {
+      "id": "icon-neoncat-1x1",
+      "label": "アイコン（ネオン猫耳）",
+      "icon": "😺",
+      "ratio": "1:1",
+      "width": 1080,
+      "height": 1080,
+      "preview": [
+        "#0d0b1e",
+        "#ff4fd8"
+      ],
+      "background": {
+        "material": "neon-grid"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.5,
+          "y": 0.56,
+          "w": 0.6,
+          "h": 0.6
+        },
+        {
+          "type": "part",
+          "material": "cat-ears",
+          "x": 0.5,
+          "y": 0.2,
+          "h": 0.16
+        }
+      ],
+      "filters": [
+        {
+          "key": "sparkle",
+          "strength": 0.35
+        }
+      ],
+      "frame": "ring-dark"
+    },
+    {
+      "id": "icon-wa-1x1",
+      "label": "アイコン（和の花紋）",
+      "icon": "🎎",
+      "ratio": "1:1",
+      "width": 1080,
+      "height": 1080,
+      "preview": [
+        "#5a4a1a",
+        "#e63946"
+      ],
+      "background": {
+        "material": "ov-wa-crests"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.5,
+          "y": 0.5,
+          "w": 0.62,
+          "h": 0.62
+        },
+        {
+          "type": "part",
+          "material": "sakura",
+          "x": 0.24,
+          "y": 0.24,
+          "h": 0.1,
+          "angle": -15
+        },
+        {
+          "type": "part",
+          "material": "sakura",
+          "x": 0.78,
+          "y": 0.78,
+          "h": 0.08,
+          "angle": 20
+        }
+      ],
+      "filters": [
+        {
+          "key": "vignette",
+          "strength": 0.25
+        }
+      ],
+      "frame": "ring"
+    },
+    {
+      "id": "icon-butterfly-1x1",
+      "label": "アイコン（ちょうちょ）",
+      "icon": "🦋",
+      "ratio": "1:1",
+      "width": 1080,
+      "height": 1080,
+      "preview": [
+        "#1f3a2a",
+        "#9b7bff"
+      ],
+      "background": {
+        "material": "ov-morris-violet"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.5,
+          "y": 0.52,
+          "w": 0.6,
+          "h": 0.6
+        },
+        {
+          "type": "part",
+          "material": "ov-butterfly-mint",
+          "x": 0.22,
+          "y": 0.3,
+          "h": 0.12,
+          "angle": -25
+        },
+        {
+          "type": "part",
+          "material": "ov-butterfly-orange",
+          "x": 0.8,
+          "y": 0.36,
+          "h": 0.11,
+          "angle": 22
+        },
+        {
+          "type": "part",
+          "material": "ov-butterfly-green",
+          "x": 0.3,
+          "y": 0.8,
+          "h": 0.1,
+          "angle": 10
+        }
+      ],
+      "filters": [],
+      "frame": "ring-dark"
+    },
+    {
+      "id": "icon-penguin-1x1",
+      "label": "アイコン（ゆるペンギン）",
+      "icon": "🐧",
+      "ratio": "1:1",
+      "width": 1080,
+      "height": 1080,
+      "preview": [
+        "#d6f0ff",
+        "#7ab8f5"
+      ],
+      "background": {
+        "gradient": [
+          "#e8f6ff",
+          "#9fd3ff",
+          "vertical"
+        ]
+      },
+      "items": [
+        {
+          "type": "part",
+          "material": "ov-penguin",
+          "x": 0.5,
+          "y": 0.46,
+          "h": 0.6
+        },
+        {
+          "type": "text",
+          "text": "〇〇",
+          "style": "yurukawa",
+          "x": 0.5,
+          "y": 0.82,
+          "w": 0.5,
+          "size": 90,
+          "props": {
+            "fill": "#4a7ab8"
+          }
+        }
+      ],
+      "filters": [],
+      "frame": "ring"
+    },
+    {
+      "id": "wa-cover-16x9",
+      "label": "和ロック歌ってみた（北斎）",
+      "icon": "🌊",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#e8dcc0",
+        "#1d3a6e"
+      ],
+      "background": {
+        "material": "ov-hokusai-wave"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.74,
+          "y": 0.54,
+          "w": 0.42,
+          "h": 0.92
+        },
+        {
+          "type": "part",
+          "material": "telop-band",
+          "x": 0.29,
+          "y": 0.62,
+          "h": 0.16,
+          "stretch": 1.6
+        },
+        {
+          "type": "text",
+          "text": "和ロック",
+          "style": "battle",
+          "x": 0.29,
+          "y": 0.36,
+          "w": 0.5,
+          "size": 150
+        },
+        {
+          "type": "text",
+          "text": "歌ってみた",
+          "style": "neon",
+          "x": 0.29,
+          "y": 0.62,
+          "w": 0.46,
+          "size": 70
+        },
+        {
+          "type": "text",
+          "text": "「〇〇」",
+          "style": "news",
+          "x": 0.29,
+          "y": 0.82,
+          "w": 0.44,
+          "size": 48,
+          "props": {
+            "fill": "#1d3a6e"
+          }
+        }
+      ],
+      "filters": [
+        {
+          "key": "vignette",
+          "strength": 0.35
+        }
+      ]
+    },
+    {
+      "id": "morris-chat-16x9",
+      "label": "おしゃれ雑談（モリス柄）",
+      "icon": "🌿",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#f2d9b8",
+        "#e2557a"
+      ],
+      "background": {
+        "material": "ov-morris-pink"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.26,
+          "y": 0.52,
+          "w": 0.4,
+          "h": 0.9
+        },
+        {
+          "type": "part",
+          "material": "moko-bubble",
+          "x": 0.69,
+          "y": 0.48,
+          "h": 0.66
+        },
+        {
+          "type": "text",
+          "text": "まったり",
+          "style": "yurukawa",
+          "x": 0.69,
+          "y": 0.34,
+          "w": 0.4,
+          "size": 70
+        },
+        {
+          "type": "text",
+          "text": "雑談",
+          "style": "puffy",
+          "x": 0.69,
+          "y": 0.52,
+          "w": 0.4,
+          "size": 170,
+          "props": {
+            "fill": "#e2557a"
+          }
+        },
+        {
+          "type": "text",
+          "text": "〇月〇日 21:00",
+          "style": "news",
+          "x": 0.69,
+          "y": 0.7,
+          "w": 0.36,
+          "size": 40,
+          "props": {
+            "fill": "#7a4f3a"
+          }
+        }
+      ],
+      "filters": [
+        {
+          "key": "light-leak",
+          "strength": 0.3
+        }
+      ]
+    },
+    {
+      "id": "rose-cover-16x9",
+      "label": "バラの歌ってみた",
+      "icon": "🌹",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#2a0a1a",
+        "#c2304a"
+      ],
+      "background": {
+        "gradient": [
+          "#1a0610",
+          "#6e1a33",
+          "diagonal"
+        ]
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.74,
+          "y": 0.52,
+          "w": 0.4,
+          "h": 0.9
+        },
+        {
+          "type": "part",
+          "material": "ov-rose-red",
+          "x": 0.1,
+          "y": 0.72,
+          "h": 0.56,
+          "angle": -12
+        },
+        {
+          "type": "part",
+          "material": "ov-rose-pink",
+          "x": 0.42,
+          "y": 0.86,
+          "h": 0.36,
+          "angle": 18
+        },
+        {
+          "type": "part",
+          "material": "ov-butterfly-blue",
+          "x": 0.5,
+          "y": 0.16,
+          "h": 0.14,
+          "angle": 15
+        },
+        {
+          "type": "text",
+          "text": "歌ってみた",
+          "style": "neon",
+          "x": 0.3,
+          "y": 0.3,
+          "w": 0.52,
+          "size": 100,
+          "props": {
+            "fill": "#ffe3ea"
+          }
+        },
+        {
+          "type": "text",
+          "text": "「〇〇」",
+          "style": "puffy",
+          "x": 0.3,
+          "y": 0.5,
+          "w": 0.52,
+          "size": 90
+        }
+      ],
+      "filters": [
+        {
+          "key": "bokeh",
+          "strength": 0.35
+        },
+        {
+          "key": "vignette",
+          "strength": 0.4
+        }
+      ]
+    },
+    {
+      "id": "butterfly-notice-16x9",
+      "label": "ちょうちょのお知らせ",
+      "icon": "🦋",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#1f3a2a",
+        "#9b7bff"
+      ],
+      "background": {
+        "material": "ov-morris-violet"
+      },
+      "items": [
+        {
+          "type": "part",
+          "material": "telop-band",
+          "x": 0.5,
+          "y": 0.5,
+          "h": 0.3,
+          "stretch": 2.2
+        },
+        {
+          "type": "text",
+          "text": "お知らせ",
+          "style": "impact",
+          "x": 0.5,
+          "y": 0.48,
+          "w": 0.6,
+          "size": 150
+        },
+        {
+          "type": "text",
+          "text": "〇月〇日 〇〇します",
+          "style": "news",
+          "x": 0.5,
+          "y": 0.72,
+          "w": 0.6,
+          "size": 46
+        },
+        {
+          "type": "part",
+          "material": "ov-butterfly-morpho",
+          "x": 0.14,
+          "y": 0.22,
+          "h": 0.24,
+          "angle": -20
+        },
+        {
+          "type": "part",
+          "material": "ov-butterfly-orange",
+          "x": 0.86,
+          "y": 0.2,
+          "h": 0.2,
+          "angle": 18
+        },
+        {
+          "type": "part",
+          "material": "ov-butterfly-mint",
+          "x": 0.12,
+          "y": 0.8,
+          "h": 0.18,
+          "angle": 12
+        }
+      ],
+      "filters": [
+        {
+          "key": "vignette",
+          "strength": 0.45
+        }
+      ],
+      "frame": "scallop"
+    },
+    {
+      "id": "penguin-game-16x9",
+      "label": "ゆるゲーム実況（ペンギン）",
+      "icon": "🐧",
+      "ratio": "16:9",
+      "width": 1280,
+      "height": 720,
+      "preview": [
+        "#e8f6ff",
+        "#3ad1ff"
+      ],
+      "background": {
+        "gradient": [
+          "#f2fbff",
+          "#9fd3ff",
+          "vertical"
+        ]
+      },
+      "items": [
+        {
+          "type": "part",
+          "material": "ov-penguin",
+          "x": 0.18,
+          "y": 0.56,
+          "h": 0.84
+        },
+        {
+          "type": "text",
+          "text": "ゆる実況",
+          "style": "gaming",
+          "x": 0.62,
+          "y": 0.32,
+          "w": 0.6,
+          "size": 140
+        },
+        {
+          "type": "text",
+          "text": "〇〇やってみる",
+          "style": "yurukawa",
+          "x": 0.62,
+          "y": 0.56,
+          "w": 0.6,
+          "size": 80,
+          "props": {
+            "fill": "#4a7ab8"
+          }
+        },
+        {
+          "type": "part",
+          "material": "gamepad",
+          "x": 0.52,
+          "y": 0.8,
+          "h": 0.16,
+          "angle": -10
+        },
+        {
+          "type": "text",
+          "text": "#1",
+          "style": "impact",
+          "x": 0.68,
+          "y": 0.8,
+          "w": 0.14,
+          "size": 70
+        }
+      ],
+      "filters": [],
+      "frame": "pixel"
+    },
+    {
+      "id": "wa-cover-9x16",
+      "label": "和の歌ってみた（縦）",
+      "icon": "🌊",
+      "ratio": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "preview": [
+        "#140b2e",
+        "#3a5aa8"
+      ],
+      "background": {
+        "material": "ov-hokusai-feminine"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.5,
+          "y": 0.52,
+          "w": 0.86,
+          "h": 0.42
+        },
+        {
+          "type": "text",
+          "text": "和ロック",
+          "style": "battle",
+          "x": 0.5,
+          "y": 0.12,
+          "w": 0.9,
+          "size": 170
+        },
+        {
+          "type": "text",
+          "text": "歌ってみた",
+          "style": "neon",
+          "x": 0.5,
+          "y": 0.21,
+          "w": 0.86,
+          "size": 90
+        },
+        {
+          "type": "text",
+          "text": "「〇〇」",
+          "style": "puffy",
+          "x": 0.5,
+          "y": 0.8,
+          "w": 0.86,
+          "size": 90
+        }
+      ],
+      "filters": [
+        {
+          "key": "vignette",
+          "strength": 0.35
+        }
+      ]
+    },
+    {
+      "id": "botanical-9x16",
+      "label": "ボタニカルの告知（縦）",
+      "icon": "🌹",
+      "ratio": "9:16",
+      "width": 1080,
+      "height": 1920,
+      "preview": [
+        "#cfe3e0",
+        "#e2557a"
+      ],
+      "background": {
+        "material": "ov-morris-willow"
+      },
+      "items": [
+        {
+          "type": "placeholder",
+          "x": 0.5,
+          "y": 0.46,
+          "w": 0.8,
+          "h": 0.38
+        },
+        {
+          "type": "text",
+          "text": "New Cover",
+          "style": "neon",
+          "x": 0.5,
+          "y": 0.1,
+          "w": 0.86,
+          "size": 110,
+          "props": {
+            "fill": "#e2557a"
+          }
+        },
+        {
+          "type": "text",
+          "text": "「〇〇」",
+          "style": "puffy",
+          "x": 0.5,
+          "y": 0.74,
+          "w": 0.86,
+          "size": 96,
+          "props": {
+            "fill": "#e2557a"
+          }
+        },
+        {
+          "type": "text",
+          "text": "〇月〇日 公開",
+          "style": "news",
+          "x": 0.5,
+          "y": 0.81,
+          "w": 0.7,
+          "size": 54,
+          "props": {
+            "fill": "#3a5a4a"
+          }
+        },
+        {
+          "type": "part",
+          "material": "ov-rose-pink",
+          "x": 0.2,
+          "y": 0.9,
+          "h": 0.2,
+          "angle": -14
+        },
+        {
+          "type": "part",
+          "material": "ov-rose-pale",
+          "x": 0.82,
+          "y": 0.9,
+          "h": 0.18,
+          "angle": 16
+        },
+        {
+          "type": "part",
+          "material": "ov-butterfly-blue",
+          "x": 0.82,
+          "y": 0.2,
+          "h": 0.08,
+          "angle": 20
+        }
+      ],
+      "filters": [
+        {
+          "key": "light-leak",
+          "strength": 0.3
+        }
+      ],
+      "frame": "scallop"
+    },
+    {
+      "id": "morris-birds-1x1",
+      "label": "モリス柄のお知らせ",
+      "icon": "🕊",
+      "ratio": "1:1",
+      "width": 1080,
+      "height": 1080,
+      "preview": [
+        "#1f4d33",
+        "#e8d9a8"
+      ],
+      "background": {
+        "material": "ov-morris-birds"
+      },
+      "items": [
+        {
+          "type": "part",
+          "material": "telop-band",
+          "x": 0.5,
+          "y": 0.5,
+          "h": 0.26,
+          "stretch": 1.7
+        },
+        {
+          "type": "text",
+          "text": "お知らせ",
+          "style": "impact",
+          "x": 0.5,
+          "y": 0.48,
+          "w": 0.7,
+          "size": 140
+        },
+        {
+          "type": "text",
+          "text": "〇月〇日",
+          "style": "news",
+          "x": 0.5,
+          "y": 0.68,
+          "w": 0.6,
+          "size": 56
+        }
+      ],
+      "filters": [
+        {
+          "key": "vignette",
+          "strength": 0.4
+        }
+      ],
+      "frame": "flowers"
     }
   ]
 }

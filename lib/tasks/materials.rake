@@ -44,7 +44,27 @@ namespace :materials do
     ["sakura-fubuki", "桜吹雪", "background", "backgrounds/sakura-fubuki.svg", "KotoBouquet オリジナル"],
     ["summer-sky", "夏空と入道雲", "background", "backgrounds/summer-sky.svg", "KotoBouquet オリジナル"],
     ["autumn-leaves", "紅葉", "background", "backgrounds/autumn-leaves.svg", "KotoBouquet オリジナル"],
-    ["snow-night", "雪の夜", "background", "backgrounds/snow-night.svg", "KotoBouquet オリジナル"]
+    ["snow-night", "雪の夜", "background", "backgrounds/snow-night.svg", "KotoBouquet オリジナル"],
+    ["sunset-city", "夕焼けの街", "background", "backgrounds/sunset-city.svg", "KotoBouquet オリジナル"],
+    ["seigaiha", "青海波（和柄）", "background", "backgrounds/seigaiha.svg", "KotoBouquet オリジナル"],
+    ["synthwave", "レトロな夕日とグリッド", "background", "backgrounds/synthwave.svg", "KotoBouquet オリジナル"],
+    ["rainy-night", "雨の夜の窓", "background", "backgrounds/rainy-night.svg", "KotoBouquet オリジナル"],
+    ["galaxy", "銀河", "background", "backgrounds/galaxy.svg", "KotoBouquet オリジナル"],
+    ["candy-stripe", "キャンディのしましま", "background", "backgrounds/candy-stripe.svg", "KotoBouquet オリジナル"],
+    ["forest-light", "木もれ日の森", "background", "backgrounds/forest-light.svg", "KotoBouquet オリジナル"],
+    ["film-stage", "スポットライトの舞台", "background", "backgrounds/film-stage.svg", "KotoBouquet オリジナル"],
+    ["mic", "マイク", "part", "parts/mic.svg", "KotoBouquet オリジナル"],
+    ["music-notes", "音符", "part", "parts/music-notes.svg", "KotoBouquet オリジナル"],
+    ["headphones", "ヘッドホン", "part", "parts/headphones.svg", "KotoBouquet オリジナル"],
+    ["gamepad", "ゲームのコントローラー", "part", "parts/gamepad.svg", "KotoBouquet オリジナル"],
+    ["bow", "リボン", "part", "parts/bow.svg", "KotoBouquet オリジナル"],
+    ["lightning", "いなずま", "part", "parts/lightning.svg", "KotoBouquet オリジナル"],
+    ["moon", "三日月", "part", "parts/moon.svg", "KotoBouquet オリジナル"],
+    ["cloud", "もくもく雲", "part", "parts/cloud.svg", "KotoBouquet オリジナル"],
+    ["rainbow", "にじ", "part", "parts/rainbow.svg", "KotoBouquet オリジナル"],
+    ["bouquet", "花束", "part", "parts/bouquet.svg", "KotoBouquet オリジナル"],
+    ["cat-face", "ねこの顔", "part", "parts/cat-face.svg", "KotoBouquet オリジナル"],
+    ["cake", "ケーキ", "part", "parts/cake.svg", "KotoBouquet オリジナル"]
   ].freeze
 
 
@@ -52,7 +72,12 @@ namespace :materials do
   BUILTIN_TAGS = {
     "bubble" => "bubble", "star" => "stamp,sparkle", "heart" => "stamp", "arrow" => "label",
     "burst-label" => "label", "frame" => "frame", "siva-circle" => "icon", "siva-banner" => "frame",
-    "burst" => "pop", "neon-grid" => "cyber", "pastel-dots" => "pastel", "pixel-heart" => "pixel,stamp", "pixel-cursor" => "pixel,icon", "pixel-hourglass" => "pixel", "sparkle4" => "sparkle,stamp", "light-dots" => "sparkle", "heart-dots" => "sparkle,stamp", "moko-bubble" => "bubble", "telop-band" => "label", "name-tag" => "label", "cat-ears" => "icon", "paw" => "stamp,icon", "crown" => "stamp,icon", "sakura" => "season,stamp", "sunflower" => "season", "momiji" => "season", "snowflake" => "season,sparkle", "pixel-grid" => "cyber", "monitor-screen" => "cyber", "gingham" => "pastel", "clouds" => "pastel,nature", "bubbles" => "nature", "water-ripple" => "nature", "starry-sky" => "night", "aurora" => "night", "sakura-fubuki" => "season,pastel", "summer-sky" => "season,nature", "autumn-leaves" => "season,nature", "snow-night" => "season,night"
+    "burst" => "pop", "neon-grid" => "cyber", "pastel-dots" => "pastel", "pixel-heart" => "pixel,stamp", "pixel-cursor" => "pixel,icon", "pixel-hourglass" => "pixel", "sparkle4" => "sparkle,stamp", "light-dots" => "sparkle", "heart-dots" => "sparkle,stamp", "moko-bubble" => "bubble", "telop-band" => "label", "name-tag" => "label", "cat-ears" => "icon", "paw" => "stamp,icon", "crown" => "stamp,icon", "sakura" => "season,stamp", "sunflower" => "season", "momiji" => "season", "snowflake" => "season,sparkle", "pixel-grid" => "cyber", "monitor-screen" => "cyber", "gingham" => "pastel", "clouds" => "pastel,nature", "bubbles" => "nature", "water-ripple" => "nature", "starry-sky" => "night", "aurora" => "night", "sakura-fubuki" => "season,pastel", "summer-sky" => "season,nature", "autumn-leaves" => "season,nature", "snow-night" => "season,night",
+    "sunset-city" => "night", "seigaiha" => "season", "synthwave" => "cyber", "rainy-night" => "night,nature",
+    "galaxy" => "night", "candy-stripe" => "pastel,pop", "forest-light" => "nature", "film-stage" => "pop",
+    "mic" => "icon,stamp", "music-notes" => "stamp", "headphones" => "icon", "gamepad" => "icon,cyber",
+    "bow" => "stamp,pastel", "lightning" => "stamp,pop", "moon" => "night,stamp", "cloud" => "pastel,nature",
+    "rainbow" => "pastel,nature", "bouquet" => "stamp,season", "cat-face" => "icon,stamp", "cake" => "stamp"
   }.freeze
 
   desc "最初から入っていた部品・背景を、素材（Material）にキー付きで登録する"

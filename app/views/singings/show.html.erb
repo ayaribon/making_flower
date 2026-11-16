@@ -231,6 +231,7 @@
         <button class="sg-btn sg-btn--magic" data-action="singing-mixer#autoMix">🪄 おまかせミックス</button>
         <button class="sg-btn" data-action="singing-mixer#findChoruses">🪄 サビっぽい所を探す</button>
         <button class="sg-btn" data-singing-mixer-target="structureButton" data-action="singing-mixer#guessStructure" title="オケの音の感じとくり返し（あれば歌声）から、イントロ・Aメロ・Bメロ・サビ… の目安を④の部分に入れます。推測なので、ずれていたら帯の端をドラッグ・名前を変えて直してね">🪄 曲の構成を推測</button>
+        <button class="sg-btn" data-action="singing-mixer#startPartTap" title="曲を流しながら、サビなどが始まった所で名前のボタンを押すだけ">👆 タップで部分を付ける</button>
         <span class="sg-help">迷ったらまず左の2つ。声とオケを分析して、音量・声量のならし・明るさを決めて、サビを盛り上げます。「曲の構成を推測」はイントロ〜アウトロの目安をまとめて④の部分に入れます（推測なので、ずれていたら直してね）</span>
       </div>
       <p class="sg-help">曲全体の雰囲気を決めてから、「サビは盛り上げる！」のように部分ごとに指示を付けられます。スライダーは再生中でも動かせます。</p>
@@ -581,7 +582,7 @@
     <!-- ⑤ 動画（MV） -->
     <section class="sg-card sg-card--mix" id="sg-mv">
       <h2 class="sg-card__title"><span class="sg-num">5</span>動画（MV）を作る</h2>
-      <p class="sg-help">上から順に 5-1 見本 → 5-2 画像 → 5-3 動き → 5-4 文字 → 5-5 演出 → 5-6 仕上げ。5-1 だけでも動画になります。左の動画は、いま作っている動画です（▶ で好きな所から再生）</p>
+      <p class="sg-help">右のタブを順に 5-1 見本 → 5-2 画像 → 5-3 動き → 5-4 演出 → 5-5 文字 → 5-6 仕上げ。5-1 だけでも動画になります。左の動画は、いま作っている動画です（▶ で好きな所から再生）</p>
 
       <div class="sg-mv-layout">
         <%# ---------- 左：いま作っている動画（スクロールしても見える） ---------- %>
@@ -594,6 +595,8 @@
           <div class="sg-mv-frame" data-singing-mixer-target="mvFrame">
             <canvas class="sg-canvas sg-mv" width="1280" height="720" data-singing-mixer-target="canvas" data-action="click->singing-mixer#mvTogglePlay" title="押すと再生・一時停止"></canvas>
             <button type="button" class="sg-mv-play-overlay" data-singing-mixer-target="mvPlayOverlay" data-action="singing-mixer#mvTogglePlay" aria-label="動画を再生" hidden>▶</button>
+            <%# 🪄 5-1 を開いている間は、ここで見本の動画を流す（▶ で、いま作っている動画に戻る） %>
+            <span class="sg-qt__badge sg-qt__badge--main" data-singing-mixer-target="qtBadge" hidden></span>
             <div class="sg-safe" aria-hidden="true">
               <span class="sg-safe__top"></span><span class="sg-safe__right"></span><span class="sg-safe__bottom">ボタン・説明が重なる所</span>
             </div>
@@ -614,18 +617,22 @@
         </div>
 
         <%# ---------- 右：作る順番に並べた設定 ---------- %>
-        <div class="sg-mv-settings sg-mvsteps">
+        <div class="sg-mv-settings sg-mvsteps is-tabbed" data-singing-mixer-target="mvSteps">
+          <%# 📑 1ページに1つだけ出す（全部出すと長いので）。押すとその設定に切りかわる %>
+          <div class="sg-mvtabs" role="tablist" aria-label="動画の設定">
+            <% [["5-1", "🪄", "見本"], ["5-2", "🖼", "画像"], ["5-3", "🎞", "動き"], ["5-4", "🎆", "演出"], ["5-5", "✏️", "文字"], ["5-6", "✂️", "仕上げ"]].each_with_index do |(num, icon, label), i| %>
+              <button type="button" class="sg-mvtab" role="tab" data-singing-mixer-target="mvTab" data-mv-tab="<%= i %>" data-action="singing-mixer#selectMvTab">
+                <span class="sg-mvtab__num"><%= num %></span><span class="sg-mvtab__label"><%= icon %> <%= label %></span>
+              </button>
+            <% end %>
+          </div>
 
           <%# 5-1 見本を選ぶ：できあがっている見本の動画を見て「これと同じように作る」 %>
           <details class="sg-mvstep" open>
             <summary><span class="sg-mvstep__num">5-1</span><span class="sg-mvstep__title">🪄 見本を選ぶ</span><span class="sg-mvstep__sum" data-singing-mixer-target="mvStepSum" data-step="tpl"></span></summary>
             <p class="sg-help">見本の動画を押して見比べてね。「✨ これと同じように作る」で、画像・動き・文字・演出がまとめて入ります（このあと 5-2〜5-6 で1つずつ直せます）</p>
             <div class="sg-qt__list" role="group" aria-label="見本の動画" data-singing-mixer-target="qtList"></div>
-            <div class="sg-qt__preview">
-              <canvas class="sg-canvas sg-qt__canvas" width="640" height="360" data-singing-mixer-target="qtPreview" aria-label="見本の動画"></canvas>
-              <span class="sg-qt__badge">見本</span>
-              <span class="sg-qt__now" data-singing-mixer-target="qtPreviewInfo"></span>
-            </div>
+            <p class="sg-help">👈 押した見本は、左の動画の所で流れます（▶ 再生すると、いま作っている動画に戻ります）</p>
             <p class="sg-help sg-qt__hint" data-singing-mixer-target="qtHint"></p>
             <label class="sg-check"><input type="checkbox" checked data-singing-mixer-target="qtKeepImages"><span>自分で選んだ画像は、そのまま使う <small>（見本の画像に入れかえない）</small></span></label>
             <div class="sg-row">
@@ -656,6 +663,20 @@
               <input type="range" min="2" max="30" step="1" value="8" data-singing-mixer-target="mvBgInterval" data-edit-key="bgInterval" data-action="input->singing-mixer#changeMvEdit" aria-label="切りかわる間隔（秒）">
             </div>
             <div class="sg-mvedit__slides-box">
+              <%# 🧩 「サビの始まり」などで切りかえるときの、サビなどの場所を決める所への道（どれからでも決められる） %>
+              <div class="sg-partlinks">
+                <p class="sg-help"><b>🧩 サビなどの場所</b>：「場所ごと」は、ここで決めた部分（サビ・Bメロ…）で切りかわります</p>
+                <div class="sg-row">
+                  <button class="sg-btn sg-btn--small sg-btn--primary" data-action="singing-mixer#startPartTap">👆 タップで部分を付ける</button>
+                  <button class="sg-btn sg-btn--small" data-singing-mixer-target="structureButton" data-action="singing-mixer#guessStructure">🪄 自動で推測</button>
+                  <button class="sg-btn sg-btn--small" data-jump-to="sg-mix" data-action="singing-mixer#jumpToSection">🧩 ④ミックスで直す</button>
+                  <button class="sg-btn sg-btn--small" data-mv-tab="3" data-action="singing-mixer#selectMvTab">🎆 5-4 部分ごとの演出</button>
+                </div>
+                <p class="sg-help"><b>🖼 時間で切りかえる</b>：歌詞と同じように、曲を流しながら押すだけ</p>
+                <div class="sg-row">
+                  <button class="sg-btn sg-btn--small sg-btn--primary" data-action="singing-mixer#startSlideTap">👆 再生しながらタップで切りかえ場所を決める</button>
+                </div>
+              </div>
               <div class="sg-slides" data-singing-mixer-target="mvSlideList"></div>
               <details class="sg-details sg-slide-add">
                 <summary>＋ 切りかえる画像を足す</summary>
@@ -670,19 +691,19 @@
             <h4 class="sg-mvstep__sub">画面の見た目</h4>
             <div class="sg-presets" role="group" aria-label="画面の見た目">
               <button class="sg-chip" data-singing-mixer-target="mvTemplateButton" data-mv-template="plain" data-action="singing-mixer#selectMvTemplate">🖼 画像だけ</button>
-              <button class="sg-chip" data-singing-mixer-target="mvTemplateButton" data-mv-template="simple" data-action="singing-mixer#selectMvTemplate">🌊 下に音の波</button>
               <button class="sg-chip" data-singing-mixer-target="mvTemplateButton" data-mv-template="bars" data-action="singing-mixer#selectMvTemplate">📊 音のバー</button>
-              <button class="sg-chip" data-singing-mixer-target="mvTemplateButton" data-mv-template="visualizer" data-action="singing-mixer#selectMvTemplate">🌀 曲名のまわりに輪</button>
+              <button class="sg-chip" data-singing-mixer-target="mvTemplateButton" data-mv-template="visualizer" data-action="singing-mixer#selectMvTemplate">🌀 音の輪</button>
               <button class="sg-chip" data-singing-mixer-target="mvTemplateButton" data-mv-template="particles" data-action="singing-mixer#selectMvTemplate">🎆 光のつぶ</button>
               <button class="sg-chip" data-singing-mixer-target="mvTemplateButton" data-mv-template="jacket" data-action="singing-mixer#selectMvTemplate">💿 ジャケット風</button>
             </div>
             <p class="sg-help" data-singing-mixer-target="mvTemplateHint"></p>
+            <label class="sg-check"><input type="checkbox" data-singing-mixer-target="mvWave" data-action="change->singing-mixer#toggleMvWave"><span>🌊 下に音の波を出す <small>（どの見た目とも組み合わせられます）</small></span></label>
             <div class="sg-knob">
               <label>画像の暗さ <span class="sg-val" data-singing-mixer-target="mvDimValue">20%</span></label>
               <input type="range" min="0" max="80" step="1" value="20" data-singing-mixer-target="mvDim" data-action="input->singing-mixer#changeMvText" aria-label="画像の暗さ">
               <small>文字が読みにくいときは暗くする</small>
             </div>
-            <h4 class="sg-mvstep__sub">色のフィルター <small class="sg-help">（曲全体。部分ごとの色は 5-5 演出で）</small></h4>
+            <h4 class="sg-mvstep__sub">色のフィルター <small class="sg-help">（曲全体。部分ごとの色は 5-4 演出で）</small></h4>
             <div class="sg-presets" role="group" aria-label="色のフィルター">
               <button class="sg-chip" data-singing-mixer-target="mvFilterButton" data-filter="none" data-action="singing-mixer#selectMvFilter">なし</button>
               <button class="sg-chip" data-singing-mixer-target="mvFilterButton" data-filter="mono" data-action="singing-mixer#selectMvFilter">⚫ モノクロ</button>
@@ -706,23 +727,57 @@
             <summary><span class="sg-mvstep__num">5-3</span><span class="sg-mvstep__title">🎞 動き</span><span class="sg-mvstep__sum" data-singing-mixer-target="mvStepSum" data-step="anim"></span></summary>
             <h4 class="sg-mvstep__sub">✍️ 歌詞の出し方</h4>
             <div class="sg-anim__chips" data-singing-mixer-target="mvAnimPanel" data-anim-kind="lyric" role="group" aria-label="歌詞の出し方"></div>
+            <h4 class="sg-mvstep__sub">🅰 文字の飾り</h4>
+            <div class="sg-anim__chips" data-singing-mixer-target="mvAnimPanel" data-anim-kind="deco" role="group" aria-label="文字の飾り"></div>
+            <p class="sg-help">どの出し方とも組み合わせられます。キーワード＝行の中でいちばん長い漢字・カタカナのつながり</p>
             <h4 class="sg-mvstep__sub">🖼 画像の動き</h4>
             <div class="sg-anim__chips" data-singing-mixer-target="mvAnimPanel" data-anim-kind="bg" role="group" aria-label="画像の動き"></div>
             <h4 class="sg-mvstep__sub">🚪 画像が切りかわるとき</h4>
             <div class="sg-anim__chips" data-singing-mixer-target="mvAnimPanel" data-anim-kind="enter" role="group" aria-label="画像が切りかわるとき"></div>
             <p class="sg-help">「切りかわるとき」は、5-2 で途中の画像を足したときに動きます</p>
+            <h4 class="sg-mvstep__sub">🔷 図形の動き</h4>
+            <div class="sg-anim__chips" data-singing-mixer-target="mvAnimPanel" data-anim-kind="geo" role="group" aria-label="図形の動き"></div>
+            <p class="sg-help">四角・丸・線・矢印が、拍に合わせて動きます（画像の上・歌詞の下。サビで強く、落ちサビで控えめ）</p>
           </details>
 
-          <%# 5-4 文字：曲名・クレジット → フォント → テロップ → ロゴ（歌詞そのものは、このあとの「歌詞テロップ」で） %>
+          <%# 5-4 演出：全体（拍・サビ）→ 部分ごと（雰囲気・始まり・終わり・色）→ 自分で立てたポイント %>
           <details class="sg-mvstep">
-            <summary><span class="sg-mvstep__num">5-4</span><span class="sg-mvstep__title">✏️ 文字</span><span class="sg-mvstep__sum" data-singing-mixer-target="mvStepSum" data-step="text"></span></summary>
+            <summary><span class="sg-mvstep__num">5-4</span><span class="sg-mvstep__title">🎆 演出</span><span class="sg-mvstep__sum" data-singing-mixer-target="mvStepSum" data-step="fx"></span></summary>
+            <div class="sg-knob">
+              <label>演出の強さ <span class="sg-val" data-singing-mixer-target="fxStrengthValue">ふつう（60）</span></label>
+              <input type="range" min="0" max="100" step="1" value="60" data-singing-mixer-target="fxStrength" data-action="input->singing-mixer#changeFx" aria-label="演出の強さ">
+            </div>
+            <div class="sg-checks">
+              <label class="sg-check"><input type="checkbox" checked data-singing-mixer-target="fxBeat" data-action="change->singing-mixer#changeFx"><span>🥁 拍に合わせてはねる</span></label>
+              <label class="sg-check"><input type="checkbox" checked data-singing-mixer-target="fxChorus" data-action="change->singing-mixer#changeFx"><span>🔥 部分ごとの雰囲気を使う（サビで明るく・入った瞬間にピカッ）</span></label>
+              <label class="sg-check"><input type="checkbox" checked data-singing-mixer-target="fxSparkle" data-action="change->singing-mixer#changeFx"><span>✨ キラキラ</span></label>
+            </div>
+            <p class="sg-help sg-fx-info" data-singing-mixer-target="fxInfo"></p>
+
+            <h4 class="sg-mvstep__sub">🧩 部分ごとの演出</h4>
+            <p class="sg-help">④ミックスの部分（なければ自動で見つけたサビ）ごとに、雰囲気・始まりと終わりの演出・色・図形の動きを選べます。同じ名前の部分は全部同じになります。時間のボタンで2秒前から試聴</p>
+            <div class="sg-row">
+              <button class="sg-btn sg-btn--small" data-action="singing-mixer#startPartTap" title="曲を流しながら、サビなどが始まった所で名前のボタンを押すだけ">👆 タップで部分を付ける</button>
+              <button class="sg-btn sg-btn--small" data-singing-mixer-target="structureButton" data-action="singing-mixer#guessStructure" title="オケから、イントロ・Aメロ・サビ・落ちサビ… の目安を④の部分に入れます">🪄 曲の構成を推測（④の部分に入れる）</button>
+              <button class="sg-btn sg-btn--small sg-btn--ghost" data-action="singing-mixer#resetFxNameStyles">↺ 雰囲気を最初に戻す</button>
+            </div>
+            <p class="sg-help sg-fx-info" data-singing-mixer-target="qtInfo"></p>
+            <div class="sg-qt__points" data-singing-mixer-target="qtPoints"></div>
+            <div class="sg-row">
+              <button class="sg-btn sg-btn--small" data-action="singing-mixer#addMvPoint" title="再生中は今の位置、止まっているときは「見る所」の位置に足します。④で📍ピンを選んでいれば、そのピンにくっつけます">＋ 今の位置にポイントを足す</button>
+            </div>
+          </details>
+
+          <%# 5-5 文字：曲名・クレジット → フォント → テロップ → ロゴ（歌詞そのものは、このあとの「歌詞テロップ」で） %>
+          <details class="sg-mvstep">
+            <summary><span class="sg-mvstep__num">5-5</span><span class="sg-mvstep__title">✏️ 文字</span><span class="sg-mvstep__sum" data-singing-mixer-target="mvStepSum" data-step="text"></span></summary>
             <label class="sg-field">曲名<input type="text" maxlength="60" placeholder="例：〇〇〇（歌ってみた）" data-singing-mixer-target="mvTitle" data-action="input->singing-mixer#changeMvText"></label>
             <label class="sg-field">歌った人<input type="text" maxlength="40" placeholder="あなたの名前" data-singing-mixer-target="mvArtist" data-action="input->singing-mixer#changeMvText"></label>
             <label class="sg-field">オケのクレジット<input type="text" maxlength="80" placeholder="例：オケ：〇〇様 ／ 原曲：△△" data-singing-mixer-target="mvCredit" data-action="input->singing-mixer#changeMvText"></label>
             <p class="sg-help">オケの配布元が決めている書き方があれば、そのとおりに書いてね</p>
             <div class="sg-checks">
-              <label class="sg-check"><input type="checkbox" checked data-singing-mixer-target="mvIntro"><span>最初に曲名を大きく出す</span></label>
-              <label class="sg-check"><input type="checkbox" checked data-singing-mixer-target="mvOutro"><span>最後にクレジットを出す</span></label>
+              <label class="sg-check"><input type="checkbox" checked data-singing-mixer-target="mvIntro"><span>🎬 最初に出す <small>（曲名・歌った人・オケのクレジット）</small></span></label>
+              <label class="sg-check"><input type="checkbox" checked data-singing-mixer-target="mvOutro"><span>🎬 最後に出す <small>（曲名・歌った人・オケのクレジット）</small></span></label>
               <label class="sg-check"><input type="checkbox" checked data-singing-mixer-target="mvProgress"><span>下に再生バーを出す</span></label>
             </div>
             <h4 class="sg-mvstep__sub">🔤 フォント <small class="sg-help">（歌詞・曲名・テロップ）</small></h4>
@@ -764,43 +819,30 @@
             <p class="sg-help" data-singing-mixer-target="mvLogoInfo">ロゴは出しません</p>
           </details>
 
-          <%# 5-5 演出：全体（拍・サビ）→ 部分ごと（雰囲気・始まり・終わり・色）→ 自分で立てたポイント %>
-          <details class="sg-mvstep">
-            <summary><span class="sg-mvstep__num">5-5</span><span class="sg-mvstep__title">🎆 演出</span><span class="sg-mvstep__sum" data-singing-mixer-target="mvStepSum" data-step="fx"></span></summary>
-            <div class="sg-knob">
-              <label>演出の強さ <span class="sg-val" data-singing-mixer-target="fxStrengthValue">ふつう（60）</span></label>
-              <input type="range" min="0" max="100" step="1" value="60" data-singing-mixer-target="fxStrength" data-action="input->singing-mixer#changeFx" aria-label="演出の強さ">
-            </div>
-            <div class="sg-checks">
-              <label class="sg-check"><input type="checkbox" checked data-singing-mixer-target="fxBeat" data-action="change->singing-mixer#changeFx"><span>🥁 拍に合わせてはねる</span></label>
-              <label class="sg-check"><input type="checkbox" checked data-singing-mixer-target="fxChorus" data-action="change->singing-mixer#changeFx"><span>🔥 部分ごとの雰囲気を使う（サビで明るく・入った瞬間にピカッ）</span></label>
-              <label class="sg-check"><input type="checkbox" checked data-singing-mixer-target="fxSparkle" data-action="change->singing-mixer#changeFx"><span>✨ キラキラ</span></label>
-            </div>
-            <p class="sg-help sg-fx-info" data-singing-mixer-target="fxInfo"></p>
-
-            <h4 class="sg-mvstep__sub">🧩 部分ごとの演出</h4>
-            <p class="sg-help">④ミックスの部分（なければ自動で見つけたサビ）ごとに、雰囲気・始まりと終わりの演出・色を選べます。同じ名前の部分は全部同じになります。時間のボタンで2秒前から試聴</p>
-            <div class="sg-row">
-              <button class="sg-btn sg-btn--small" data-singing-mixer-target="structureButton" data-action="singing-mixer#guessStructure" title="オケから、イントロ・Aメロ・サビ・落ちサビ… の目安を④の部分に入れます">🪄 曲の構成を推測（④の部分に入れる）</button>
-              <button class="sg-btn sg-btn--small sg-btn--ghost" data-action="singing-mixer#resetFxNameStyles">↺ 雰囲気を最初に戻す</button>
-            </div>
-            <p class="sg-help sg-fx-info" data-singing-mixer-target="qtInfo"></p>
-            <div class="sg-qt__points" data-singing-mixer-target="qtPoints"></div>
-            <div class="sg-row">
-              <button class="sg-btn sg-btn--small" data-action="singing-mixer#addMvPoint" title="再生中は今の位置、止まっているときは「見る所」の位置に足します。④で📍ピンを選んでいれば、そのピンにくっつけます">＋ 今の位置にポイントを足す</button>
-            </div>
-          </details>
-
           <%# 5-6 仕上げ：書き出す範囲・フェード %>
           <details class="sg-mvstep">
             <summary><span class="sg-mvstep__num">5-6</span><span class="sg-mvstep__title">✂️ 仕上げ</span><span class="sg-mvstep__sum" data-singing-mixer-target="mvStepSum" data-step="finish"></span></summary>
-            <h4 class="sg-mvstep__sub">書き出す範囲 <small class="sg-help">（サビだけ30秒など）</small></h4>
-            <label class="sg-check"><input type="checkbox" data-singing-mixer-target="mvRangeToggle" data-action="change->singing-mixer#toggleMvRange"><span>曲の一部だけを動画にする（ショート動画向け）</span></label>
+            <h4 class="sg-mvstep__sub">✂️ 動画を切り取る <small class="sg-help">（ショート動画は長さの上限があります）</small></h4>
+            <div class="sg-row">
+              <button class="sg-btn sg-btn--primary sg-btn--small" data-len="60" data-action="singing-mixer#mvRangeShort">📱 サビを中心に60秒で切り取る</button>
+            </div>
+            <label class="sg-check"><input type="checkbox" data-singing-mixer-target="mvRangeToggle" data-action="change->singing-mixer#toggleMvRange"><span>曲の一部だけを動画にする</span></label>
             <div class="sg-row sg-mvedit__range">
               <span class="sg-range__label">始まり</span>
+              <button class="sg-btn sg-btn--small" data-side="start" data-d="-1" data-action="singing-mixer#nudgeMvRange" aria-label="始まりを1秒前へ">−1秒</button>
               <input class="sg-num-input" type="text" inputmode="decimal" data-side="start" data-singing-mixer-target="mvRangeStart" data-action="change->singing-mixer#changeMvRange" aria-label="書き出す範囲の始まり（分:秒）">
+              <button class="sg-btn sg-btn--small" data-side="start" data-d="1" data-action="singing-mixer#nudgeMvRange" aria-label="始まりを1秒後へ">＋1秒</button>
               <span class="sg-range__label">終わり</span>
+              <button class="sg-btn sg-btn--small" data-side="end" data-d="-1" data-action="singing-mixer#nudgeMvRange" aria-label="終わりを1秒前へ">−1秒</button>
               <input class="sg-num-input" type="text" inputmode="decimal" data-side="end" data-singing-mixer-target="mvRangeEnd" data-action="change->singing-mixer#changeMvRange" aria-label="書き出す範囲の終わり（分:秒）">
+              <button class="sg-btn sg-btn--small" data-side="end" data-d="1" data-action="singing-mixer#nudgeMvRange" aria-label="終わりを1秒後へ">＋1秒</button>
+            </div>
+            <div class="sg-row">
+              <span class="sg-help">長さ：</span>
+              <% [15, 30, 60, 90, 180].each do |len| %>
+                <button class="sg-chip" data-len="<%= len %>" data-action="singing-mixer#mvRangeLen"><%= len < 60 ? "#{len}秒" : len == 60 ? "60秒" : len == 90 ? "90秒" : "3分" %></button>
+              <% end %>
+              <span class="sg-help">（始まりはそのまま）</span>
             </div>
             <div class="sg-row">
               <button class="sg-btn sg-btn--small" data-action="singing-mixer#mvRangeChorus">🔥 サビ1つぶん</button>
@@ -809,6 +851,7 @@
               <button class="sg-btn sg-btn--small" data-singing-mixer-target="mvRangePlayButton" data-action="singing-mixer#playMvRange" disabled>▶ この範囲を試聴</button>
             </div>
             <p class="sg-help" data-singing-mixer-target="mvRangeInfo">曲の最初から最後まで書き出します</p>
+            <p class="sg-help">長さの上限は投稿先ごとにちがい、変わることもあります。投稿する前に、そのサービスの決まりを確かめてね</p>
             <h4 class="sg-mvstep__sub">フェード <small class="sg-help">（黒から出る・黒に消える）</small></h4>
             <div class="sg-knob">
               <label>最初のフェードイン <span class="sg-val" data-singing-mixer-target="mvFadeInValue">なし</span></label>
@@ -821,6 +864,7 @@
             <label class="sg-check"><input type="checkbox" checked data-singing-mixer-target="mvFadeAudio" data-edit-key="fadeAudio" data-action="change->singing-mixer#changeMvEdit"><span>音も一緒にフェードする <small>（⚡速い書き出しのとき。🎬録画は絵だけ）</small></span></label>
             <p class="sg-help">できたら <a href="#sg-save">⑥ 保存</a> で書き出してね</p>
           </details>
+          <div class="sg-mvtab-nav" data-singing-mixer-target="mvTabNav"></div>
         </div>
       </div>
     </section>
@@ -829,6 +873,15 @@
     <section class="sg-card" id="sg-lyrics">
       <h2 class="sg-card__title"><span class="sg-num">5+</span>歌詞テロップ <small class="sg-help">（なくてもOK）</small></h2>
       <p class="sg-help">歌詞を貼り付けて（1行＝1つのテロップ）、「🪄 歌声から自動で合わせる」。うまくいかない所は「👆 タップで合わせる」（曲が流れるので、各行の歌い始めでタップするだけ）。</p>
+      <%# 🎬 いま作っている動画（⑤と同じ動画を写す）。行を選ぶ・動かすと、その行の所を見せる %>
+      <div class="sg-mirror sg-mirror--sticky">
+        <canvas class="sg-mirror__canvas" data-singing-mixer-target="mvMirror" data-action="click->singing-mixer#mvTogglePlay" title="押すと再生・一時停止"></canvas>
+        <div class="sg-mirror__side">
+          <button type="button" class="sg-btn sg-btn--primary sg-btn--small" data-singing-mixer-target="mvMirrorPlay" data-action="singing-mixer#mvTogglePlay" disabled>▶ 再生</button>
+          <span class="sg-mirror__time" data-singing-mixer-target="mvMirrorTime">0:00.0 / 0:00.0</span>
+          <p class="sg-help">歌詞の行を押す・動かすと、動画がその行の所になります</p>
+        </div>
+      </div>
       <div class="sg-lyrics-layout">
         <div>
           <textarea class="sg-textarea" rows="10" placeholder="ここに歌詞を貼り付け&#10;1行が1つのテロップになります&#10;（時間つきの LRC もそのまま使えます）"
@@ -895,9 +948,55 @@
       </div>
     </div>
 
+    <!-- 👆 タップで部分（サビなど）・画像の切りかえ場所を決める（再生している間だけ出る） -->
+    <div class="sg-tap sg-ptap" data-singing-mixer-target="ptapPanel" hidden>
+      <div class="sg-tap__inner" data-singing-mixer-target="ptapBody"></div>
+    </div>
+
     <!-- ⑥ 保存 -->
     <section class="sg-card" id="sg-save">
       <h2 class="sg-card__title"><span class="sg-num">6</span>保存する</h2>
+
+      <%# 🎬 最後の確認：できあがる動画（⑤と同じ動画を写す） %>
+      <div class="sg-final">
+        <h3 class="sg-group__title">🎬 最後に動画を確認</h3>
+        <div class="sg-mirror">
+          <canvas class="sg-mirror__canvas" data-singing-mixer-target="mvMirror" data-action="click->singing-mixer#mvTogglePlay" title="押すと再生・一時停止"></canvas>
+          <div class="sg-mirror__side">
+            <button type="button" class="sg-btn sg-btn--primary" data-singing-mixer-target="mvMirrorPlay" data-action="singing-mixer#mvTogglePlay" disabled>▶ 再生</button>
+            <span class="sg-mirror__time" data-singing-mixer-target="mvMirrorTime">0:00.0 / 0:00.0</span>
+            <div class="sg-row sg-row--tight">
+              <button class="sg-btn sg-btn--small" data-mv-jump="intro" data-action="singing-mixer#mvJump">最初</button>
+              <button class="sg-btn sg-btn--small" data-mv-jump="chorus" data-action="singing-mixer#mvJump">サビ</button>
+              <button class="sg-btn sg-btn--small" data-mv-jump="outro" data-action="singing-mixer#mvJump">最後</button>
+            </div>
+            <p class="sg-help">好きな所は、下の再生バーで動かせます</p>
+          </div>
+        </div>
+      </div>
+
+      <%# ✏️ 直したい所へ1回で戻る %>
+      <div class="sg-backto">
+        <h3 class="sg-group__title">✏️ 直したい所へ戻る</h3>
+        <div class="sg-backto__grid">
+          <button type="button" class="sg-backto__btn" data-jump-to="sg-rec" data-action="singing-mixer#jumpToSection"><span>🎙</span>録音を録り直す</button>
+          <button type="button" class="sg-backto__btn" data-jump-to="sg-sync" data-action="singing-mixer#jumpToSection"><span>⏱</span>ずれ・ノイズ</button>
+          <button type="button" class="sg-backto__btn" data-jump-to="sg-mix" data-action="singing-mixer#jumpToSection"><span>🎚</span>ミックス（声の音）</button>
+          <button type="button" class="sg-backto__btn" data-jump-to="sg-lyrics" data-action="singing-mixer#jumpToSection"><span>📝</span>歌詞のタイミング</button>
+          <button type="button" class="sg-backto__btn" data-jump-to="sg-key" data-action="singing-mixer#jumpToSection"><span>🎹</span>キー・速さ</button>
+          <button type="button" class="sg-backto__btn" data-jump-to="sg-load" data-action="singing-mixer#jumpToSection"><span>🎼</span>音を入れ直す</button>
+        </div>
+        <p class="sg-help">🎬 動画の：</p>
+        <div class="sg-backto__chips">
+          <button type="button" class="sg-chip" data-jump-to="sg-mv" data-mv-step="0" data-action="singing-mixer#jumpToSection">🪄 見本</button>
+          <button type="button" class="sg-chip" data-jump-to="sg-mv" data-mv-step="1" data-action="singing-mixer#jumpToSection">🖼 画像</button>
+          <button type="button" class="sg-chip" data-jump-to="sg-mv" data-mv-step="2" data-action="singing-mixer#jumpToSection">🎞 動き</button>
+          <button type="button" class="sg-chip" data-jump-to="sg-mv" data-mv-step="3" data-action="singing-mixer#jumpToSection">🎆 演出</button>
+          <button type="button" class="sg-chip" data-jump-to="sg-mv" data-mv-step="4" data-action="singing-mixer#jumpToSection">✏️ 文字</button>
+          <button type="button" class="sg-chip" data-jump-to="sg-mv" data-mv-step="5" data-action="singing-mixer#jumpToSection">✂️ 仕上げ</button>
+        </div>
+        <p class="sg-help">直したら、「💾 保存に戻る」でここへ戻れます</p>
+      </div>
       <div class="sg-row">
         <button class="sg-btn sg-btn--primary" data-singing-mixer-target="audioButton" data-action="singing-mixer#exportAudio" disabled>🎵 音声だけ保存（WAV）</button>
       </div>
@@ -908,6 +1007,7 @@
       <p class="sg-help">声だけ（アカペラ）は曲の頭からの時間に合わせて書き出すので、あとでオケと並べてもずれません。エフェクトなしは、ノイズ消し・録り直し・編集だけ入った声です。</p>
       <div class="sg-export">
         <h3 class="sg-group__title">🎬 動画（MV）</h3>
+        <p class="sg-help is-warn" data-singing-mixer-target="mvShortWarn" hidden></p>
         <div class="sg-row">
           <button class="sg-btn sg-btn--magic" data-singing-mixer-target="fastButton" data-action="singing-mixer#fastExport" disabled>⚡ 速く書き出す（MP4）</button>
           <select class="sg-select" data-singing-mixer-target="exportQuality" aria-label="動画の画質">
@@ -940,6 +1040,8 @@
 
   <!-- いつでも押せる再生バー -->
   <div class="sg-transport">
+    <%# 🎤 ▶ 試聴しているあいだ、右上でドット絵の子が歌う（飾りだけ） %>
+    <canvas class="sg-singer" data-singing-mixer-target="singer" aria-hidden="true" hidden></canvas>
     <div class="sg-transport__inner">
       <%# ▶ YouTube のような再生バー：バーを動かした所から再生。再生中に動かすと、はなした所へ飛ぶ %>
       <input type="range" min="0" max="1000" step="1" value="0" class="sg-transport__seek" data-singing-mixer-target="transportSeek"

@@ -54,7 +54,12 @@
   </div>
 
   <header class="studio-header">
-    <h1 class="studio-logo">Koto<span>Bouquet</span> <small>✦</small></h1>
+    <div class="studio-header-left">
+      <%# 🏠 メニュー（ログイン後のトップ）へ。下書きを保存してから移る %>
+      <%= link_to root_path, class: "studio-history-button studio-home-button", title: "メニューへ（いまの編集は保存されます）",
+            data: { turbo: false, action: "click->canvas-editor#goHome" } do %>🏠<span>メニュー</span><% end %>
+      <h1 class="studio-logo"><%= link_to root_path, class: "studio-logo-link", title: "メニューへ", data: { turbo: false, action: "click->canvas-editor#goHome" } do %>Koto<span>Bouquet</span> <small>✦</small><% end %></h1>
+    </div>
     <div class="studio-header-actions">
       <button type="button" class="studio-history-button" title="マイテンプレに保存"
         data-action="click->canvas-editor#openMySaveDialog">⭐<span>マイ保存</span></button>
@@ -95,6 +100,13 @@
       <canvas data-canvas-editor-target="canvas"></canvas>
       <!-- 🔍 透過でなぞっている所の拡大鏡 -->
       <canvas class="studio-loupe" data-canvas-editor-target="loupe" hidden></canvas>
+    </div>
+    <%# 🧑‍🎨 編集が進むと「いいね！」とほめてくれる子（飾りだけ。書き出す画像には入らない） %>
+    <div class="studio-buddy" data-controller="pixel-buddy">
+      <p class="studio-buddy__bubble" data-pixel-buddy-target="bubble" role="status" aria-live="polite" hidden></p>
+      <button type="button" class="studio-buddy__body" data-pixel-buddy-target="body" aria-label="応援してくれる子（なぞると運べる・たたくと応援）">
+        <canvas data-pixel-buddy-target="canvas"></canvas>
+      </button>
     </div>
   </section>
 
@@ -573,7 +585,10 @@
           ["noise", "📼", "ノイズ", 40],
           ["glitch", "⚡", "グリッチ", 50],
           ["retro", "🎞️", "レトロ", 60],
-          ["light-leak", "🌈", "光もれ", 60]
+          ["light-leak", "🌈", "光もれ", 60],
+          ["bokeh", "🔆", "玉ボケ", 50],
+          ["speedlines", "💥", "集中線", 50],
+          ["snow", "❄️", "雪", 50]
         ].each do |key, icon, label, default| %>
           <div class="studio-effect-row">
             <button type="button" class="studio-effect-toggle"
@@ -605,7 +620,13 @@
             ["hearts", "💗", "ハート"],
             ["stars", "⭐", "星"],
             ["polaroid", "📸", "ポラロイド"],
-            ["tape", "🩹", "テープ"]
+            ["tape", "🩹", "テープ"],
+            ["film", "🎞️", "フィルム"],
+            ["neon", "💡", "ネオン"],
+            ["scallop", "🧁", "レース"],
+            ["flowers", "💐", "お花"],
+            ["ring", "🔘", "アイコン輪"],
+            ["ring-dark", "🟣", "アイコン輪（暗）"]
           ].each do |key, icon, label| %>
             <button type="button" class="studio-frame-button<%= " is-active" if key == "none" %>"
               data-canvas-editor-target="frameButton" data-key="<%= key %>"

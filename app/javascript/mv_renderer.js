@@ -16,9 +16,9 @@
 // }
 
 export const MV_TEMPLATES = Object.freeze({
-  simple: { label: "🌊 下に音の波", hint: "画像の下に音の波、左上に曲名。どんな曲にも合う" },
+  simple: { label: "🌊 下に音の波", hint: "画像だけ＋下に音の波（いまは「🌊 下に音の波を出す」のチェックで、どの見た目とも組み合わせられます）" },
   jacket: { label: "💿 ジャケット風", hint: "画像をCDジャケットのように真ん中に置いて、まわりはぼかす" },
-  visualizer: { label: "🌀 曲名のまわりに輪", hint: "曲名のまわりを、音に合わせて輪がはねる" },
+  visualizer: { label: "🌀 音の輪", hint: "画面の真ん中で、音に合わせて輪がはねる（曲名は出しません）" },
   particles: { label: "🎆 光のつぶ", hint: "光のつぶが音に合わせてふわっと舞う" },
   bars: { label: "📊 音のバー", hint: "画面の下いっぱいに音のバー。ノリのいい曲に" },
   plain: { label: "🖼 画像だけ", hint: "画像と文字だけ。音の波は出しません" }
@@ -30,7 +30,12 @@ export const MV_ANIMS = Object.freeze({
   lyric: {
     fade: "ふわっと（今まで）", pop: "ポンと出る", rise: "下からスッと", type: "1文字ずつ",
     bounce: "ぴょんぴょん", wave: "うねうね", neon: "ネオン", scatter: "ばらばら（はげしく）", kinetic: "ドン！ドン！（大きく）",
-    slidein: "横から入って横へ出る", dropin: "上から1文字ずつ落ちてくる", flyin: "まわりから文字が飛んでくる"
+    slidein: "横から入って横へ出る", dropin: "上から1文字ずつ落ちてくる", flyin: "まわりから文字が飛んでくる",
+    reveal: "▭ 帯で隠して出す", spot: "🅰 文字PV（場所ばらばら・縦書きも）", spring: "ビヨン（はね返る）"
+  },
+  // 🅰 文字の飾り（どの歌詞の出し方とも組み合わせられる）
+  deco: {
+    none: "なし（今まで）", bigword: "背景に大きな文字", keyword: "キーワードを強調", both: "両方"
   },
   transition: {
     flash: "フラッシュ（今まで）", zoom: "ズームでドン", invert: "色が反転", glitch: "グリッチ", none: "なし"
@@ -40,13 +45,18 @@ export const MV_ANIMS = Object.freeze({
     beat: "拍でドンドン", bounce: "ぽよんぽよん", spin: "くるんと回る", shake: "拍でぶるぶる",
     pandown: "ゆっくり上から下へ", panup: "ゆっくり下から上へ", panright: "ゆっくり横に流れる"
   },
+  // 🔷 図形の動き（モーショングラフィックス）：画像の上・歌詞の下に、拍に合わせて動く図形を重ねる
+  geo: {
+    none: "なし（今まで）", squares: "◇ 四角がくるくる", rings: "◎ 丸が広がる", lines: "／ 線がシュッ",
+    arrows: "↻ 矢印（回る＋画面切りかえ）", float: "△ 図形がふわふわ", mix: "✳ ぜんぶ少しずつ"
+  },
   // 🖼 背景（画像）が切りかわるときの入り方。今までは「ふわっと入れかわる」
   enter: {
     fade: "ふわっと（今まで）", blur: "ぼかしから、くっきり", slideD: "上から入ってくる", slideL: "右から入ってくる", slideU: "下から入ってくる", drop: "上から落ちてくる（はずむ）", zoomin: "奥から飛び出す"
   }
 })
 
-export const DEFAULT_MV_ANIM = Object.freeze({ lyric: "fade", transition: "flash", bg: "slow", enter: "fade" })
+export const DEFAULT_MV_ANIM = Object.freeze({ lyric: "fade", transition: "flash", bg: "slow", enter: "fade", geo: "none", deco: "none" })
 
 const animOf = (scene) => ({ ...DEFAULT_MV_ANIM, ...(scene.anim || {}) })
 
@@ -112,7 +122,7 @@ export const DEFAULT_MV_EDIT = Object.freeze({
   fadeIn: 0, fadeOut: 0, fadeAudio: true,
   logo: { enabled: false, kind: "text", text: "", corner: "br", size: "m", opacity: 0.8 },
   // 🪄 テンプレート（かんたん作成）・📍 ポイントの演出。どれも最初は空（今までと同じ見た目）
-  tpl: null, pointFx: {}, filterNames: {}, points: []
+  tpl: null, pointFx: {}, filterNames: {}, geoNames: {}, points: []
 })
 
 // 📍 ポイントで起きる演出の名前（mv_templates.js の MV_POINT_FX と同じキー）
@@ -161,6 +171,8 @@ export function normalizeMvEdit(e) {
         end: POINT_FX_KINDS.includes(v.end) ? v.end : "none"
       }])) : {},
     filterNames: src.filterNames && typeof src.filterNames === "object" ? Object.fromEntries(Object.entries(src.filterNames).filter(([, v]) => MV_FILTERS[v])) : {},
+    // 🔷 部分の名前ごとの図形の動き（なければ 5-3 の「図形の動き」のまま）
+    geoNames: src.geoNames && typeof src.geoNames === "object" ? Object.fromEntries(Object.entries(src.geoNames).filter(([, v]) => MV_ANIMS.geo[v])) : {},
     points: Array.isArray(src.points) ? src.points.filter((p) => p && p.id && POINT_FX_KINDS.includes(p.kind)).slice(0, 100).map((p) => ({
       id: String(p.id), kind: p.kind,
       anchor: p.anchor && typeof p.anchor === "object" ? { ...p.anchor } : { type: "time", sec: 0 }
@@ -544,10 +556,13 @@ function drawIntro(g, w, h, t, scene, k) {
   g.fillStyle = "rgba(0,0,0,0.35)"
   g.fillRect(0, 0, w, h)
   const rise = (1 - a) * 20 * k
-  fitText(g, scene.title || "歌ってみた", w / 2, h * 0.47 + rise, w * 0.86, 76 * k, { align: "center" })
-  if (scene.artist) fitText(g, `歌：${scene.artist}`, w / 2, h * 0.47 + 64 * k + rise, w * 0.8, 34 * k, { weight: 500, align: "center", color: scene.colors.accent2 })
+  // 曲名（大きく）→ 歌った人 → オケのクレジット（小さく）。最後のクレジットと同じ中身
+  const y0 = h * 0.45 - (scene.credit ? 20 * k : 0)
+  fitText(g, scene.title || "歌ってみた", w / 2, y0 + rise, w * 0.86, 76 * k, { align: "center" })
+  if (scene.artist) fitText(g, `歌：${scene.artist}`, w / 2, y0 + 64 * k + rise, w * 0.8, 34 * k, { weight: 500, align: "center", color: scene.colors.accent2 })
+  if (scene.credit) fitText(g, scene.credit, w / 2, y0 + (scene.artist ? 108 : 64) * k + rise, w * 0.8, 24 * k, { weight: 500, align: "center", color: "rgba(255,255,255,0.85)" })
   g.fillStyle = scene.colors.accent
-  g.fillRect(w / 2 - 60 * k * a, h * 0.47 + 18 * k, 120 * k * a, 4 * k)
+  g.fillRect(w / 2 - 60 * k * a, y0 + 18 * k, 120 * k * a, 4 * k)
   g.restore()
 }
 
@@ -764,7 +779,7 @@ export function lyricIndexAt(lyrics, t) {
 }
 
 // 1行を書く。karaoke なら、歌っている所まで色が変わる（左から右へ）
-function drawLyricLine(g, text, x, y, maxW, size, scene, { progress = null, alpha = 1, align = "center" } = {}) {
+function drawLyricLine(g, text, x, y, maxW, size, scene, { progress = null, alpha = 1, align = "center", keyword = null, line = null, t = 0 } = {}) {
   let s = size
   g.font = fontOf(800, s)
   while (s > 12 && g.measureText(text).width > maxW) {
@@ -775,6 +790,14 @@ function drawLyricLine(g, text, x, y, maxW, size, scene, { progress = null, alph
   const left = align === "center" ? x - tw / 2 : x
   g.save()
   g.globalAlpha *= alpha
+  // 🅰 キーワードの下にマーカー（歌い始めたらスッと伸びる）
+  if (keyword && line) {
+    const chars = Array.from(text)
+    const pre = g.measureText(chars.slice(0, keyword.start).join("")).width
+    const kwW = g.measureText(chars.slice(keyword.start, keyword.start + keyword.len).join("")).width
+    const grow = clamp01((t - keywordTime(line, keyword, chars.length)) / 0.2)
+    drawKeywordMarker(g, left + pre, left + pre + kwW, y, s, grow, scene.colors.accent)
+  }
   g.textAlign = "left"
   g.lineJoin = "round"
   g.lineWidth = Math.max(3, s * 0.16)
@@ -866,10 +889,18 @@ function drawCharLyric(g, w, h, t, scene, k, line, a, style) {
   const n = L.chars.length
   const sung = sungChars(scene, line, t, n)
   const b = beatAt(scene, t)
+  const kw = decoOf(scene).keyword && style !== "scatter" ? keywordOf(line.text) : null
+  const kt = kw ? keywordTime(line, kw, n) : 0
   g.save()
   g.font = fontOf(800, L.size)
   g.textAlign = "center"
   g.textBaseline = "alphabetic"
+  // 🅰 キーワードのマーカー（動きの少ない出し方のときだけ。文字が飛び回るときは色だけ変える）
+  if (kw && (style === "wave" || style === "neon" || style === "spring" || style === "bounce")) {
+    const i0 = kw.start
+    const i1 = Math.min(n - 1, kw.start + kw.len - 1)
+    drawKeywordMarker(g, L.xs[i0] - L.ws[i0] / 2, L.xs[i1] + L.ws[i1] / 2, a.y, L.size, clamp01((t - kt) / 0.2) * fadeOut, scene.colors.accent)
+  }
   L.chars.forEach((ch, i) => {
     let dx = 0
     let dy = 0
@@ -922,6 +953,17 @@ function drawCharLyric(g, w, h, t, scene, k, line, a, style) {
       alpha *= flick * clamp01(since / 0.1)
       fill = i < sung ? "#ffffff" : accent
       glow = s * (0.35 + 0.35 * Math.exp(-b.dt / 0.18))
+    } else if (style === "spring") {
+      // ビヨン：1文字ずつ、小さい所から大きくなって行きすぎて戻る（びよよん）。終わりは後ろの文字から縮んで消える
+      const local = since - i * 0.04
+      if (local < 0) return
+      const e = elasticOut(clamp01(local / 0.7))
+      sc = e
+      dy = (1 - e) * s * 0.5
+      const out = clamp01((t - (line.endSec - 0.3) - (n - 1 - i) * 0.02) / 0.25)
+      sc *= 1 - out * out
+      alpha = clamp01(local / 0.06)
+      if (sc <= 0.01) return
     } else if (style === "scatter") {
       // ばらばら：大きさ・角度・高さがばらばらの文字が、1文字ずつドンと押される
       const local = since - i * 0.05
@@ -940,6 +982,7 @@ function drawCharLyric(g, w, h, t, scene, k, line, a, style) {
       fill = i < sung ? accent : (r3 > 0.72 ? accent2 : r3 < 0.18 ? accent : "#ffffff")
     }
     if (alpha <= 0.01) return
+    if (kw && i >= kw.start && i < kw.start + kw.len && t >= kt && style !== "neon") fill = scene.colors.accent2 || fill
     g.save()
     g.globalAlpha *= clamp01(alpha)
     g.translate(L.xs[i] + dx, a.y + dy)
@@ -1001,7 +1044,221 @@ function drawKinetic(g, w, h, t, scene, k, line, a, since, fadeOut, seed) {
   g.restore()
 }
 
-const CHAR_STYLES = new Set(["bounce", "wave", "neon", "scatter", "kinetic", "dropin", "flyin"])
+const CHAR_STYLES = new Set(["bounce", "wave", "neon", "scatter", "kinetic", "dropin", "flyin", "spring"])
+
+// ---------- 🅰 文字PV（AviUtl の文字PV・リリックモーションでよくある動き） ----------
+
+// 行の中の「キーワード」：いちばん長い漢字・カタカナ・英数字のつながり（なければ最後の数文字）。{ start, len }（文字の番号）
+function keywordOf(text) {
+  const chars = Array.from(text || "")
+  const kindOf = (c) => (/[一-鿿々]/.test(c) ? 1 : /[゠-ヿー]/.test(c) ? 2 : /[A-Za-z0-9]/.test(c) ? 3 : 0)
+  let best = null
+  let i = 0
+  while (i < chars.length) {
+    const kind = kindOf(chars[i])
+    if (!kind) { i++; continue }
+    let j = i + 1
+    while (j < chars.length && kindOf(chars[j]) === kind) j++
+    const len = j - i
+    const score = len + (kind === 2 ? 0.5 : 0)
+    if (len >= 2 && (!best || score >= best.score)) best = { start: i, len, score }
+    i = j
+  }
+  if (best) return { start: best.start, len: best.len }
+  const n = chars.length
+  return n ? { start: Math.max(0, n - 4), len: Math.min(4, n) } : null
+}
+
+// キーワードを歌い始める時間（行の中の位置から見積もる）
+function keywordTime(line, kw, n) {
+  const span = Math.max(0.3, (line.endSec - line.startSec) * 0.85)
+  return line.startSec + (kw.start / Math.max(1, n)) * span
+}
+
+// 文字の飾り（🅰）：背景に大きな文字／キーワードを強調
+function decoOf(scene) {
+  const d = animOf(scene).deco
+  return { big: d === "bigword" || d === "both", keyword: d === "keyword" || d === "both" }
+}
+
+// 🅰 背景に大きな文字：キーワードを画面いっぱいの大きさで、うすく（ふち取りだけ）ゆっくり流す
+function drawBigWord(g, w, h, t, scene, k, line) {
+  const kw = keywordOf(line.text)
+  if (!kw) return
+  const word = Array.from(line.text).slice(kw.start, kw.start + kw.len).join("")
+  const since = t - line.startSec
+  const life = line.endSec - line.startSec
+  const inA = clamp01(since / 0.3)
+  const outA = clamp01((line.endSec - t) / 0.4)
+  let size = h * 0.62
+  g.save()
+  g.font = fontOf(900, size)
+  while (size > 40 && g.measureText(word).width > w * 1.15) { size -= 8; g.font = fontOf(900, size) }
+  const drift = (since / Math.max(1, life)) * w * 0.08
+  const seed = Math.floor(line.startSec * 10)
+  const dir = seed % 2 ? 1 : -1
+  g.translate(w / 2 + dir * (w * 0.04 - drift), h * 0.5)
+  g.rotate(-0.05 * dir)
+  const sc = 1.12 - 0.12 * smooth(inA)
+  g.scale(sc, sc)
+  g.textAlign = "center"
+  g.textBaseline = "middle"
+  g.globalAlpha = 0.16 * inA * outA
+  g.lineWidth = 3 * k
+  g.strokeStyle = scene.colors.accent2 || "#ffffff"
+  g.strokeText(word, 0, 0)
+  g.globalAlpha = 0.07 * inA * outA
+  g.fillStyle = scene.colors.accent || "#ffffff"
+  g.fillText(word, 0, 0)
+  g.restore()
+}
+
+// キーワードの下に引くマーカー（左からスッと伸びる）。x0〜x1 は文字の左右
+function drawKeywordMarker(g, x0, x1, baseY, size, grow, color) {
+  if (grow <= 0) return
+  g.save()
+  g.globalAlpha *= 0.9
+  g.fillStyle = color
+  const pad = size * 0.08
+  g.fillRect(x0 - pad, baseY - size * 0.42, (x1 - x0 + pad * 2) * grow, size * 0.5)
+  g.restore()
+}
+
+// はね返る動き（少し行きすぎて戻る）
+const backOut = (x) => { const c = 1.9; const m = x - 1; return 1 + (c + 1) * m * m * m + c * m * m }
+const elasticOut = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : 1 - Math.exp(-6 * x) * Math.cos(x * 13))
+
+// ▭ 帯で隠して出す：色の帯が左から伸びて文字を隠し、帯が右へ抜けると文字が出ている。終わりは逆に隠して消える
+function drawRevealLyric(g, w, h, t, scene, k, line, a, kw) {
+  const since = t - line.startSec
+  const progress = scene.karaoke ? clamp01(since / Math.max(0.3, (line.endSec - line.startSec) * 0.85)) : null
+  let s = a.size
+  g.save()
+  g.font = fontOf(800, s)
+  while (s > 12 && g.measureText(line.text).width > a.maxW) { s -= 2; g.font = fontOf(800, s) }
+  const tw = g.measureText(line.text).width
+  const left = a.align === "center" ? a.x - tw / 2 : a.x
+  const y = a.y
+  const IN = 0.5
+  const OUT = 0.45
+  const pin = clamp01(since / IN)
+  const pout = clamp01((t - (line.endSec - OUT)) / OUT)
+  let barL = left
+  let barR = left
+  let showL = left
+  let showR = left + tw
+  if (pin < 1) {
+    if (pin < 0.5) { barR = left + tw * (1 - Math.pow(1 - pin / 0.5, 3)); showR = left } // 帯が伸びる（文字はまだ）
+    else { barL = left + tw * Math.pow((pin - 0.5) / 0.5, 3); barR = left + tw; showR = barL } // 帯が抜けて文字が出る
+  } else if (pout > 0) {
+    if (pout < 0.5) { barR = left + tw * (1 - Math.pow(1 - pout / 0.5, 3)); showL = barR } // 帯が文字を隠していく
+    else { barL = left + tw * Math.pow((pout - 0.5) / 0.5, 3); barR = left + tw; showR = left } // 帯が抜けて消える
+  }
+  // 文字の下の細い線（出ている間）
+  if (pin >= 0.5 && pout < 0.5) {
+    g.fillStyle = scene.colors.accent2 || "#ffffff"
+    g.globalAlpha = 0.8
+    g.fillRect(showL, y + s * 0.22, Math.max(0, showR - showL), Math.max(2, s * 0.06))
+    g.globalAlpha = 1
+  }
+  if (showR > showL) {
+    g.save()
+    g.beginPath()
+    g.rect(showL, y - s * 1.3, showR - showL, s * 1.8)
+    g.clip()
+    drawLyricLine(g, line.text, a.x, y, a.maxW, a.size, scene, { progress, align: a.align, keyword: kw, line, t })
+    g.restore()
+  }
+  if (barR > barL) {
+    g.fillStyle = scene.colors.accent || "#ffffff"
+    g.fillRect(barL, y - s * 0.95, barR - barL, s * 1.25)
+    g.fillStyle = scene.colors.accent2 || "#ffffff"
+    g.fillRect(barR - s * 0.08, y - s * 0.95, s * 0.08, s * 1.25) // 帯の先の光る線
+  }
+  g.restore()
+}
+
+// 🅰 文字PV配置：行ごとに、場所・大きさ・向きを変える（ときどき縦書き）。1文字ずつはね返って出る
+const PV_SPOTS = [
+  { x: 0.08, y: 0.3, align: "left" },
+  { x: 0.92, y: 0.7, align: "right" },
+  { x: 0.5, y: 0.5, align: "center", big: true },
+  { x: 0.84, y: 0.16, vertical: true },
+  { x: 0.08, y: 0.76, align: "left" },
+  { x: 0.16, y: 0.14, vertical: true },
+  { x: 0.92, y: 0.32, align: "right" },
+  { x: 0.5, y: 0.3, align: "center" }
+]
+function drawSpotLyric(g, w, h, t, scene, k, line, idx, kw) {
+  const chars = Array.from(line.text)
+  const n = chars.length
+  if (!n) return
+  const seed = Math.floor(line.startSec * 10) * 31
+  const tall = layoutOf(w, h) === "tall"
+  let spot = PV_SPOTS[(idx * 3 + (seed % 5)) % PV_SPOTS.length]
+  if (spot.vertical && n > 12) spot = PV_SPOTS[2]
+  // 縦長の動画は、下の20%と右の15%をよける
+  const sx = tall ? Math.min(spot.x, 0.8) : spot.x
+  const sy = tall ? Math.min(spot.y, 0.72) : spot.y
+  const since = t - line.startSec
+  const sung = sungChars(scene, line, t, n)
+  const kt = kw ? keywordTime(line, kw, n) : 0
+  const accent = scene.colors.accent
+  const accent2 = scene.colors.accent2
+  let size = Math.min(w, h) * 0.075 * (spot.big ? 1.6 : 1.1) * (0.9 + hash(seed + 3) * 0.3)
+  const rot = spot.vertical ? 0 : (hash(seed + 7) - 0.5) * 0.16
+  g.save()
+  g.textAlign = "center"
+  g.textBaseline = "middle"
+  let pos
+  if (spot.vertical) {
+    size = Math.min(size, (h * 0.8) / (n * 1.05))
+    const total = n * size * 1.05
+    const top = Math.max(h * 0.06, Math.min(h * 0.94 - total, sy * h - total / 2))
+    pos = chars.map((_, j) => ({ x: sx * w, y: top + size * 0.52 + j * size * 1.05, cw: size }))
+  } else {
+    g.font = fontOf(800, size)
+    const maxW = w * (spot.align === "center" ? 0.86 : 0.7)
+    let ws = chars.map((c) => g.measureText(c).width)
+    let tot = ws.reduce((x, y) => x + y, 0)
+    if (tot > maxW) { size *= maxW / tot; g.font = fontOf(800, size); ws = chars.map((c) => g.measureText(c).width); tot = ws.reduce((x, y) => x + y, 0) }
+    const left = spot.align === "left" ? sx * w : spot.align === "right" ? sx * w - tot : sx * w - tot / 2
+    let x = left
+    pos = ws.map((cw) => { const p = { x: x + cw / 2, y: sy * h, cw }; x += cw; return p })
+  }
+  g.font = fontOf(800, size)
+  const cx = pos.reduce((s2, p) => s2 + p.x, 0) / n
+  const cy = pos.reduce((s2, p) => s2 + p.y, 0) / n
+  g.translate(cx, cy)
+  g.rotate(rot)
+  g.translate(-cx, -cy)
+  // キーワードのマーカー
+  if (kw && !spot.vertical) {
+    const grow = clamp01((t - kt) / 0.2)
+    const p0 = pos[kw.start]
+    const p1 = pos[Math.min(n - 1, kw.start + kw.len - 1)]
+    drawKeywordMarker(g, p0.x - p0.cw / 2, p1.x + p1.cw / 2, p0.y + size * 0.3, size, grow * clamp01((line.endSec - t) / 0.25), accent)
+  }
+  chars.forEach((ch, j) => {
+    const local = since - j * 0.035
+    if (local < 0) return
+    const m = clamp01(local / 0.32)
+    let sc = backOut(m)
+    const out = clamp01((t - (line.endSec - 0.3) - (n - 1 - j) * 0.015) / 0.25)
+    sc *= 1 - out * out
+    if (sc <= 0.01) return
+    const isKw = kw && j >= kw.start && j < kw.start + kw.len
+    let fill = j < sung ? accent : "#ffffff"
+    if (isKw && t >= kt) fill = spot.vertical ? accent2 : "#ffffff"
+    g.save()
+    g.globalAlpha *= clamp01(m * 4)
+    g.translate(pos[j].x, pos[j].y)
+    g.scale(sc, sc)
+    drawGlyph(g, ch, 0, 0, size, fill)
+    g.restore()
+  })
+  g.restore()
+}
 
 function drawLyrics(g, w, h, t, scene, k) {
   const lyrics = scene.lyrics
@@ -1009,7 +1266,16 @@ function drawLyrics(g, w, h, t, scene, k) {
   const i = lyricIndexAt(lyrics, t)
   const a = lyricAnchor(scene, w, h, k)
   const style = animOf(scene).lyric
-  if (i >= 0 && CHAR_STYLES.has(style)) {
+  const deco = decoOf(scene)
+  if (deco.big && i >= 0) drawBigWord(g, w, h, t, scene, k, lyrics[i]) // 歌詞より下に
+  const kw = deco.keyword && i >= 0 ? keywordOf(lyrics[i].text) : null
+  if (i >= 0 && style === "spot") {
+    drawSpotLyric(g, w, h, t, scene, k, lyrics[i], i, kw)
+    return // 場所がばらばらなので、次の行は出さない
+  }
+  if (i >= 0 && style === "reveal") {
+    drawRevealLyric(g, w, h, t, scene, k, lyrics[i], a, kw)
+  } else if (i >= 0 && CHAR_STYLES.has(style)) {
     drawCharLyric(g, w, h, t, scene, k, lyrics[i], a, style)
     if (style === "scatter" || style === "kinetic") return // はげしい動きのときは、次の行は出さない
   } else if (i >= 0) {
@@ -1054,7 +1320,7 @@ function drawLyrics(g, w, h, t, scene, k) {
       g.scale(scale, scale)
       g.translate(-a.x, -y)
     }
-    drawLyricLine(g, text, a.x, y, a.maxW, a.size, scene, { progress: style === "type" ? null : progress, alpha, align: style === "type" && a.align === "center" ? "center" : a.align })
+    drawLyricLine(g, text, a.x, y, a.maxW, a.size, scene, { progress: style === "type" ? null : progress, alpha, align: style === "type" && a.align === "center" ? "center" : a.align, keyword: style === "type" ? null : kw, line, t })
     g.restore()
   }
   // 次の行を小さく（すぐ続くときだけ）
@@ -1067,19 +1333,15 @@ function drawLyrics(g, w, h, t, scene, k) {
 
 // ---------- テンプレート ----------
 
-function renderSimple(g, w, h, t, scene, k) {
+// 🌊 下に音の波（左右対称のバー）。どの見た目とも組み合わせられる（scene.wave）
+function drawWave(g, w, h, t, scene, k) {
   const level = scene.features?.level || 0
-  const m = bgMotion(t, scene, { zoom: 1.04 + 0.02 * Math.sin(t * 0.15), panX: Math.sin(t * 0.05) * 0.5 })
-  drawBackground(g, w, h, scene, m.zoom, m.panX, m.panY, m.rot)
-  dim(g, w, h, scene.dim)
   // 下を少し暗く（波が見えやすいように）
   const gr = g.createLinearGradient(0, h * 0.55, 0, h)
   gr.addColorStop(0, "rgba(0,0,0,0)")
-  gr.addColorStop(1, "rgba(0,0,0,0.55)")
+  gr.addColorStop(1, "rgba(0,0,0,0.45)")
   g.fillStyle = gr
   g.fillRect(0, h * 0.55, w, h * 0.45)
-
-  // 音の波（左右対称のバー）
   const n = 48
   const bands = bandsOf(scene, n)
   const bw = (w * 0.8) / (n * 2)
@@ -1098,9 +1360,10 @@ function renderSimple(g, w, h, t, scene, k) {
     g.fillRect(xl + bw * 0.15, base - bh, bw * 0.7, bh)
   }
   g.restore()
-  if (tall) drawCorner(g, w, h, t, scene, k, 40 * k, h * 0.12)
-  else drawCorner(g, w, h, t, scene, k)
 }
+
+// 前の「下に音の波」の見た目（いまは「画像だけ」＋🌊 音の波）。古い設定のために残す
+const showWave = (scene) => !!scene.wave || scene.template === "simple"
 
 function renderJacket(g, w, h, t, scene, k) {
   const level = scene.features?.level || 0
@@ -1203,16 +1466,7 @@ function renderVisualizer(g, w, h, t, scene, k) {
   }
   g.stroke()
   g.restore()
-  // 真ん中の円と曲名
-  g.save()
-  g.beginPath()
-  g.arc(cx, cy, r * 0.92, 0, Math.PI * 2)
-  g.fillStyle = "rgba(0,0,0,0.35)"
-  g.fill()
-  g.restore()
-  const a = scene.showIntro ? clamp01((t - clipStart(scene) - 3.6) / 0.8) : 1
-  fitText(g, scene.title || "歌ってみた", cx, cy + 8 * k, r * 1.6, 40 * k, { align: "center", alpha: a })
-  if (scene.artist) fitText(g, scene.artist, cx, cy + 44 * k, r * 1.5, 22 * k, { weight: 500, align: "center", alpha: a, color: scene.colors.accent2 })
+  // 輪だけ（曲名は出さない）
 }
 
 // 🎆 パーティクル（K30）：光のつぶが下から舞い上がり、音が大きいほど大きく・明るく
@@ -1299,7 +1553,7 @@ function renderPlain(g, w, h, t, scene, k) {
   else drawCorner(g, w, h, t, scene, k)
 }
 
-const RENDERERS = { simple: renderSimple, jacket: renderJacket, visualizer: renderVisualizer, particles: renderParticles, bars: renderBars, plain: renderPlain }
+const RENDERERS = { simple: renderPlain, jacket: renderJacket, visualizer: renderVisualizer, particles: renderParticles, bars: renderBars, plain: renderPlain }
 
 // 🎞 場面転換（K30）：サビ（と落ちサビ）が始まる時間から、どれくらいたったか
 function cutAt(scene, t) {
@@ -1342,10 +1596,296 @@ function drawGlitch(g, w, h, dt, k) {
   g.restore()
 }
 
+// ---------- 🔷 図形の動き（モーショングラフィックス） ----------
+// 四角・丸・線・矢印・三角を、拍に合わせて幾何学的に動かす。画像の上・歌詞の下に重ねる。
+// どれも「t と拍」だけで決まる（⚡速い書き出しでも同じ絵）。歌詞が読めるように、真ん中はぬりつぶさない
+
+// 拍の情報：直前の拍の番号・そこからの秒数、i 番目の拍の時間
+function geoBeat(scene, t) {
+  const beats = scene.beatTimes || scene.fx?.beats
+  const real = !!(beats && beats.length && t >= beats[0])
+  const timeOf = (i) => (real ? beats[Math.max(0, Math.min(beats.length - 1, i))] : Math.max(0, i) * 0.5)
+  const b = beatAt(scene, t)
+  return { index: b.index, dt: b.dt, timeOf }
+}
+
+function geoColors(scene) {
+  const c = scene.colors || {}
+  return [c.accent || "#7cc8ff", c.accent2 || "#ffffff", "#ffffff"]
+}
+
+function strokeRotRect(g, cx, cy, size, rot, lw) {
+  g.save()
+  g.translate(cx, cy)
+  g.rotate(rot)
+  g.lineWidth = lw
+  g.strokeRect(-size / 2, -size / 2, size, size)
+  g.restore()
+}
+
+function shapePath(g, kind, x, y, r, rot) {
+  g.save()
+  g.translate(x, y)
+  g.rotate(rot)
+  g.beginPath()
+  if (kind === 0) g.rect(-r, -r, r * 2, r * 2)
+  else if (kind === 1) g.arc(0, 0, r, 0, Math.PI * 2)
+  else if (kind === 2) { g.moveTo(0, -r); g.lineTo(r * 0.87, r * 0.5); g.lineTo(-r * 0.87, r * 0.5); g.closePath() }
+  else { g.moveTo(-r, -r); g.lineTo(r, r); g.moveTo(r, -r); g.lineTo(-r, r) } // ×
+  g.restore()
+}
+
+// 四角がくるくる回る（真ん中のまわりに3重の四角＋すみのカギかっこ）
+function geoSquares(g, w, h, t, scene, k, amp, cols) {
+  const b = geoBeat(scene, t)
+  const hit = Math.exp(-b.dt / 0.2)
+  const cx = w / 2
+  const cy = h / 2
+  const m = Math.min(w, h)
+  for (let i = 0; i < 3; i++) {
+    const size = m * (0.62 + i * 0.16) * (1 + hit * 0.04 * amp)
+    const rot = (Math.PI / 4) * Math.floor(b.index / (2 + i)) * (i % 2 ? -1 : 1) // 拍ごとにカクッと回る
+    const ease = smooth(Math.min(1, b.dt / 0.25))
+    const prev = (Math.PI / 4) * Math.floor((b.index - 1) / (2 + i)) * (i % 2 ? -1 : 1)
+    g.strokeStyle = cols[i % cols.length]
+    g.globalAlpha = (0.55 - i * 0.13) * amp
+    strokeRotRect(g, cx, cy, size, prev + (rot - prev) * ease + t * 0.05 * (i % 2 ? -1 : 1), (6 - i * 1.5) * k)
+  }
+  // すみのカギかっこ（拍でキュッと寄る）
+  const pad = 28 * k + hit * 10 * k * amp
+  const L = 60 * k
+  g.globalAlpha = 0.85 * amp
+  g.strokeStyle = cols[1]
+  g.lineWidth = 5 * k
+  ;[[pad, pad, 1, 1], [w - pad, pad, -1, 1], [pad, h - pad, 1, -1], [w - pad, h - pad, -1, -1]].forEach(([x, y, dx, dy]) => {
+    g.beginPath()
+    g.moveTo(x, y + L * dy)
+    g.lineTo(x, y)
+    g.lineTo(x + L * dx, y)
+    g.stroke()
+  })
+}
+
+// 丸が広がる（拍ごとに、真ん中から輪が広がって消える）
+function geoRings(g, w, h, t, scene, k, amp, cols) {
+  const b = geoBeat(scene, t)
+  const R = Math.hypot(w, h) / 2
+  for (let j = 0; j < 4; j++) {
+    const i = b.index - j
+    if (i < 0) break
+    const age = t - b.timeOf(i)
+    if (age < 0 || age > 1.6) continue
+    const p = age / 1.6
+    const r = R * (0.08 + smooth(Math.min(1, p * 1.3)) * 0.95)
+    g.globalAlpha = (1 - p) * 0.7 * amp
+    g.strokeStyle = cols[i % 2]
+    g.lineWidth = (i % 4 === 0 ? 14 : 5) * k * (1 - p * 0.6)
+    g.setLineDash(i % 3 === 1 ? [18 * k, 14 * k] : [])
+    g.beginPath()
+    g.arc(w / 2, h / 2, r, 0, Math.PI * 2)
+    g.stroke()
+  }
+  g.setLineDash([])
+  // まわりを回る点の輪
+  g.fillStyle = cols[1]
+  const n = 24
+  const rr = Math.min(w, h) * 0.42
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2 + t * 0.4
+    g.globalAlpha = (i % 3 === 0 ? 0.8 : 0.35) * amp
+    g.beginPath()
+    g.arc(w / 2 + Math.cos(a) * rr, h / 2 + Math.sin(a) * rr, (i % 3 === 0 ? 5 : 3) * k, 0, Math.PI * 2)
+    g.fill()
+  }
+}
+
+// 線がシュッ（2拍ごとに、ななめの太い線が画面を横切る＋細いしま）
+function geoLines(g, w, h, t, scene, k, amp, cols) {
+  const b = geoBeat(scene, t)
+  const i0 = b.index - (b.index % 2)
+  const age = t - b.timeOf(i0)
+  const dir = (i0 / 2) % 2 ? -1 : 1
+  const p = Math.min(1, Math.max(0, age / 0.55))
+  const e = smooth(p)
+  const span = w + h
+  g.save()
+  g.translate(w / 2, h / 2)
+  g.rotate(-0.35 * dir)
+  for (let j = 0; j < 3; j++) {
+    const x = (-span / 2 - 200 * k) + (span + 400 * k) * Math.min(1, e * (1 + j * 0.12))
+    const len = (560 - j * 120) * k
+    const y = (j - 1) * 60 * k + (dir > 0 ? -h * 0.2 : h * 0.2)
+    g.globalAlpha = (1 - p * p) * 0.9 * amp
+    g.fillStyle = cols[j % cols.length]
+    g.fillRect(dir > 0 ? x - len : -x, y, len, (26 - j * 7) * k)
+  }
+  g.restore()
+  // うすいななめのしま（ゆっくり流れる）
+  g.save()
+  g.globalAlpha = 0.1 * amp
+  g.strokeStyle = cols[1]
+  g.lineWidth = 2 * k
+  const gap = 46 * k
+  const off = (t * 30 * k) % gap
+  g.beginPath()
+  for (let x = -h + off; x < w; x += gap) {
+    g.moveTo(x, h)
+    g.lineTo(x + h * 0.6, 0)
+  }
+  g.stroke()
+  g.restore()
+}
+
+// ⤵ 矢印の場面転換：部分が切りかわる瞬間に、画面いっぱいの大きな矢印（3色を少しずつずらして重ねる）が横切って、
+// 切りかわりを隠す。いちばん覆っているのが、ちょうど切りかわる時間（cut）。向きは切りかわりごとに交互
+const WIPE_LEN = 0.9 // 秒（切りかわりの前後 0.45 秒ずつ）
+function geoArrowWipe(g, w, h, t, scene, cols) {
+  const cuts = (scene.animCuts || []).filter((c) => c > 1)
+  let cut = null
+  let n = 0
+  cuts.forEach((c, i) => { if (Math.abs(t - c) < WIPE_LEN / 2 && (cut === null || Math.abs(t - c) < Math.abs(t - cut))) { cut = c; n = i } })
+  if (cut === null) return
+  const p0 = (t - (cut - WIPE_LEN / 2)) / WIPE_LEN // 0〜1
+  const dir = n % 2 ? -1 : 1
+  const depth = h * 0.55 // 先のとがり
+  const L = w * 1.7 + depth // 胴の長さ（切りかわる時間に、先からしっぽのへこみまで画面を全部覆える長さ）
+  const travel = L + w + depth
+  g.save()
+  if (dir < 0) { g.translate(w, 0); g.scale(-1, 1) } // 右から左へ
+  ;[cols[1], cols[2], cols[0]].forEach((c, j) => {
+    const p = Math.min(1, Math.max(0, p0 + (2 - j) * 0.08)) // 先に2色が通って、最後の色がちょうど切りかわる時間に画面を覆う
+    const tip = travel * p
+    const tail = tip - L
+    g.globalAlpha = 1
+    g.fillStyle = c
+    const y0 = -h * 0.05 // 上下は少しはみ出させる（ゆれても端が見えないように）
+    const y1 = h * 1.05
+    g.beginPath()
+    g.moveTo(tail, y0)
+    g.lineTo(tip - depth, y0)
+    g.lineTo(tip, h / 2)
+    g.lineTo(tip - depth, y1)
+    g.lineTo(tail, y1)
+    g.lineTo(tail + depth, h / 2) // しっぽは「く」の字にへこませる
+    g.closePath()
+    g.fill()
+  })
+  g.restore()
+}
+
+// ↻ くるくる回る矢印の輪：真ん中のまわりに、矢じり付きの円弧（3本）。拍ごとにクイッと回る。内側は逆回り
+function geoArrowSpin(g, w, h, t, scene, k, amp, cols) {
+  const b = geoBeat(scene, t)
+  const m = Math.min(w, h)
+  const ease = 1 - Math.pow(1 - Math.min(1, b.dt / 0.28), 3)
+  const rings = [
+    { r: m * 0.44, segs: 3, step: Math.PI * 2 / 3, lw: 9, col: cols[0], sign: 1, slow: 0.15 },
+    { r: m * 0.34, segs: 4, step: Math.PI / 2, lw: 5, col: cols[1], sign: -1, slow: 0.25 }
+  ]
+  g.lineCap = "round"
+  g.lineJoin = "round"
+  rings.forEach((ring) => {
+    const rot = ring.sign * ((b.index - 1 + ease) * ring.step * 0.5 + t * ring.slow)
+    const gap = 0.5 // 円弧のすき間（ラジアン）
+    const seg = (Math.PI * 2) / ring.segs
+    g.strokeStyle = ring.col
+    g.fillStyle = ring.col
+    g.lineWidth = ring.lw * k
+    g.globalAlpha = 0.75 * amp
+    for (let i = 0; i < ring.segs; i++) {
+      const a0 = rot + i * seg
+      const a1 = a0 + seg - gap
+      g.beginPath()
+      g.arc(w / 2, h / 2, ring.r, ring.sign > 0 ? a0 : a1, ring.sign > 0 ? a1 : a0, ring.sign < 0)
+      g.stroke()
+      // 矢じり（回っていく向きの先に）
+      const at = ring.sign > 0 ? a1 : a0
+      const x = w / 2 + Math.cos(at) * ring.r
+      const y = h / 2 + Math.sin(at) * ring.r
+      const tx = -Math.sin(at) * ring.sign // 進む向き
+      const ty = Math.cos(at) * ring.sign
+      const s = ring.lw * 2.6 * k
+      g.beginPath()
+      g.moveTo(x + tx * s * 1.4, y + ty * s * 1.4)
+      g.lineTo(x - ty * s, y + tx * s)
+      g.lineTo(x + ty * s, y - tx * s)
+      g.closePath()
+      g.fill()
+    }
+  })
+}
+
+// 矢印：くるくる回る輪＋切りかわりで画面いっぱいの矢印
+function geoArrows(g, w, h, t, scene, k, amp, cols) {
+  geoArrowSpin(g, w, h, t, scene, k, amp, cols)
+  geoArrowWipe(g, w, h, t, scene, cols)
+}
+
+// 図形がふわふわ（四角・丸・三角・×が、回りながら上へ。拍で少しはねる）
+function geoFloat(g, w, h, t, scene, k, amp, cols) {
+  const b = geoBeat(scene, t)
+  const hit = Math.exp(-b.dt / 0.2)
+  const n = 16
+  g.lineWidth = 4 * k
+  g.lineJoin = "round"
+  for (let i = 0; i < n; i++) {
+    const speed = 30 + hash(i + 3) * 50
+    const r = (14 + hash(i + 7) * 26) * k * (1 + hit * 0.12 * amp)
+    const x = hash(i + 11) * w + Math.sin(t * 0.6 + i) * 20 * k
+    // 真ん中（歌詞の辺り）は少しよける
+    const xx = Math.abs(x - w / 2) < w * 0.12 ? x + Math.sign(x - w / 2 || 1) * w * 0.12 : x
+    const y = h + 60 * k - ((t * speed * k + hash(i + 19) * (h + 120 * k)) % (h + 120 * k))
+    const kind = i % 4
+    g.globalAlpha = (0.35 + 0.35 * hash(i + 23)) * amp
+    g.strokeStyle = cols[i % 2]
+    shapePath(g, kind, xx, y, r, t * (0.4 + hash(i + 29)) * (i % 2 ? -1 : 1))
+    if (i % 5 === 0 && kind !== 3) {
+      g.fillStyle = cols[i % 2]
+      g.globalAlpha *= 0.35
+      g.fill()
+    }
+    g.stroke()
+  }
+}
+
+const GEO_DRAW = { squares: geoSquares, rings: geoRings, lines: geoLines, arrows: geoArrows, float: geoFloat }
+
+function drawGeoKind(g, w, h, t, scene, k, kind, amp, cols) {
+  if (!kind || kind === "none" || amp <= 0.01) return
+  g.save()
+  if (kind === "mix") {
+    geoRings(g, w, h, t, scene, k, amp * 0.7, cols)
+    geoFloat(g, w, h, t, scene, k, amp * 0.8, cols)
+    geoArrowWipe(g, w, h, t, scene, cols) // 切りかわりは矢印で
+  } else if (GEO_DRAW[kind]) {
+    GEO_DRAW[kind](g, w, h, t, scene, k, amp, cols)
+  }
+  g.restore()
+}
+
+// 曲の t 秒目の図形：部分ごとに決めた図形（scene.geoSpans）があればそれ、なければ 5-3 の図形。境目は 0.4 秒で入れかえる
+function drawGeo(g, w, h, t, scene, k, f) {
+  const base = animOf(scene).geo || "none"
+  let part = null
+  let wPart = 0
+  ;(scene.geoSpans || []).forEach((s) => {
+    const wv = clamp01((t - s.startSec + 0.2) / 0.4) * clamp01((s.endSec - t + 0.2) / 0.4)
+    if (wv > wPart) { wPart = wv; part = s.kind }
+  })
+  if (base === "none" && (!part || part === "none")) return
+  // 落ちサビ（静か）では控えめ、サビでははっきり
+  const amp = Math.max(0.25, Math.min(1, 0.7 + 0.3 * (f.chorus || 0) - 0.45 * (f.calm || 0)))
+  const cols = geoColors(scene)
+  if (!part || part === base) { drawGeoKind(g, w, h, t, scene, k, base, amp, cols); return }
+  drawGeoKind(g, w, h, t, scene, k, base, amp * (1 - wPart), cols)
+  drawGeoKind(g, w, h, t, scene, k, part, amp * wPart, cols)
+}
+
 // ---------- 📍 ポイントの演出（テンプレート・かんたん作成） ----------
-// scene.cues = [{ at: 秒, kind: "flash" | "zoom" | "shake" | "invert" | "glitch" | "blackout" | "whiteout" }]
+// scene.cues = [{ at: 秒, kind: "flash" | "zoom" | "shake" | "invert" | "glitch" | "blackout" | "whiteout"
+//                          | "strobe" | "tilt" | "rainbow" | "cinema" | "pulse" }]
 // 演出ごとに「いちばん最近のポイントから何秒たったか」を返す（終わった演出は入れない）
-const CUE_LIFE = { flash: 0.9, zoom: 0.8, shake: 0.6, invert: 0.16, glitch: 0.35, blackout: 0.9, whiteout: 1.8 }
+const CUE_LIFE = { flash: 0.9, zoom: 0.8, shake: 0.6, invert: 0.16, glitch: 0.35, blackout: 0.9, whiteout: 1.8, strobe: 0.6, tilt: 0.9, rainbow: 1.4, cinema: 3.2, pulse: 1.6 }
 export function cueStates(scene, t) {
   const out = {}
   const cues = scene.cues
@@ -1581,7 +2121,7 @@ export function renderFrame(g, w, h, t, scene) {
 
 function renderFrameInner(g, w, h, t, scene) {
   const k = Math.min(w, h) / 720 // 720px を基準に、大きさをそろえる
-  const draw = RENDERERS[scene.template] || renderSimple
+  const draw = RENDERERS[scene.template] || renderPlain
   const anim = animOf(scene)
   const f = { ...fxState(scene, t) }
   if (anim.transition !== "flash") f.flash = 0 // フラッシュは「フラッシュ」のときだけ
@@ -1613,12 +2153,27 @@ function renderFrameInner(g, w, h, t, scene) {
     sy = Math.cos(d * 53) * a * 0.7
     zoom += 0.04 // ゆらしても端がすき間にならないように
   }
-  if (zoom !== 1 || sx || sy) {
+  // くるっとかたむく：ななめにかたむいて、ゆれながら戻る（端がすき間にならないように大きくする）
+  let rot = 0
+  if (cue.tilt !== undefined) {
+    const d = cue.tilt
+    rot = 0.09 * Math.exp(-d / 0.28) * Math.cos(d * 14)
+    zoom += Math.abs(Math.sin(rot)) * Math.max(w / h, h / w)
+  }
+  // ドクンドクン：心臓の音のように 2回はねる
+  if (cue.pulse !== undefined) {
+    const d = cue.pulse
+    zoom += 0.06 * (Math.exp(-((d - 0.05) ** 2) / 0.004) + 0.7 * Math.exp(-((d - 0.4) ** 2) / 0.004) + 0.5 * Math.exp(-((d - 1.0) ** 2) / 0.004))
+  }
+  if (zoom !== 1 || sx || sy || rot) {
     g.translate(w / 2 + sx, h / 2 + sy)
+    if (rot) g.rotate(rot)
     g.scale(zoom, zoom)
     g.translate(-w / 2, -h / 2)
   }
   draw(g, w, h, t, s2, k)
+  if (showWave(scene)) drawWave(g, w, h, t, s2, k) // 🌊 下に音の波
+  drawGeo(g, w, h, t, scene, k, f) // 🔷 図形の動き
   g.restore()
   if (dt !== null && anim.transition === "invert" && dt < 0.16) {
     // 色が反転：一瞬だけ色をひっくり返して、すぐ戻す
@@ -1658,6 +2213,36 @@ function renderFrameInner(g, w, h, t, scene) {
   if (cue.blackout !== undefined) {
     const d = cue.blackout
     cover("#000000", d < 0.15 ? 1 : 1 - smooth((d - 0.15) / 0.75))
+  }
+  // チカチカ：白い光が細かく点滅（同じ t なら同じ点滅）
+  if (cue.strobe !== undefined) {
+    const d = cue.strobe
+    if (Math.floor(d / 0.06) % 2 === 0) cover("#ffffff", 0.7 * (1 - d / 0.6))
+  }
+  // にじ色：色がくるくる変わりながら、だんだん消える
+  if (cue.rainbow !== undefined) {
+    const d = cue.rainbow
+    g.save()
+    g.globalCompositeOperation = "overlay"
+    g.globalAlpha = 0.6 * (1 - smooth(d / 1.4))
+    const gr = g.createLinearGradient(0, 0, w, h)
+    for (let i = 0; i <= 6; i++) gr.addColorStop(i / 6, `hsl(${Math.round((i * 60 + d * 400) % 360)}, 100%, 55%)`)
+    g.fillStyle = gr
+    g.fillRect(0, 0, w, h)
+    g.restore()
+  }
+  // 映画みたい：上と下に黒い帯がスッと入って、しばらくして戻る
+  if (cue.cinema !== undefined) {
+    const d = cue.cinema
+    const e = d < 0.5 ? smooth(d / 0.5) : d > 2.6 ? 1 - smooth((d - 2.6) / 0.6) : 1
+    const bh = h * 0.12 * e
+    if (bh > 0.5) {
+      g.save()
+      g.fillStyle = "#000"
+      g.fillRect(0, 0, w, bh)
+      g.fillRect(0, h - bh, w, bh)
+      g.restore()
+    }
   }
   g.save()
   drawGlow(g, w, h, scene, f)

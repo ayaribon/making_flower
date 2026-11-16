@@ -21,6 +21,7 @@ class SessionsController < ApplicationController
     if user
       reset_session   # 前のログインの情報を消してから入る（なりすまし対策）
       session[:user_id] = user.id
+      session[:login_id] = SecureRandom.hex(8) # ログインするたびに変わる番号（ドット絵の子を「消した」のは、このログインの間だけ）
       Rails.cache.delete(attempt_key)
       redirect_to root_path
     else
