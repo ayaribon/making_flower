@@ -16,6 +16,9 @@ services:
         APP_UID: ${APP_UID:-1000}
         APP_GID: ${APP_GID:-1000}
     user: app
+    environment:
+      # ✂️ 切り抜きの依頼の送り先（Discord のウェブフック）。値は .env に書く（.env はコミットしない）
+      DISCORD_CLIP_WEBHOOK_URL: ${DISCORD_CLIP_WEBHOOK_URL:-}
     command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails s -b '0.0.0.0'"
     volumes:
       - ".:/app"
