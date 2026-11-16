@@ -1,0 +1,40 @@
+<%# 📎 切り抜きに使っていい素材・画像を送る。見た目は clip_requests.css %>
+<div class="cr">
+  <div class="cr-inner">
+    <p class="cr-back"><%= link_to "🏠 メニューへ", root_path, data: { turbo: false } %>　<%= link_to "✂️ 切り抜きをたのむ", new_clip_request_path, data: { turbo: false } %></p>
+    <h1 class="cr-title">📎 使っていい素材・画像を送る</h1>
+    <p class="cr-lead">切り抜きに使ってほしいロゴ・立ち絵・画像・効果音などがあったら送ってね。</p>
+    <% if current_user.working_clip_request %><p class="cr-flash cr-flash--ok">💻 いま作業中の依頼に使わせてもらうね</p><% end %>
+
+    <% if flash[:alert].present? %><p class="cr-flash cr-flash--ng" role="alert"><%= flash[:alert] %></p><% end %>
+    <% unless @configured %>
+      <p class="cr-flash cr-flash--ng">⚠ いまは送れません。管理者に知らせてください</p>
+    <% end %>
+
+    <%= form_with model: @clip_material, url: clip_materials_path, local: true, class: "cr-form", data: { turbo: false } do |f| %>
+      <% if @clip_material.errors.any? %>
+        <div class="cr-errors" role="alert">
+          <p>直してほしい所があります</p>
+          <ul><% @clip_material.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul>
+        </div>
+      <% end %>
+      <%= render "clip_requests/image_picker", f: f, label: "🖼 画像をそのまま送る" %>
+      <div class="cr-field">
+        <%= f.label :links, "素材のリンク" %>
+        <%= f.text_area :links, rows: 3, maxlength: 1000, placeholder: "https://drive.google.com/…\n（1行に1つ。いくつでもOK）" %>
+        <p class="cr-help">たくさんあるとき・大きいとき・効果音などは、Googleドライブなどに入れて、共有を「リンクを知っている全員が閲覧可」にしてリンクを貼ってね。<b>画像かリンクのどちらか</b>があればOK</p>
+      </div>
+      <div class="cr-field">
+        <%= f.label :description, "どんな素材？" %><span class="cr-opt">なくてもOK</span>
+        <%= f.text_area :description, rows: 2, maxlength: 500, placeholder: "例）配信のロゴ・立ち絵（笑顔）・よく使う効果音" %>
+      </div>
+      <label class="cr-check">
+        <%= f.check_box :permission, {}, "1", "0" %>
+        <span>自分で作ったもの、または切り抜きに使ってよい素材です<span class="cr-req">必須</span></span>
+      </label>
+      <div class="cr-actions">
+        <%= f.submit "📎 素材を送る", class: "cr-submit", disabled: !@configured, data: { disable_with: "送っています…" } %>
+      </div>
+    <% end %>
+  </div>
+</div>

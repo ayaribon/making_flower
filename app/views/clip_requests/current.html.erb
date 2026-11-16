@@ -1,0 +1,27 @@
+<%# 💻 いま作業中だよ（ひとり1回1依頼）。見た目は clip_requests.css %>
+<div class="cr cr--done">
+  <div class="cr-inner">
+    <div class="cr-done">
+      <%= render "worker" %>
+      <h1 class="cr-done__title">いま作業中だよ！</h1>
+      <p class="cr-done__lead">依頼を受け取りました。動画ができあがるのを待ってね。</p>
+
+      <dl class="cr-mine">
+        <dt>動画</dt><dd><%= link_to @clip_request.video_url.truncate(60), @clip_request.video_url, target: "_blank", rel: "noopener noreferrer" %></dd>
+        <dt>切り抜きたい所</dt><dd><%= simple_format(h(@clip_request.scenes.truncate(300)), {}, wrapper_tag: "span") %></dd>
+        <dt>形・長さ</dt><dd><%= ClipRequest::ORIENTATIONS[@clip_request.orientation] %>・<%= ClipRequest::LENGTHS[@clip_request.length] %></dd>
+        <% if @clip_request.deadline %><dt>しめきり</dt><dd><%= @clip_request.deadline.strftime("%Y/%m/%d") %></dd><% end %>
+        <dt>たのんだ日</dt><dd><%= l(@clip_request.created_at, format: "%Y/%m/%d %H:%M") rescue @clip_request.created_at.strftime("%Y/%m/%d %H:%M") %></dd>
+      </dl>
+
+      <div class="cr-done__actions">
+        <%= link_to "🏠 メニューにもどる", root_path, class: "cr-submit cr-done__home", data: { turbo: false } %>
+        <div class="cr-done__more">
+          <%= link_to "📎 使っていい素材を送る", new_clip_material_path, data: { turbo: false } %>
+        </div>
+        <%= button_to "キャンセルする", cancel_clip_request_path(@clip_request), method: :post, class: "cr-cancel",
+              form: { data: { turbo_confirm: "依頼をキャンセルしますか？（キャンセルしたら、また新しくたのめます）" } } %>
+      </div>
+    </div>
+  </div>
+</div>

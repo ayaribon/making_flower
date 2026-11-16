@@ -20,6 +20,7 @@
           <%= link_to "👥 ユーザー", admin_users_path %>
           <%= link_to "🎨 素材", admin_materials_path %>
           <%= link_to "📋 テンプレ", admin_design_templates_path %>
+          <%= link_to "✂️ 切り抜き", admin_clip_requests_path %>
           <%= link_to "✏️ 編集画面へ", editor_path, data: { turbo: false } %>
           <%= button_to "ログアウト", logout_path, method: :delete, form_class: "admin-inline" %>
         </nav>

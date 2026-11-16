@@ -46,3 +46,67 @@
   .cr-form { padding: 16px; }
   .cr-submit { width: 100%; }
 }
+
+/* ⚠ はじめに読んでね（あくまで善処） */
+.cr-note { margin: 0 0 14px; padding: 12px 16px; border-radius: 16px; background: #fff7e0; color: #6b4a00; border: 2px dashed #f0c050; }
+.cr-note__title { margin: 0 0 6px; font-weight: 800; }
+.cr-note ul { margin: 0; padding-left: 1.2em; }
+.cr-note li { margin: 3px 0; font-size: 0.92rem; line-height: 1.6; }
+.cr-note__cheer { margin: 8px 0 0; font-weight: 800; color: #c2304a; }
+
+/* ✂️ 送ったあとのページ */
+.cr--done { display: flex; align-items: center; }
+.cr-done { padding: 28px 20px; border-radius: 24px; background: #fff; text-align: center; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); }
+.cr-done__stage { position: relative; display: inline-block; }
+.cr-done__canvas { width: 288px; height: 204px; image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+.cr-done__typing { position: absolute; left: 4px; top: 8px; padding: 2px 8px; border: 2px solid #2b1d2e; border-radius: 4px; background: #fff; font-family: "DotGothic16", system-ui, sans-serif; font-size: 13px; animation: cr-typing 0.5s steps(2) infinite; }
+@keyframes cr-typing { from { transform: translateY(0); } to { transform: translateY(-2px); } }
+.cr-done__title { margin: 12px 0 4px; font-size: clamp(1.4rem, 5vw, 1.9rem); }
+.cr-done__lead { margin: 0 0 18px; color: #5a6b8a; font-size: 1.05rem; }
+.cr-done__actions { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.cr-done__home { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.cr-done__more { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; font-size: 0.92rem; }
+.cr-done__more a { color: #2f6fed; }
+@media (max-width: 640px) {
+  .cr-done__canvas { width: 240px; height: 170px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cr-done__typing { animation: none; }
+}
+
+/* 💻 いま作業中だよ */
+.cr-mine { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0 auto 18px; max-width: 520px; padding: 12px 16px; border-radius: 14px; background: #f4f7ff; text-align: left; font-size: 0.92rem; }
+.cr-mine dt { font-weight: 800; color: #5a6b8a; white-space: nowrap; }
+.cr-mine dd { margin: 0; overflow-wrap: anywhere; }
+.cr-cancel { margin-top: 6px; padding: 6px 14px; border: 2px solid #d6dff0; border-radius: 999px; background: #fff; color: #9a3a12; font: inherit; font-size: 0.88rem; cursor: pointer; }
+.cr-cancel:hover { border-color: #e0a090; }
+.cr-result a { margin-left: 8px; color: #1d6b3d; font-weight: 800; }
+.cr-field input[type="file"] { font-size: 0.92rem; }
+
+/* ✂️ 管理画面：切り抜きの依頼 */
+.admin-clip { flex-direction: column; align-items: stretch; gap: 8px; }
+.admin-clip__line { margin: 2px 0; font-size: 0.88rem; overflow-wrap: anywhere; }
+.admin-clip__actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.admin-clip__form { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0; flex: 1 1 320px; }
+.admin-clip__url { flex: 1 1 200px; min-width: 0; padding: 6px 10px; border: 1px solid #d6dff0; border-radius: 8px; font: inherit; }
+
+/* 🖼 画像をいくつも選ぶ */
+.ip-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.ip-drop { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px; border: 2px dashed #c7d4ee; border-radius: 14px; background: #f7f9ff; transition: background 0.15s, border-color 0.15s; }
+.ip-drop.is-over { border-color: #2f6fed; background: #e4edff; }
+.ip-add { min-height: 44px; padding: 8px 16px; border: 0; border-radius: 999px; background: #2f6fed; color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+.ip-add:focus-visible { outline: 3px solid rgba(47, 111, 237, 0.35); outline-offset: 2px; }
+.ip-hint { font-size: 0.82rem; color: #5a6b8a; }
+.ip-count { margin-left: auto; font-size: 0.85rem; font-weight: 700; color: #2f6fed; font-variant-numeric: tabular-nums; }
+.ip-message { margin: 4px 0 0; padding: 6px 10px; border-radius: 8px; background: #ffe9e0; color: #9a3a12; font-size: 0.85rem; }
+.ip-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin: 8px 0 0; padding: 0; list-style: none; }
+.ip-item { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 6px; border: 1px solid #d6dff0; border-radius: 10px; background: #fff; }
+.ip-item img { width: 100%; aspect-ratio: 1 / 1; object-fit: contain; border-radius: 6px; background: repeating-conic-gradient(#eef2fa 0% 25%, #fff 0% 50%) 50% / 16px 16px; }
+.ip-item__name { font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ip-item__size { font-size: 0.7rem; color: #5a6b8a; }
+.ip-item__del { position: absolute; top: 2px; right: 2px; width: 32px; height: 32px; border: 2px solid #fff; border-radius: 50%; background: #c2304a; color: #fff; font-size: 1.1rem; font-weight: 800; line-height: 1; cursor: pointer; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2); }
+.ip-item__del:hover { background: #a01f37; }
+@media (max-width: 640px) {
+  .ip-count { margin-left: 0; width: 100%; }
+  .ip-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
