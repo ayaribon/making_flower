@@ -1,18 +1,35 @@
-<%# 🧑‍💼 Dettyan 育成ゲーム。いまは「じゅんび中」の画面だけ。見た目は app/assets/stylesheets/dettyan.css %>
-<div class="dt">
+<%# 🧑‍💼 Dettyan 育成ゲーム。動きは controllers/dettyan_game_controller.js、見た目は app/assets/stylesheets/dettyan.css %>
+<div class="dt" data-controller="dettyan-game" data-dettyan-game-user-id-value="<%= current_user.id %>">
   <div class="dt-inner">
-    <a class="dt-home-link" href="<%= root_path %>" data-turbo="false">🏠 メニュー</a>
-
-    <header class="dt-header">
-      <p class="dt-eyebrow">KotoBouquet</p>
+    <header class="dt-bar">
+      <a class="dt-home-link" href="<%= root_path %>" data-turbo="false">🏠 メニュー</a>
       <h1 class="dt-title">Dettyan 育成ゲーム</h1>
+      <div class="dt-sound">
+        <button type="button" class="dt-icon-button" data-dettyan-game-target="soundButton" data-action="dettyan-game#toggleSoundPanel" aria-label="音の設定">🔊</button>
+        <div class="dt-sound-panel" data-dettyan-game-target="soundPanel" hidden>
+          <button type="button" data-dettyan-game-target="bgmToggle" data-action="dettyan-game#toggleBgm">🎵 BGM：オン</button>
+          <button type="button" data-dettyan-game-target="seToggle" data-action="dettyan-game#toggleSe">🔔 こうかおん：オン</button>
+        </div>
+      </div>
     </header>
 
-    <%# Dettyan：黒髪のマンバン（おだんご）、茶色のジャケット %>
-    <div class="dt-stage" data-controller="dettyan">
-      <canvas class="dt-chara" data-dettyan-target="canvas" role="img" aria-label="Dettyan"></canvas>
+    <div class="dt-hud">
+      <span class="dt-money">💰 <span data-dettyan-game-target="money">0</span></span>
+      <span class="dt-stat">げんき <span class="dt-meter"><span class="dt-meter__fill dt-meter__fill--genki" data-dettyan-game-target="genki"></span></span></span>
+      <span class="dt-stat">ごきげん <span class="dt-meter"><span class="dt-meter__fill dt-meter__fill--gokigen" data-dettyan-game-target="gokigen"></span></span></span>
     </div>
 
-    <p class="dt-soon">ただいま じゅんび中です。<br>もうすぐ Dettyan に会えるよ。</p>
+    <div class="dt-stage">
+      <canvas class="dt-room" data-dettyan-game-target="canvas" data-action="pointerdown->dettyan-game#tap" role="img" aria-label="事務所の部屋を歩く Dettyan"></canvas>
+      <div class="dt-bubble" data-dettyan-game-target="bubble" hidden></div>
+
+      <%# はじめる画面（音が出ることを先に知らせる。タップで音が鳴り始める） %>
+      <button type="button" class="dt-start" data-dettyan-game-target="start" data-action="dettyan-game#start">
+        <span class="dt-start__text" data-dettyan-game-target="startText">よみこみ中…</span>
+        <span class="dt-start__note" data-dettyan-game-target="startNote" hidden>※音が出ます（右上の🔊で消せます）</span>
+      </button>
+    </div>
+
+    <p class="dt-help">Dettyan をタップすると話しかけられるよ。床をタップすると、そこまで歩くよ。</p>
   </div>
 </div>

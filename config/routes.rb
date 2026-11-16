@@ -44,6 +44,8 @@ Rails.application.routes.draw do
   get "singing", to: "singings#show"
   # 🧑‍💼 Dettyan 育成ゲーム（いまは入口だけ。中身はこれから）
   get "dettyan", to: "dettyans#show"
+  # 💾 Dettyan のセーブ（アカウントに保存・本人のものだけ・Issue #51）
+  resource :dettyan_save, only: [:show, :update], defaults: { format: :json }
   # ✂️ 切り抜き動画をたのむ（フォーム → Discord に投稿。保存はしない）
   resources :clip_requests, only: [:new, :create] do
     get :current, on: :collection # 💻 いま作業中だよ（ひとり1回1依頼）

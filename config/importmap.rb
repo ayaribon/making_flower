@@ -23,3 +23,5 @@ pin "harmony" # 🎶 ハモリ・ケロケロ風（K29）
 pin "pixel_buddy" # 🧑‍🎨 ドット絵の子（歌う子・ほめてくれる子の絵）
 pin "pixel_singer" # 🎤 試聴中に歌うドット絵の子
 pin "dettyan_sprite" # 🧑‍💼 Dettyan のドット絵
+pin "dettyan_save" # 💾 Dettyan のセーブ（サーバー＋控え）
+pin "dettyan_sound" # 🎵 Dettyan の BGM・SE
