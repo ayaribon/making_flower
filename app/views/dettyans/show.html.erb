@@ -22,6 +22,25 @@
     <div class="dt-stage">
       <canvas class="dt-room" data-dettyan-game-target="canvas" data-action="pointerdown->dettyan-game#tap" role="img" aria-label="事務所の部屋を歩く Dettyan"></canvas>
       <div class="dt-bubble" data-dettyan-game-target="bubble" hidden></div>
+      <div class="dt-toast" data-dettyan-game-target="toast" role="status" hidden></div>
+
+      <%# おせわのメニュー（Dettyan をタップすると出る） %>
+      <div class="dt-care" data-dettyan-game-target="menu" hidden>
+        <button type="button" data-action="dettyan-game#care" data-dettyan-game-kind-param="pet">🤚<span>なでる</span></button>
+        <button type="button" data-action="dettyan-game#care" data-dettyan-game-kind-param="clean">🧹<span>そうじ</span></button>
+        <button type="button" data-action="dettyan-game#care" data-dettyan-game-kind-param="talk">💬<span>はなす</span></button>
+        <button type="button" data-action="dettyan-game#openBag">🍙<span>ごはん</span></button>
+      </div>
+
+      <%# ショップ・もちもの（中身は dettyan_foods.js の表から作る） %>
+      <div class="dt-sheet" data-dettyan-game-target="sheet" hidden>
+        <div class="dt-sheet__head">
+          <span class="dt-sheet__title" data-dettyan-game-target="sheetTitle"></span>
+          <span class="dt-sheet__money" data-dettyan-game-target="sheetMoney"></span>
+          <button type="button" class="dt-sheet__close" data-action="dettyan-game#closeSheet" aria-label="とじる">✕</button>
+        </div>
+        <div class="dt-sheet__list" data-dettyan-game-target="sheetList"></div>
+      </div>
 
       <%# はじめる画面（音が出ることを先に知らせる。タップで音が鳴り始める） %>
       <button type="button" class="dt-start" data-dettyan-game-target="start" data-action="dettyan-game#start">
@@ -30,6 +49,11 @@
       </button>
     </div>
 
-    <p class="dt-help">Dettyan をタップすると話しかけられるよ。床をタップすると、そこまで歩くよ。</p>
+    <div class="dt-actions">
+      <button type="button" data-action="dettyan-game#openShop">🛒 ショップ</button>
+      <button type="button" data-action="dettyan-game#openBag">🎒 もちもの</button>
+    </div>
+
+    <p class="dt-help">Dettyan をタップすると、おせわができるよ。床をタップすると、そこまで歩くよ。</p>
   </div>
 </div>
