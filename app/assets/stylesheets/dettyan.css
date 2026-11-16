@@ -37,6 +37,8 @@
 
 .dt-hud { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin-bottom: 8px; font-size: 0.9rem; }
 .dt-money { font-weight: 700; font-size: 1rem; }
+.dt-level { font-weight: 800; padding: 1px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.18); }
+.dt-stat__num { font-size: 0.75rem; opacity: 0.8; font-variant-numeric: tabular-nums; }
 .dt-stat { display: inline-flex; align-items: center; gap: 6px; }
 .dt-meter { display: inline-block; width: 72px; height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.2); overflow: hidden; }
 .dt-meter__fill { display: block; height: 100%; width: 0; transition: width 0.3s ease; }
@@ -112,6 +114,20 @@
   flex: none; min-width: 72px; min-height: 40px; padding: 6px 12px; border: 0; border-radius: 999px; cursor: pointer;
   background: #ffb347; color: #2a1c12; font: inherit; font-weight: 700; touch-action: manipulation;
 }
+.dt-item__button--on { background: rgba(255, 255, 255, 0.22); color: #fff; }
+.dt-item--locked { opacity: 0.5; }
+.dt-item__icon--emoji { display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
+.dt-sheet__section { margin: 12px 4px 2px; font-size: 0.85rem; font-weight: 700; opacity: 0.85; }
+.dt-sheet__note { padding: 4px 4px 6px; font-size: 0.78rem; opacity: 0.8; }
+.dt-result__line { padding: 6px 4px; font-weight: 700; }
+.dt-result__line--sub { font-weight: 400; font-size: 0.8rem; opacity: 0.75; padding-top: 0; }
+.dt-result__levelup { margin: 6px 0; padding: 8px 10px; border-radius: 10px; background: rgba(255, 216, 77, 0.2); color: #ffe38a; font-weight: 800; }
+.dt-result__back { display: block; width: 100%; margin: 12px 0 4px; }
+.dt-skip {
+  position: absolute; right: 8px; bottom: 8px; z-index: 7; pointer-events: none;
+  padding: 4px 10px; border-radius: 999px; background: rgba(0, 0, 0, 0.45); color: #fff; font-size: 0.75rem;
+}
+.dt-skip[hidden] { display: none; }
 .dt-item__button:disabled { background: rgba(255, 255, 255, 0.18); color: rgba(255, 255, 255, 0.5); cursor: default; }
 
 .dt-toast {
@@ -129,7 +145,7 @@
 }
 @keyframes dt-pop { from { opacity: 1; margin-top: 0; } to { opacity: 0; margin-top: -28px; } }
 
-.dt-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.dt-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
 .dt-actions button {
   min-height: 48px; border: 0; border-radius: 12px; cursor: pointer;
   background: rgba(255, 255, 255, 0.16); color: #fff; font: inherit; font-size: 1rem; font-weight: 700;
