@@ -1,0 +1,16 @@
+<%# 📎 素材を送ったあと。見た目は clip_requests.css %>
+<div class="cr cr--done">
+  <div class="cr-inner">
+    <div class="cr-done">
+      <%= render "clip_requests/worker" %>
+      <h1 class="cr-done__title">素材を送りました！</h1>
+      <p class="cr-done__lead">ありがとう！ 切り抜きに使わせてもらうね。</p>
+      <div class="cr-done__actions">
+        <%= link_to "🏠 メニューにもどる", root_path, class: "cr-submit cr-done__home", data: { turbo: false } %>
+        <div class="cr-done__more">
+          <%= link_to "✂️ 切り抜きのページへ", new_clip_request_path, data: { turbo: false } %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

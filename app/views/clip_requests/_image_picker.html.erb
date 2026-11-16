@@ -1,0 +1,15 @@
+<%# 🖼 画像をいくつも選ぶ（image_picker_controller.js）。f：フォーム、label：見出し、note：見出しの横の小さい札 %>
+<div class="cr-field" data-controller="image-picker">
+  <span class="cr-label"><%= label %></span><% if local_assigns[:note] %><span class="cr-opt"><%= note %></span><% end %>
+  <div class="ip-drop" data-image-picker-target="drop"
+       data-action="dragover->image-picker#dragover dragleave->image-picker#dragleave drop->image-picker#dropped">
+    <button type="button" class="ip-add" data-action="image-picker#pick">＋ 画像を追加</button>
+    <span class="ip-hint">押すたびに足せます（PCは、ここに画像をドロップしてもOK）</span>
+    <span class="ip-count" data-image-picker-target="count" aria-live="polite"></span>
+  </div>
+  <%= f.file_field :images, multiple: true, accept: "image/png,image/jpeg,image/webp,image/gif", class: "ip-input",
+        data: { image_picker_target: "input", action: "change->image-picker#picked" }, tabindex: -1, "aria-hidden": "true" %>
+  <p class="ip-message" data-image-picker-target="message" role="alert" hidden></p>
+  <ul class="ip-list" data-image-picker-target="list" hidden></ul>
+  <p class="cr-help">ロゴ・立ち絵など。12枚まで・1枚8MB・合計30MBまで（PNG・JPEG・WebP・GIF）。いらない画像は × で消せます</p>
+</div>

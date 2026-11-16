@@ -13,6 +13,13 @@ class User < ApplicationRecord
   has_one :editor_draft, dependent: :destroy
   # 💾 ミックス設定のテンプレート（K42）
   has_many :mix_templates, dependent: :destroy
+  # ✂️ 切り抜き動画の依頼（ひとり1回1依頼）
+  has_many :clip_requests, dependent: :destroy
+
+  # いま作業中の切り抜きの依頼（なければ nil）
+  def working_clip_request
+    clip_requests.working.order(:created_at).last
+  end
 
   # 見間違えやすい文字（0 o 1 l i）は使わない
   CODE_CHARS = "abcdefghjkmnpqrstuvwxyz23456789".chars.freeze

@@ -1,0 +1,54 @@
+<section class="admin-card">
+  <div class="admin-card-head">
+    <h2>✂️ 切り抜きの依頼（作業中 <%= @working.size %>件）</h2>
+  </div>
+  <p class="auth-note">「✅ できた」か「🙏 お断り」を押すと、その人の「作業中」が終わって、また頼めるようになります（Discord にも知らせます）。できた動画のリンクを入れると、その人の依頼ページに「▶ 動画を見る」が出ます。</p>
+
+  <% if @working.empty? %>
+    <p class="auth-note">いま作業中の依頼はありません。</p>
+  <% end %>
+  <ul class="admin-list">
+    <% @working.each do |r| %>
+      <li class="admin-row admin-clip">
+        <div class="admin-clip__body">
+          <div class="admin-row-name">
+            <strong><%= r.user.name %></strong>
+            <span class="admin-badge">#<%= r.id %>・<%= r.created_at.strftime("%m/%d %H:%M") %></span>
+            <% if r.deadline %><span class="admin-badge">しめきり <%= r.deadline.strftime("%m/%d") %></span><% end %>
+          </div>
+          <p class="admin-clip__line"><%= link_to r.video_url.truncate(70), r.video_url, target: "_blank", rel: "noopener noreferrer" %></p>
+          <p class="admin-clip__line"><%= r.scenes.truncate(200) %></p>
+          <p class="admin-clip__line"><%= ClipRequest::ORIENTATIONS[r.orientation] %>・<%= ClipRequest::LENGTHS[r.length] %>・<%= ClipRequest::SUBTITLES[r.subtitles] %></p>
+        </div>
+        <div class="admin-clip__actions">
+          <%= form_with url: admin_clip_request_path(r), method: :patch, class: "admin-clip__form" do |f| %>
+            <%= f.hidden_field :status, value: "done" %>
+            <%= f.url_field :result_url, placeholder: "できた動画のリンク（なくてもOK）", class: "admin-clip__url" %>
+            <%= f.submit "✅ できた", class: "admin-button is-main", data: { turbo_confirm: "#{r.user.name} さんの依頼を「できた」にしますか？" } %>
+          <% end %>
+          <%= button_to "🙏 お断り", admin_clip_request_path(r), method: :patch, params: { status: "declined" },
+                form_class: "admin-inline", class: "admin-button is-danger",
+                data: { turbo_confirm: "#{r.user.name} さんの依頼を「お断り」にしますか？" } %>
+        </div>
+      </li>
+    <% end %>
+  </ul>
+</section>
+
+<section class="admin-card">
+  <h2>おわった依頼（新しい順に30件）</h2>
+  <ul class="admin-list">
+    <% @closed.each do |r| %>
+      <li class="admin-row">
+        <div class="admin-row-name">
+          <strong><%= r.user.name %></strong>
+          <span class="admin-badge"><%= r.status_label %></span>
+          <span class="admin-badge">#<%= r.id %>・<%= r.closed_at&.strftime("%m/%d %H:%M") %></span>
+        </div>
+        <div class="admin-row-actions">
+          <% if r.result_url.present? %><%= link_to "▶ できた動画", r.result_url, target: "_blank", rel: "noopener noreferrer" %><% end %>
+        </div>
+      </li>
+    <% end %>
+  </ul>
+</section>
