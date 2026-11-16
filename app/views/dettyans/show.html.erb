@@ -14,8 +14,9 @@
     </header>
 
     <div class="dt-hud">
+      <span class="dt-level" data-dettyan-game-target="level">Lv1</span>
       <span class="dt-money">💰 <span data-dettyan-game-target="money">0</span></span>
-      <span class="dt-stat">げんき <span class="dt-meter"><span class="dt-meter__fill dt-meter__fill--genki" data-dettyan-game-target="genki"></span></span></span>
+      <span class="dt-stat">げんき <span class="dt-meter"><span class="dt-meter__fill dt-meter__fill--genki" data-dettyan-game-target="genki"></span></span> <span class="dt-stat__num" data-dettyan-game-target="genkiNum"></span></span>
       <span class="dt-stat">ごきげん <span class="dt-meter"><span class="dt-meter__fill dt-meter__fill--gokigen" data-dettyan-game-target="gokigen"></span></span></span>
     </div>
 
@@ -23,6 +24,7 @@
       <canvas class="dt-room" data-dettyan-game-target="canvas" data-action="pointerdown->dettyan-game#tap" role="img" aria-label="事務所の部屋を歩く Dettyan"></canvas>
       <div class="dt-bubble" data-dettyan-game-target="bubble" hidden></div>
       <div class="dt-toast" data-dettyan-game-target="toast" role="status" hidden></div>
+      <div class="dt-skip" data-dettyan-game-target="skip" hidden>タップで とばす ▶▶</div>
 
       <%# おせわのメニュー（Dettyan をタップすると出る） %>
       <div class="dt-care" data-dettyan-game-target="menu" hidden>
@@ -50,10 +52,11 @@
     </div>
 
     <div class="dt-actions">
+      <button type="button" data-action="dettyan-game#openQuest">⚔️ たいじ</button>
       <button type="button" data-action="dettyan-game#openShop">🛒 ショップ</button>
       <button type="button" data-action="dettyan-game#openBag">🎒 もちもの</button>
     </div>
 
-    <p class="dt-help">Dettyan をタップすると、おせわができるよ。床をタップすると、そこまで歩くよ。</p>
+    <p class="dt-help">Dettyan をタップすると、おせわができるよ。⚔️ たいじ は げんき を使って、すぐ帰ってくるよ。</p>
   </div>
 </div>

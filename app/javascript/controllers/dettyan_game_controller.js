@@ -3,10 +3,13 @@ import { DETTYAN_SPRITE, drawDettyan } from "dettyan_sprite"
 import { DettyanStore } from "dettyan_save"
 import { DettyanSound } from "dettyan_sound"
 import { FOODS, findFood, foodGokigen, drawFood } from "dettyan_foods"
-import { applyIdle, claimDailyReward, doCare, buyFood, feedFood, dirtCount } from "dettyan_care"
+import { applyIdle, claimDailyReward, doCare, buyFood, feedFood, dirtCount, maxGenki } from "dettyan_care"
+import { PLACES, MONSTERS, canGo, goAdventure, expToNext, dettyanPower, drawSlime } from "dettyan_adventure"
+import { GEAR, findGear, equipped, toggleGear, drawGearIcon, drawHand } from "dettyan_gear"
 
 // 🧑‍💼 Dettyan 育成ゲーム：事務所の部屋の中を Dettyan がちょこちょこ歩く。タップでおせわ、ショップでごはん
 // セーブは dettyan_save.js、音は dettyan_sound.js、ごはんの表は dettyan_foods.js、おせわの計算は dettyan_care.js
+// モンスター退治は dettyan_adventure.js（その場で行って帰ってきて、結果を再生する）、ぶき・いしょうは dettyan_gear.js
 // 仕様は docs/dettyan/requirements.md
 
 const W = 128 // 部屋の大きさ（ドット）
@@ -23,10 +26,15 @@ const MENU_SEC = 7 // おせわのメニューを出している間、Dettyan �
 const EAT_SEC = 1.5
 // ほこりの場所（そうじするまで、床に1つずつ増える）
 const DIRT_SPOTS = [[24, 60], [100, 82], [64, 88], [110, 56], [36, 80]]
+// バトルの場所（ドット）
+const BATTLE_ME_X = 34
+const BATTLE_FOE_X = 94
+const BATTLE_FEET = 82
+const BATTLE_MAX_SEC = 12 // 長いバトルも、だいたいこの秒数で見終わるように速くする
 
 export default class extends Controller {
   static targets = ["canvas", "start", "startText", "startNote", "money", "genki", "gokigen", "soundButton", "soundPanel", "bgmToggle", "seToggle", "bubble",
-    "menu", "sheet", "sheetTitle", "sheetMoney", "sheetList", "toast"]
+    "menu", "sheet", "sheetTitle", "sheetMoney", "sheetList", "toast", "level", "genkiNum", "skip"]
   static values = { userId: Number }
 
   connect() {
@@ -43,6 +51,7 @@ export default class extends Controller {
     this.chara = { x: W / 2, y: 74, tx: W / 2, ty: 74, mode: "idle", until: 1.5, stepT: 0, frame: 0, blink: 0, nextBlink: 3, hop: 0 }
     this.particles = [] // コイン・ハート・きらきら
     this.eating = null  // { food, t }
+    this.battle = null  // モンスター退治の再生中
 
     this.last = performance.now()
     this.loop = (now) => {
@@ -152,6 +161,7 @@ export default class extends Controller {
       this.eating.t += dt
       if (this.eating.t >= EAT_SEC) this.finishEating()
     }
+    if (this.battle) return this.tickBattle(dt)
     if (!this.started) return
 
     if (ch.mode === "walk") {
@@ -195,6 +205,7 @@ export default class extends Controller {
   draw() {
     const g = this.g
     const ch = this.chara
+    if (this.battle) return this.drawBattle(g)
     g.drawImage(this.room, 0, 0)
     if (this.store.state) {
       const dirt = dirtCount(this.store.state, this.store.now())
@@ -209,9 +220,16 @@ export default class extends Controller {
     g.fillRect(Math.round(ch.x) - 6, Math.round(ch.y) - 1, 12, 2)
     // もぐもぐ：食べている間は口のあたりで小さく上下する
     const munch = this.eating ? Math.round(Math.abs(Math.sin(this.eating.t * 10))) : 0
-    drawDettyan(g, left, top + munch, { eyes: ch.blink > 0 || this.eating ? "blink" : "open", frame: ch.frame })
+    this.drawMe(g, left, top + munch, { eyes: ch.blink > 0 || this.eating ? "blink" : "open", frame: ch.frame })
     if (this.eating) this.drawEating(g, left, top)
     this.drawParticles(g)
+  }
+
+  // そうびしている いしょう・ぶき で描く
+  drawMe(g, left, top, opts = {}) {
+    const gear = this.store.state ? equipped(this.store.state) : {}
+    drawDettyan(g, left, top, { ...opts, colors: gear.outfit?.colors })
+    if (gear.weapon) drawHand(g, gear.weapon, left + 15, top + 15)
   }
 
   // 食べているごはん（ひと口ごとに右から少しずつ減る）
@@ -281,6 +299,7 @@ export default class extends Controller {
   // ---- タップ ----
   tap(event) {
     if (!this.started) return
+    if (this.battle) return this.skipBattle()
     const rect = this.canvasTarget.getBoundingClientRect()
     const x = ((event.clientX - rect.left) / rect.width) * W
     const y = ((event.clientY - rect.top) / rect.height) * H
@@ -362,7 +381,7 @@ export default class extends Controller {
 
   // ---- ショップ・持ち物 ----
   openShop() {
-    if (!this.started) return
+    if (!this.started || this.battle) return
     this.sound.se("tap")
     this.hideMenu()
     this.sheetMode = "shop"
@@ -371,7 +390,7 @@ export default class extends Controller {
   }
 
   openBag() {
-    if (!this.started) return
+    if (!this.started || this.battle) return
     this.sound.se("tap")
     this.hideMenu()
     this.sheetMode = "bag"
@@ -381,6 +400,7 @@ export default class extends Controller {
 
   closeSheet() {
     this.sound.se("tap")
+    if (this.sheetMode === "result") this.backFromBattle()
     this.sheetTarget.hidden = true
     this.sheetMode = null
   }
@@ -457,6 +477,10 @@ export default class extends Controller {
         button.dataset.dettyanGameIdParam = food.id
         list.append(itemRow(food, `💰${food.price}${have ? `・もっている ${have}` : ""}`, button))
       }
+    } else if (this.sheetMode === "quest") {
+      this.renderQuest(list, s)
+    } else if (this.sheetMode === "result") {
+      this.renderResult(list, s)
     } else {
       this.sheetTitleTarget.textContent = "🎒 もちもの"
       const owned = FOODS.filter((f) => s.items[f.id] > 0)
@@ -475,7 +499,275 @@ export default class extends Controller {
         button.dataset.dettyanGameIdParam = food.id
         list.append(itemRow(food, `× ${s.items[food.id]}`, button))
       }
+      // ぶき・いしょう
+      const gears = GEAR.filter((g) => s.gear.owned[g.id])
+      if (gears.length) list.append(el("div", "dt-sheet__section", "🗡️ そうび"))
+      for (const gear of gears) {
+        const on = s.gear[gear.slot] === gear.id
+        const button = el("button", "dt-item__button" + (on ? " dt-item__button--on" : ""), on ? "はずす" : "そうびする")
+        button.type = "button"
+        button.dataset.action = "dettyan-game#equip"
+        button.dataset.dettyanGameIdParam = gear.id
+        list.append(gearRow(gear, on ? "そうび中" : "", button))
+      }
     }
+  }
+
+  // ---- ぶき・いしょう ----
+  equip(event) {
+    let result = null
+    this.store.update((s) => { result = toggleGear(s, event.params.id) })
+    if (!result?.ok) return
+    this.sound.se(result.on ? "buy" : "tap")
+    this.toast(result.on ? `${result.gear.name} を そうびした` : `${result.gear.name} を はずした`)
+    this.renderSheet()
+  }
+
+  // ---- モンスター退治 ----
+  openQuest() {
+    if (!this.started || this.battle || this.eating) return
+    this.sound.se("tap")
+    this.hideMenu()
+    this.sheetMode = "quest"
+    this.renderSheet()
+    this.sheetTarget.hidden = false
+  }
+
+  renderQuest(list, s) {
+    this.sheetTitleTarget.textContent = "⚔️ モンスターたいじ"
+    const power = dettyanPower(s)
+    list.append(el("div", "dt-sheet__note", `Lv${s.dettyan.level}・たいりょく ${power.hp}・こうげき ${power.atk}　げんき ${Math.floor(s.stats.genki)}/${maxGenki(s)}`))
+    for (const place of PLACES) {
+      const check = canGo(s, place.id)
+      const button = el("button", "dt-item__button", check.reason === "level" ? `Lv${place.level}から` : "いく")
+      button.type = "button"
+      button.disabled = !check.ok
+      button.dataset.action = "dettyan-game#go"
+      button.dataset.dettyanGameIdParam = place.id
+      const row = el("div", "dt-item" + (check.reason === "level" ? " dt-item--locked" : ""))
+      const icon = el("div", "dt-item__icon dt-item__icon--emoji", place.icon)
+      const body = el("div", "dt-item__body")
+      body.append(el("div", "dt-item__name", place.name))
+      const kinds = [...new Set(place.monsters)].map((id) => MONSTERS[id].name).join("・")
+      body.append(el("div", "dt-item__effect", `げんき −${place.genki}`))
+      body.append(el("div", "dt-item__sub", check.reason === "genki" ? "げんき が たりないよ" : kinds))
+      row.append(icon, body, button)
+      list.append(row)
+    }
+  }
+
+  go(event) {
+    if (this.battle) return
+    const id = event.params.id
+    const before = { level: this.store.state.dettyan.level }
+    let result = null
+    // 結果は先に計算してセーブする（再生の途中で閉じても、もらったものはなくならない）
+    this.store.update((s) => { result = goAdventure(s, id, Math.floor(Math.random() * 2 ** 31)) })
+    if (!result.ok) {
+      this.sound.se("no")
+      this.toast(result.reason === "genki" ? "げんき が たりないよ" : `Lv${result.place?.level} から 行けるよ`)
+      return
+    }
+    this.store.flush()
+    this.sheetTarget.hidden = true
+    this.sheetMode = null
+    this.hideBubble()
+    this.hideMenu()
+    this.particles = []
+    this.startBattle(result, before)
+  }
+
+  startBattle(result, before) {
+    const { battle, place } = result
+    const steps = [{ type: "intro", dur: 1.1 }]
+    let cur = -1
+    for (const r of battle.rounds) {
+      if (r.foe !== cur) {
+        cur = r.foe
+        steps.push({ type: "appear", foe: cur, dur: 0.9 })
+      }
+      steps.push({ type: "round", r, dur: 0.55 })
+      if (r.down && r.who === "me") steps.push({ type: "down", foe: r.foe, dur: 0.5 })
+    }
+    steps.push({ type: "end", dur: 1.6 })
+    const total = steps.reduce((sum, st) => sum + st.dur, 0)
+    const speed = Math.max(1, total / BATTLE_MAX_SEC)
+    for (const st of steps) st.dur /= speed
+    this.battle = {
+      result, before, place, steps, i: -1, t: 0,
+      myHp: battle.maxHp, foe: null, foeHp: 0, foeMax: 1,
+      lunge: 0, foeLunge: 0, flashMe: 0, flashFoe: 0, dying: 0, hop: 0, bob: 0
+    }
+    if (this.hasSkipTarget) this.skipTarget.hidden = false
+    this.sound.playSong("battle")
+    this.nextStep()
+  }
+
+  nextStep() {
+    const b = this.battle
+    b.i += 1
+    b.t = 0
+    const step = b.steps[b.i]
+    if (!step) return this.finishBattle()
+    const foes = b.result.battle.foes
+    if (step.type === "intro") {
+      this.toast(`${b.place.icon} ${b.place.name} に ついた！`)
+    } else if (step.type === "appear") {
+      b.foe = MONSTERS[foes[step.foe]]
+      b.foeHp = b.foe.hp
+      b.foeMax = b.foe.hp
+      b.dying = 0
+      this.sound.se("talk")
+      this.toast(`${b.foe.name} が あらわれた！`)
+    } else if (step.type === "round") {
+      const r = step.r
+      this.sound.se("hit")
+      if (r.who === "me") {
+        b.lunge = 0.3
+        b.flashFoe = 0.25
+        b.foeHp = r.foeHp
+        this.popAt(r.crit ? `かいしん！${r.dmg}` : `${r.dmg}`, BATTLE_FOE_X, BATTLE_FEET - 26)
+      } else {
+        b.foeLunge = 0.3
+        b.flashMe = 0.25
+        b.myHp = r.myHp
+        this.popAt(`${r.dmg}`, BATTLE_ME_X, BATTLE_FEET - 30)
+      }
+    } else if (step.type === "down") {
+      b.dying = 0.001
+      this.sound.se("coin")
+    } else if (step.type === "end") {
+      if (b.result.battle.win) {
+        this.sound.se("happy")
+        b.hop = 1.4
+        this.toast("ぜんぶ たおした！")
+      } else {
+        this.sound.se("no")
+        this.toast("まけちゃった… にげて かえってきた")
+      }
+    }
+  }
+
+  tickBattle(dt) {
+    const b = this.battle
+    b.t += dt
+    b.bob += dt
+    b.lunge = Math.max(0, b.lunge - dt)
+    b.foeLunge = Math.max(0, b.foeLunge - dt)
+    b.flashMe = Math.max(0, b.flashMe - dt)
+    b.flashFoe = Math.max(0, b.flashFoe - dt)
+    b.hop = Math.max(0, b.hop - dt)
+    if (b.dying > 0) b.dying = Math.min(1, b.dying + dt * 2.5)
+    this.tickParticles(dt)
+    const step = b.steps[b.i]
+    if (step && b.t >= step.dur) this.nextStep()
+  }
+
+  // 再生をとばして、結果を見る
+  skipBattle() {
+    if (!this.battle) return
+    this.sound.se("tap")
+    this.finishBattle()
+  }
+
+  finishBattle() {
+    const b = this.battle
+    if (!b) return
+    this.battle = null
+    if (this.hasSkipTarget) this.skipTarget.hidden = true
+    this.lastBattle = b
+    if (b.result.levelUps > 0) this.sound.se("levelup")
+    this.renderHud(this.store.state)
+    this.sheetMode = "result"
+    this.renderSheet()
+    this.sheetTarget.hidden = false
+  }
+
+  backFromBattle() {
+    this.sound.playSong("office")
+    const ch = this.chara
+    ch.x = W / 2
+    ch.y = 74
+    this.lookAtMe(3)
+    const r = this.lastBattle?.result
+    if (r) this.say(r.battle.win ? "ただいま！" : "いたた… ただいま")
+  }
+
+  renderResult(list, s) {
+    const { result, before } = this.lastBattle
+    const { battle, place } = result
+    this.sheetTitleTarget.textContent = battle.win ? `🏆 ${place.name}：かち！` : `💦 ${place.name}：まけちゃった`
+    const counts = {}
+    battle.foes.slice(0, battle.beaten).forEach((id) => { counts[id] = (counts[id] || 0) + 1 })
+    const beaten = Object.entries(counts).map(([id, n]) => `${MONSTERS[id].name}×${n}`).join("・")
+    list.append(el("div", "dt-result__line", beaten ? `${beaten} を たおした` : "1ぴきも たおせなかった…"))
+    list.append(el("div", "dt-result__line", `💰 +${battle.coins}　けいけんち +${battle.exp}`))
+    const lv = s.dettyan.level
+    list.append(el("div", "dt-result__line dt-result__line--sub", `Lv${lv}　つぎのレベルまで ${expToNext(lv) - s.dettyan.exp}`))
+    if (battle.drop) {
+      const food = findFood(battle.drop)
+      if (food) list.append(itemRow(food, "ひろった！ もちもの に入れたよ", el("span", "")))
+    }
+    if (battle.gear) {
+      const gear = findGear(battle.gear)
+      if (gear) {
+        const on = s.gear[gear.slot] === gear.id
+        const button = el("button", "dt-item__button" + (on ? " dt-item__button--on" : ""), on ? "はずす" : "そうびする")
+        button.type = "button"
+        button.dataset.action = "dettyan-game#equip"
+        button.dataset.dettyanGameIdParam = gear.id
+        list.append(gearRow(gear, "✨ 手に入れた！", button))
+      }
+    }
+    if (result.levelUps > 0) {
+      list.append(el("div", "dt-result__levelup", `🎉 レベル ${lv} になった！　げんき の上限 ${maxGenki(s)}`))
+      for (const p of PLACES) {
+        if (p.level > before.level && p.level <= lv) list.append(el("div", "dt-result__levelup", `${p.icon} ${p.name} に 行けるようになった！`))
+      }
+    }
+    const back = el("button", "dt-item__button dt-result__back", "🏠 じむしょに もどる")
+    back.type = "button"
+    back.dataset.action = "dettyan-game#closeSheet"
+    list.append(back)
+  }
+
+  drawBattle(g) {
+    const b = this.battle
+    const p = b.place
+    // けしき
+    g.fillStyle = p.sky
+    g.fillRect(0, 0, W, 56)
+    g.fillStyle = p.ground
+    g.fillRect(0, 56, W, H - 56)
+    g.fillStyle = p.line
+    for (let y = 60; y < H; y += 8) g.fillRect(0, y, W, 1)
+    // Dettyan（左）
+    const lunge = b.lunge > 0 ? Math.round(Math.sin((b.lunge / 0.3) * Math.PI) * 10) : 0
+    const hop = b.hop > 0 ? Math.round(Math.abs(Math.sin(b.hop * Math.PI * 3)) * 5) : 0
+    const meLeft = BATTLE_ME_X - SPRITE_W / 2 + lunge
+    const meTop = BATTLE_FEET - SPRITE_H - hop
+    g.fillStyle = "rgba(0, 0, 0, 0.2)"
+    g.fillRect(BATTLE_ME_X - 6 + lunge, BATTLE_FEET - 1, 12, 2)
+    if (!(b.flashMe > 0 && Math.floor(b.flashMe * 30) % 2)) this.drawMe(g, meLeft, meTop, { frame: lunge > 0 ? 1 : 0 })
+    // スライム（右）。2倍の大きさ
+    if (b.foe && b.dying < 1) {
+      const fl = b.foeLunge > 0 ? Math.round(Math.sin((b.foeLunge / 0.3) * Math.PI) * 10) : 0
+      const squash = (Math.sin(b.bob * 6) + 1) / 2
+      g.fillStyle = "rgba(0, 0, 0, 0.2)"
+      g.fillRect(BATTLE_FOE_X - 10 - fl, BATTLE_FEET - 1, 20, 2)
+      if (!(b.flashFoe > 0 && Math.floor(b.flashFoe * 30) % 2)) {
+        g.save()
+        g.globalAlpha = 1 - b.dying
+        g.translate(BATTLE_FOE_X - 12 - fl, BATTLE_FEET - 20)
+        g.scale(2, 2)
+        drawSlime(g, b.foe, 0, 0, squash * 0.5 + b.dying)
+        g.restore()
+      }
+    }
+    // たいりょくのバー
+    hpBar(g, 6, 6, 40, b.myHp / b.result.battle.maxHp, "#7ed957")
+    if (b.foe) hpBar(g, W - 46, 6, 40, b.foeHp / b.foeMax, "#ff6b6b")
+    this.drawParticles(g)
   }
 
   // ふきだしとは別に、ステージの上に小さく出す知らせ
@@ -489,9 +781,13 @@ export default class extends Controller {
 
   // Dettyan の上にふわっと出る数字
   pop(text) {
+    this.popAt(text, this.chara.x, this.chara.y - SPRITE_H - 10)
+  }
+
+  popAt(text, x, y) {
     const p = el("div", "dt-pop", text)
-    p.style.left = `${(this.chara.x / W) * 100}%`
-    p.style.top = `${((this.chara.y - SPRITE_H - 10) / H) * 100}%`
+    p.style.left = `${(x / W) * 100}%`
+    p.style.top = `${(y / H) * 100}%`
     this.canvasTarget.parentElement.append(p)
     setTimeout(() => p.remove(), 1500)
   }
@@ -514,7 +810,10 @@ export default class extends Controller {
   // ---- 表示 ----
   renderHud(s) {
     this.moneyTarget.textContent = s.money.toLocaleString()
-    this.genkiTarget.style.width = `${clamp(s.stats.genki)}%`
+    const max = maxGenki(s)
+    this.genkiTarget.style.width = `${clamp((s.stats.genki / max) * 100)}%`
+    if (this.hasGenkiNumTarget) this.genkiNumTarget.textContent = `${Math.floor(s.stats.genki)}/${max}`
+    if (this.hasLevelTarget) this.levelTarget.textContent = `Lv${s.dettyan.level}`
     this.gokigenTarget.style.width = `${clamp(s.stats.gokigen)}%`
     this.genkiTarget.parentElement.title = `げんき ${Math.round(s.stats.genki)}`
     this.gokigenTarget.parentElement.title = `ごきげん ${Math.round(s.stats.gokigen)}`
@@ -582,7 +881,29 @@ function itemRow(food, sub, button) {
   return row
 }
 
+// ぶき・いしょうの1行
+function gearRow(gear, sub, button) {
+  const row = el("div", "dt-item")
+  const icon = document.createElement("canvas")
+  icon.className = "dt-item__icon"
+  icon.width = 12
+  icon.height = 12
+  drawGearIcon(icon.getContext("2d"), gear, 0, 0)
+  const body = el("div", "dt-item__body")
+  body.append(el("div", "dt-item__name", `${gear.name}（${gear.slot === "weapon" ? "ぶき" : "いしょう"}）`))
+  const fx = [gear.atk ? `こうげき+${gear.atk}` : "", gear.hp ? `たいりょく+${gear.hp}` : ""].filter(Boolean).join(" ")
+  body.append(el("div", "dt-item__effect", fx))
+  if (sub) body.append(el("div", "dt-item__sub", sub))
+  row.append(icon, body, button)
+  return row
+}
+
 const px = (g, color, x, y, w = 1, h = 1) => { g.fillStyle = color; g.fillRect(x, y, w, h) }
+
+function hpBar(g, x, y, w, ratio, color) {
+  px(g, "rgba(0, 0, 0, 0.45)", x - 1, y - 1, w + 2, 5)
+  px(g, color, x, y, Math.round(w * Math.max(0, Math.min(1, ratio))), 3)
+}
 
 function drawCoin(g, x, y) {
   px(g, "#b8860b", x - 2, y - 5, 5, 5)

@@ -4,11 +4,12 @@
 
 import { findFood, foodGokigen } from "dettyan_foods"
 
-export const MAX_STAT = 100
+export const MAX_STAT = 100               // ごきげん の上限・レベル1の げんき の上限
+export const GENKI_PER_LEVEL = 5          // レベルが1上がるごとに、げんき の上限が増える
 export const DAILY_REWARD = 20            // 毎日のごほうび（その日はじめて開いたとき）
 export const DAILY_CARE_COIN_LIMIT = 30   // おせわで落ちるコインの1日の上限
 export const CARE_COOLDOWN_MS = 20 * 1000 // 同じおせわを続けてしても、この間はほとんど効かない
-export const GENKI_PER_HOUR = 4           // 放置で げんき が回復する
+export const GENKI_PER_HOUR = 4           // 放置で げんき が回復する（レベル1のとき。上限に合わせて増える）
 export const GOKIGEN_DOWN_PER_HOUR = 1.5  // 放置で ごきげん が少し下がる（GOKIGEN_FLOOR より下がらない）
 export const GOKIGEN_FLOOR = 30
 export const DIRT_EVERY_MS = 3 * 60 * 60 * 1000 // 3時間ごとに ほこり が1つ
@@ -30,6 +31,15 @@ export const CARE = {
     gokigen: 2, coinChance: 0, coins: [0, 0], // ほこり1つにつき ごきげん+3・コイン1枚（必ず）
     lines: ["ぴかぴか！", "すっきりした！"]
   }
+}
+
+// げんき の上限（たいりょくポイント）。レベルで増える
+export function maxGenki(s) {
+  return MAX_STAT + (Math.max(1, s.dettyan?.level || 1) - 1) * GENKI_PER_LEVEL
+}
+
+function clampGenki(s, v) {
+  return Math.max(0, Math.min(maxGenki(s), Math.round(v * 10) / 10))
 }
 
 // 日本の日付（例："2026-11-17"）
@@ -57,7 +67,7 @@ export function applyIdle(s, now) {
   s.lastSeenAt = now
   if (!last || now <= last) return { hours: 0 }
   const hours = Math.min(now - last, MAX_IDLE_MS) / 3600000
-  s.stats.genki = clampStat(s.stats.genki + hours * GENKI_PER_HOUR)
+  s.stats.genki = clampGenki(s, s.stats.genki + hours * GENKI_PER_HOUR * (maxGenki(s) / MAX_STAT))
   if (s.stats.gokigen > GOKIGEN_FLOOR) {
     s.stats.gokigen = clampStat(Math.max(GOKIGEN_FLOOR, s.stats.gokigen - hours * GOKIGEN_DOWN_PER_HOUR))
   }
@@ -135,12 +145,12 @@ export function feedFood(s, id) {
   const food = findFood(id)
   if (!food) return { ok: false, reason: "unknown" }
   if (!(s.items[id] > 0)) return { ok: false, reason: "none", food }
-  if (s.stats.genki >= MAX_STAT && s.stats.gokigen >= MAX_STAT) return { ok: false, reason: "full", food }
+  if (s.stats.genki >= maxGenki(s) && s.stats.gokigen >= MAX_STAT) return { ok: false, reason: "full", food }
   s.items[id] -= 1
   if (s.items[id] <= 0) delete s.items[id]
   const g0 = s.stats.genki
   const k0 = s.stats.gokigen
-  s.stats.genki = clampStat(g0 + food.genki)
+  s.stats.genki = clampGenki(s, g0 + food.genki)
   s.stats.gokigen = clampStat(k0 + foodGokigen(food))
   return { ok: true, food, genki: s.stats.genki - g0, gokigen: s.stats.gokigen - k0 }
 }

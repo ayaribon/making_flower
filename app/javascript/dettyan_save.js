@@ -14,12 +14,14 @@ export function defaultState() {
   return {
     version: SAVE_VERSION,
     money: 0,
-    stats: { genki: 80, gokigen: 70 },
+    stats: { genki: 80, gokigen: 70 }, // げんき の上限はレベルで増える（dettyan_care.js の maxGenki）
     dettyan: { level: 1, exp: 0 },
     items: {},             // { junsai: 2 } のように、持っているごはん・アイテムの数（id は dettyan_foods.js）
     daily: { day: null, careCoins: 0, rewardDay: null }, // その日（日本の日付）の数。おせわのコインの上限・毎日のごほうび
     care: { lastAt: {} },  // おせわごとに、最後にした時間（続けてしても効かないように）
     room: { cleanedAt: null }, // 最後にそうじした時間。ここからの時間で ほこり が増える
+    adventure: { count: 0, wins: 0 }, // モンスター退治に行った回数・ぜんぶたおした回数
+    gear: { owned: {}, weapon: null, outfit: null }, // 持っている ぶき・いしょう（id は dettyan_gear.js）と、そうびしているもの
     settings: { bgm: true, se: true, soundAsked: false }, // soundAsked：「音が出ます」を一度見せたか
     createdAt: null,       // はじめて遊んだ時間（サーバーの時計・ミリ秒）
     lastSeenAt: null       // 最後に遊んだ時間（サーバーの時計・ミリ秒）。放置の計算に使う

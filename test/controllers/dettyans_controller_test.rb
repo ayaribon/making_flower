@@ -15,6 +15,7 @@ class DettyansControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-dettyan-game-target=menu] button", 4
     assert_select "[data-action='dettyan-game#openShop']"
     assert_select "[data-action='dettyan-game#openBag']"
+    assert_select "[data-action='dettyan-game#openQuest']"
     assert_select "[data-dettyan-game-target=sheet]"
   end
 end

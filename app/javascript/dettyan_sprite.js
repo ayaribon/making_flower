@@ -49,7 +49,9 @@ const WALK_LEGS = {
 }
 
 // Dettyan を描く。eyes："open" | "blink"、frame：0 | 1（歩くときに交互に）
-export function drawDettyan(g, ox, oy, { eyes = "open", frame = 0 } = {}) {
+// colors：色の入れかえ（いしょう。例：{ J: "#2f6fd0" }）
+export function drawDettyan(g, ox, oy, { eyes = "open", frame = 0, colors = null } = {}) {
+  const palette = colors ? { ...DETTYAN_COLORS, ...colors } : DETTYAN_COLORS
   const sprite = DETTYAN_SPRITE
   for (let y = 0; y < sprite.length; y++) {
     const row = frame === 1 && WALK_LEGS[y] ? WALK_LEGS[y] : sprite[y]
@@ -57,7 +59,7 @@ export function drawDettyan(g, ox, oy, { eyes = "open", frame = 0 } = {}) {
       let c = row[x]
       if (c === "E" && eyes === "blink") c = y === 11 ? "K" : "S"
       if (c === ".") continue
-      g.fillStyle = DETTYAN_COLORS[c]
+      g.fillStyle = palette[c]
       g.fillRect(ox + x, oy + y, 1, 1)
     }
   }
