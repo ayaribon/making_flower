@@ -69,7 +69,75 @@
 .dt-start__note { font-size: 0.78rem; opacity: 0.6; }
 .dt-start__note[hidden] { display: none; }
 
+/* おせわのメニュー（ステージの下に重ねる） */
+.dt-care {
+  position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 6;
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+}
+.dt-care[hidden] { display: none; }
+.dt-care button {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  min-height: 52px; padding: 6px 2px; border: 0; border-radius: 10px; cursor: pointer;
+  background: rgba(42, 28, 18, 0.88); color: #fff; font: inherit; font-size: 1.25rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); touch-action: manipulation;
+}
+.dt-care button span { font-size: 0.78rem; font-weight: 700; }
+.dt-care button:active { transform: translateY(1px); background: rgba(90, 58, 34, 0.95); }
+
+/* ショップ・もちもの（ステージの上に重ねる） */
+.dt-sheet {
+  position: absolute; inset: 0; z-index: 8;
+  display: flex; flex-direction: column;
+  background: rgba(30, 20, 12, 0.94); color: #fff;
+}
+.dt-sheet[hidden] { display: none; }
+.dt-sheet__head { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
+.dt-sheet__title { flex: 1; font-weight: 700; }
+.dt-sheet__money { font-weight: 700; }
+.dt-sheet__close {
+  width: 36px; height: 36px; border: 0; border-radius: 50%; cursor: pointer;
+  background: rgba(255, 255, 255, 0.15); color: #fff; font-size: 1rem;
+}
+.dt-sheet__list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 6px 8px; }
+.dt-sheet__empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px 8px; opacity: 0.9; }
+.dt-item { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.dt-item__icon {
+  width: 40px; height: 40px; flex: none; border-radius: 8px; background: #f6ecd8;
+  image-rendering: crisp-edges; image-rendering: pixelated;
+}
+.dt-item__body { flex: 1; min-width: 0; line-height: 1.35; }
+.dt-item__name { font-weight: 700; }
+.dt-item__effect, .dt-item__sub { font-size: 0.78rem; opacity: 0.75; }
+.dt-item__button {
+  flex: none; min-width: 72px; min-height: 40px; padding: 6px 12px; border: 0; border-radius: 999px; cursor: pointer;
+  background: #ffb347; color: #2a1c12; font: inherit; font-weight: 700; touch-action: manipulation;
+}
+.dt-item__button:disabled { background: rgba(255, 255, 255, 0.18); color: rgba(255, 255, 255, 0.5); cursor: default; }
+
+.dt-toast {
+  position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 9;
+  padding: 6px 14px; border-radius: 999px; white-space: nowrap;
+  background: rgba(42, 28, 18, 0.92); color: #fff; font-size: 0.85rem; font-weight: 700;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); pointer-events: none;
+}
+.dt-toast[hidden] { display: none; }
+
+.dt-pop {
+  position: absolute; transform: translate(-50%, -100%); z-index: 5; pointer-events: none; white-space: nowrap;
+  color: #fff; font-size: 0.8rem; font-weight: 800; text-shadow: 0 1px 0 #2a1c12, 0 0 4px #2a1c12;
+  animation: dt-pop 1.5s ease-out forwards;
+}
+@keyframes dt-pop { from { opacity: 1; margin-top: 0; } to { opacity: 0; margin-top: -28px; } }
+
+.dt-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.dt-actions button {
+  min-height: 48px; border: 0; border-radius: 12px; cursor: pointer;
+  background: rgba(255, 255, 255, 0.16); color: #fff; font: inherit; font-size: 1rem; font-weight: 700;
+  touch-action: manipulation;
+}
+.dt-actions button:active { background: rgba(255, 255, 255, 0.26); }
+
 .dt-help { margin: 12px 0 0; font-size: 0.85rem; opacity: 0.75; text-align: center; line-height: 1.6; }
 
 @keyframes dt-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
-@media (prefers-reduced-motion: reduce) { .dt-start__text { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .dt-start__text, .dt-pop { animation: none; } }

@@ -203,6 +203,18 @@ export class DettyanSound {
       case "levelup": // レベルアップ
         ;["C5", "E5", "G5", "C6", "G5", "C6"].forEach((n, i) => this.tone(out, "square", freq(n), t + i * 0.09, 0.12, 0.14))
         break
+      case "pet": // なでる「ふわっ」
+        this.tone(out, "triangle", 523, t, 0.12, 0.2, 784)
+        this.tone(out, "triangle", 659, t + 0.12, 0.14, 0.18, 988)
+        break
+      case "sweep": // そうじ「さっさっ」
+        this.noise(t, 0.08, 0.2)
+        this.noise(t + 0.14, 0.08, 0.2)
+        break
+      case "no": // できない「ぶぶっ」
+        this.tone(out, "square", 180, t, 0.08, 0.12)
+        this.tone(out, "square", 150, t + 0.1, 0.12, 0.12)
+        break
       case "tap": // ボタン
         this.tone(out, "square", 1046, t, 0.04, 0.1)
         break
