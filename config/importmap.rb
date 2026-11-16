@@ -22,3 +22,4 @@ pin "project_server" # 💾 プロジェクトをアカウントに保存（K39�
 pin "harmony" # 🎶 ハモリ・ケロケロ風（K29）
 pin "pixel_buddy" # 🧑‍🎨 ドット絵の子（歌う子・ほめてくれる子の絵）
 pin "pixel_singer" # 🎤 試聴中に歌うドット絵の子
+pin "dettyan_sprite" # 🧑‍💼 Dettyan のドット絵
