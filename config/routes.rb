@@ -42,6 +42,8 @@ Rails.application.routes.draw do
   get "singing", to: "singings#show"
   # 🧑‍💼 Dettyan 育成ゲーム（いまは入口だけ。中身はこれから）
   get "dettyan", to: "dettyans#show"
+  # ✂️ 切り抜き動画をたのむ（フォーム → Discord に投稿。保存はしない）
+  resources :clip_requests, only: [:new, :create]
   # 💾 歌ってみたのプロジェクト・画像編集の下書き（アカウントに保存・本人のものだけ・K39）
   resources :singing_projects, only: [:index, :show, :update, :destroy], defaults: { format: :json } do
     member do

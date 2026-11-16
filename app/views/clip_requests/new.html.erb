@@ -1,0 +1,88 @@
+<%# ✂️ 切り抜き動画をたのむ（フォーム → Discord）。見た目は app/assets/stylesheets/clip_requests.css %>
+<div class="cr">
+  <div class="cr-inner">
+    <p class="cr-back"><%= link_to "🏠 メニューへ", root_path, data: { turbo: false } %></p>
+    <h1 class="cr-title">✂️ 切り抜き動画をたのむ</h1>
+    <p class="cr-lead">配信や動画の「ここを切り抜いてほしい！」を送ってね。管理者が Discord で受け取って、作ります。</p>
+
+    <% if notice.present? %><p class="cr-flash cr-flash--ok" role="status"><%= notice %></p><% end %>
+    <% if flash[:alert].present? %><p class="cr-flash cr-flash--ng" role="alert"><%= flash[:alert] %></p><% end %>
+    <% unless @configured %>
+      <p class="cr-flash cr-flash--ng">⚠ まだ送り先（Discord）が設定されていないので、送れません。管理者に知らせてください</p>
+    <% end %>
+
+    <%= form_with model: @clip_request, url: clip_requests_path, local: true, class: "cr-form", data: { turbo: false } do |f| %>
+      <% if @clip_request.errors.any? %>
+        <div class="cr-errors" role="alert">
+          <p>直してほしい所があります</p>
+          <ul><% @clip_request.errors.full_messages.each do |m| %><li><%= m %></li><% end %></ul>
+        </div>
+      <% end %>
+
+      <div class="cr-field">
+        <%= f.label :video_url, "動画のリンク" %><span class="cr-req">必須</span>
+        <%= f.url_field :video_url, placeholder: "https://www.youtube.com/watch?v=…", maxlength: 500, required: true, inputmode: "url" %>
+        <p class="cr-help">YouTube・Twitch などの配信のリンク。<b>手元の mp4 を送りたいとき</b>は、Googleドライブに入れて、共有を「リンクを知っている全員が閲覧可」にしてリンクを貼ってね（リンクは管理者だけが見ます。終わったら共有を止めてOK）</p>
+      </div>
+
+      <div class="cr-field">
+        <%= f.label :scenes, "切り抜きたい所" %><span class="cr-req">必須</span>
+        <%= f.text_area :scenes, rows: 4, maxlength: 1000, required: true, placeholder: "例）1:23:40〜1:25:10　ゲームで大笑いしたところ\n2:05:00〜2:06:30　歌の最後のサビ" %>
+        <p class="cr-help">はじまり〜おわりの時間と、どんな場面か。いくつでもOK</p>
+      </div>
+
+      <div class="cr-row">
+        <div class="cr-field">
+          <span class="cr-label">形</span>
+          <div class="cr-chips">
+            <% ClipRequest::ORIENTATIONS.each do |k, label| %>
+              <label class="cr-chip"><%= f.radio_button :orientation, k %><span><%= label %></span></label>
+            <% end %>
+          </div>
+        </div>
+        <div class="cr-field">
+          <span class="cr-label">長さ</span>
+          <div class="cr-chips">
+            <% ClipRequest::LENGTHS.each do |k, label| %>
+              <label class="cr-chip"><%= f.radio_button :length, k %><span><%= label %></span></label>
+            <% end %>
+          </div>
+        </div>
+        <div class="cr-field">
+          <span class="cr-label">字幕</span>
+          <div class="cr-chips">
+            <% ClipRequest::SUBTITLES.each do |k, label| %>
+              <label class="cr-chip"><%= f.radio_button :subtitles, k %><span><%= label %></span></label>
+            <% end %>
+          </div>
+        </div>
+      </div>
+
+      <div class="cr-field">
+        <%= f.label :title_idea, "タイトル案" %><span class="cr-opt">なくてもOK</span>
+        <%= f.text_field :title_idea, maxlength: 100, placeholder: "例）【神回】まさかの逆転勝ち" %>
+      </div>
+      <div class="cr-field">
+        <%= f.label :mood, "ふんいき" %><span class="cr-opt">なくてもOK</span>
+        <%= f.text_field :mood, maxlength: 200, placeholder: "例）テンポよく・効果音多め／しっとり" %>
+      </div>
+      <div class="cr-field">
+        <%= f.label :deadline, "しめきり" %><span class="cr-opt">なくてもOK</span>
+        <%= f.date_field :deadline, min: Date.current %>
+      </div>
+      <div class="cr-field">
+        <%= f.label :note, "メモ" %><span class="cr-opt">なくてもOK</span>
+        <%= f.text_area :note, rows: 3, maxlength: 1000, placeholder: "ほかに伝えたいこと" %>
+      </div>
+
+      <label class="cr-check">
+        <%= f.check_box :permission, {}, "1", "0" %>
+        <span>自分の配信、または切り抜きの許可をもらった動画です<span class="cr-req">必須</span></span>
+      </label>
+
+      <div class="cr-actions">
+        <%= f.submit "✂️ 依頼を送る", class: "cr-submit", disabled: !@configured, data: { disable_with: "送っています…" } %>
+      </div>
+    <% end %>
+  </div>
+</div>

@@ -29,6 +29,7 @@
 .hm-card--sing { background: linear-gradient(145deg, #2f7dff 0%, #4fb6ff 100%); }
 .hm-card--art { background: linear-gradient(145deg, #ff5fa2 0%, #ffa86b 100%); }
 .hm-card--dettyan { background: linear-gradient(145deg, #7a4a24 0%, #c8894a 100%); }
+.hm-card--clip { background: linear-gradient(145deg, #2fbf9f 0%, #6ad1ff 100%); }
 .hm-card:hover, .hm-card:focus-visible { transform: translateY(-4px); box-shadow: 0 16px 36px rgba(0, 0, 0, 0.32); }
 .hm-card:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 .hm-card:active { transform: scale(0.98); }
