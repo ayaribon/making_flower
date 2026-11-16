@@ -550,7 +550,14 @@ export function settingsAt(timeline, t) {
   }
   const sec = timeline.sections.find((s) => t >= s.startSec && t < s.endSec)
   const own = sec ? sec.settings : base
-  return { ...own, reverbLength: base.reverbLength, pro: { ...(own.pro || {}), ...globalsOf(base) } }
+  const out = { ...own, reverbLength: base.reverbLength, pro: { ...(own.pro || {}), ...globalsOf(base) } }
+  // 📍 場所を決めてかけたエフェクト（その範囲だけ、エフェクトの種類・かかり具合を上書き。あとに足したものが勝つ）
+  const ranges = timeline.fxRanges || []
+  for (let i = ranges.length - 1; i >= 0; i--) {
+    const r = ranges[i]
+    if (t >= r.startSec && t < r.endSec) { out.fx = r.fx; out.fxAmount = r.fxAmount; break }
+  }
+  return out
 }
 
 // 曲の fromSec 秒目が ctx の時計で ctxAt に鳴るとき、部分ごとの切りかえを先に全部予約する
@@ -566,6 +573,7 @@ export function scheduleMixTimeline(chain, timeline, ctxAt, fromSec, { live = fa
 
   const bounds = new Set()
   timeline.sections.forEach((s) => { bounds.add(s.startSec); bounds.add(s.endSec) })
+  ;(timeline.fxRanges || []).forEach((r) => { bounds.add(r.startSec); bounds.add(r.endSec) })
   ;[...bounds].filter((b) => b > fromSec).sort((a, b) => a - b).forEach((b) => {
     const at = ctxAt + (b - fromSec) - SECTION_RAMP / 2
     applyMix(chain, settingsAt(timeline, b), { at: Math.max(ctxAt, now, at), ramp: SECTION_RAMP })
