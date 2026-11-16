@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import { PAINTER_SPRITE, drawBuddy, drawDangling, drawShape, PIXEL_SHAPES, BuddyHandle, buddyHidden } from "pixel_buddy"
+import { PAINTER_SPRITE, drawBuddy, drawDangling, drawDropped, drawShape, PIXEL_SHAPES, BuddyHandle, buddyHidden } from "pixel_buddy"
 
 // 🧑‍🎨 画像編集の「ほめてくれる子」。キャンバスのすみっこにいて、編集が進むと「いいね！」とほめてくれる。
 // 画面の飾りだけ（書き出す画像には入らない）。編集画面からは、次のできごとを受け取るだけ：
@@ -62,7 +62,7 @@ export default class extends Controller {
       onHide: () => this.disconnect(),
       // ✋ 運ばれている間は、つままれてじたばた（そのあいだは毎コマ描く）
       onDragStart: () => { if (!this.raf) this.raf = requestAnimationFrame(this.tick) },
-      onDragEnd: () => {}
+      onDragEnd: () => { if (!this.raf) this.raf = requestAnimationFrame(this.tick) } // 🫠 べちゃっ → ｳﾝｼｮｯ を描くあいだ
     })
     const c = this.canvasTarget
     c.width = W
@@ -200,6 +200,14 @@ export default class extends Controller {
       const g = this.g
       g.clearRect(0, 0, W, H)
       drawDangling(g, PAINTER_SPRITE, BODY_X, BODY_Y - 2, now / 1000)
+      return
+    }
+    const dropT = this.handle ? this.handle.dropT : null
+    if (dropT !== null) {
+      this.raf = requestAnimationFrame(this.tick)
+      const g = this.g
+      g.clearRect(0, 0, W, H)
+      drawDropped(g, PAINTER_SPRITE, BODY_X, BODY_Y, dropT)
       return
     }
     const busy = now < this.cheerUntil || this.hearts.length

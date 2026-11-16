@@ -3,7 +3,7 @@
 // 画面の飾りだけ（MV の絵や書き出しには入らない）。音のつなぎ方は変えない（AnalyserNode を読むだけ）。
 // 指でなぞると運べる。たたくとぴょんとはねて、10回たたくと「じゃま？」（けすと、ログインし直すまで出ない）
 
-import { SINGER_SPRITE, drawBuddy, drawDangling, drawShape, PIXEL_SHAPES, BuddyHandle, buddyHidden } from "pixel_buddy"
+import { SINGER_SPRITE, drawBuddy, drawDangling, drawDropped, drawShape, PIXEL_SHAPES, BuddyHandle, buddyHidden } from "pixel_buddy"
 
 const NOTE_COLORS = ["#ff7ab6", "#5ec8ff", "#ffd84a", "#9b7bff"]
 
@@ -115,7 +115,9 @@ export class PixelSinger {
     const mouth = this.level > 0.22 ? 2 : singing ? 1 : 0
     const blink = (t % 3.2) > 3.05
     // ✋ 運ばれている間は、つままれてじたばた
+    const dropT = this.handle ? this.handle.dropT : null
     if (this.handle && this.handle.dragging) drawDangling(g, SINGER_SPRITE, BODY_X, BODY_Y - 2, t)
+    else if (dropT !== null) drawDropped(g, SINGER_SPRITE, BODY_X, BODY_Y, dropT) // 🫠 べちゃっ → ｳﾝｼｮｯ
     else drawBuddy(g, SINGER_SPRITE, BODY_X, BODY_Y - bob, { mouth, eyes: blink ? "blink" : "open" })
 
     // 音符（上にふわっと上がって、消える）

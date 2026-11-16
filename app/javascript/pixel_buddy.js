@@ -104,6 +104,58 @@ export function drawDangling(g, sprite, ox, oy, t) {
   else { g.fillRect(sx + 1, sy - 2, 1, 2); g.fillRect(sx + 4, sy, 1, 1) }
 }
 
+// 🫠 落とされたあと：落ちる → べちゃっ（ぺたんと寝る・ほこり）→ ｳﾝｼｮｯ（しゃがんで起きる）→ ぴょんと立つ
+// t は落としてからの秒。DROP_LEN をこえたら、ふつうに戻る
+export const DROP_LEN = 1.45
+export const DROP_GETUP_AT = 0.8 // 「ｳﾝｼｮｯ」を出す時間
+export function drawDropped(g, sprite, ox, oy, t) {
+  const n = sprite.length
+  const cx = Math.round(ox + n / 2)
+  const ground = oy + n // 足もとの高さ
+  const lying = (dy, eyes) => {
+    g.save()
+    g.translate(cx, Math.round(ground - n / 2 + 3 + dy)) // 寝ると低くなる
+    g.rotate(Math.PI / 2)
+    g.translate(-n / 2, -n / 2)
+    drawBuddy(g, sprite, 0, 0, { mouth: 0, eyes })
+    g.restore()
+  }
+  if (t < 0.12) {
+    // 落ちる（少し上から、ぺたんと）
+    lying(-6 + (t / 0.12) * 6, "blink")
+    return
+  }
+  if (t < DROP_GETUP_AT) {
+    // べちゃっ：寝たまま、ほこりが左右に飛ぶ。少しだけぴくぴく
+    lying(t > 0.5 && Math.floor(t * 10) % 3 === 0 ? -1 : 0, "blink")
+    if (t < 0.45) {
+      const s = (t - 0.12) / 0.33
+      g.fillStyle = "rgba(200, 190, 205, 0.9)"
+      const spread = Math.round(10 + s * 6)
+      const y = ground - 1 - Math.round(s * 2)
+      ;[[-spread, 0], [-spread - 2, -1], [spread, 0], [spread + 2, -1]].forEach(([dx, dy]) => g.fillRect(cx + dx, y + dy, 2, 1))
+    }
+    return
+  }
+  if (t < 1.15) {
+    // ｳﾝｼｮｯ：しゃがんで、うでで起き上がる（下のほうを地面にうめるように、低く描く）
+    const up = (t - DROP_GETUP_AT) / (1.15 - DROP_GETUP_AT) // 0 → 1
+    const sink = Math.round(5 - up * 5)
+    g.save()
+    g.beginPath()
+    g.rect(0, 0, 999, ground)
+    g.clip()
+    drawBuddy(g, sprite, ox, oy + sink, { mouth: 0, eyes: "blink" })
+    g.restore()
+    // ふんばるあせ
+    if (Math.floor(t * 8) % 2) { g.fillStyle = "#6ec8ff"; g.fillRect(cx + 8, oy + sink + 2, 1, 2) }
+    return
+  }
+  // 立った！ぴょん
+  const p = (t - 1.15) / (DROP_LEN - 1.15)
+  drawBuddy(g, sprite, ox, oy - Math.round(Math.sin(Math.min(1, p) * Math.PI) * 3), { mouth: 1, eyes: "happy" })
+}
+
 // 小さなドットの形（音符・ハート・キラキラ）
 export const PIXEL_SHAPES = {
   note: ["..K..", "..KK.", "..K.K", "..K..", "KKK..", "KKK.."],
@@ -151,6 +203,8 @@ export class BuddyHandle {
     this.onDragEnd = onDragEnd
     this.dragging = false
     this.wa = null
+    this.droppedAt = -1
+    this.sayTimers = []
     this.taps = 0
     this.lastTap = 0
     this.drag = null
@@ -170,6 +224,7 @@ export class BuddyHandle {
     this.handle.removeEventListener("pointerdown", this.down)
     window.removeEventListener("resize", this.onResize)
     this.closeAsk()
+    this.clearSay()
     this.hideWa()
   }
 
@@ -226,6 +281,9 @@ export class BuddyHandle {
       this.handle.style.cursor = "grabbing"
       this.el.classList.add("is-dragging")
       this.dragging = true
+      this.droppedAt = -1
+      this.clearSay()
+      this.hideWa()
       this.showWa()
       if (this.onDragStart) this.onDragStart()
     }
@@ -233,12 +291,39 @@ export class BuddyHandle {
     this.moveWa()
   }
 
+  // 落としてからの秒（落としていない・もう起きたときは null）
+  get dropT() {
+    if (this.droppedAt < 0) return null
+    const t = (performance.now() - this.droppedAt) / 1000
+    return t < DROP_LEN ? t : null
+  }
+
+  // 落とされた：べちゃっ → ｳﾝｼｮｯ
+  drop() {
+    this.droppedAt = performance.now()
+    this.clearSay()
+    this.say("べちゃっ", 650)
+    this.sayTimers.push(setTimeout(() => this.say("ｳﾝｼｮｯ", 600), DROP_GETUP_AT * 1000))
+  }
+
+  // 子の上に、少しのあいだだけ言葉を出す
+  say(text, ms) {
+    this.hideWa()
+    this.showWa(text)
+    this.sayTimers.push(setTimeout(() => { if (!this.dragging) this.hideWa() }, ms))
+  }
+
+  clearSay() {
+    this.sayTimers.forEach((id) => clearTimeout(id))
+    this.sayTimers = []
+  }
+
   // 「ﾜｧ~💦」の吹き出し（運んでいる間だけ、子の上に出る）
-  showWa() {
+  showWa(text = "ﾜｧ~💦") {
     if (this.wa) return
     const el = document.createElement("div")
     el.className = "kb-buddy-wa"
-    el.textContent = "ﾜｧ~💦"
+    el.textContent = text
     el.setAttribute("aria-hidden", "true")
     document.body.appendChild(el)
     this.wa = el
@@ -268,6 +353,7 @@ export class BuddyHandle {
     if (this.dragging) {
       this.dragging = false
       this.hideWa()
+      this.drop() // 🫠 べちゃっ → ｳﾝｼｮｯ
       if (this.onDragEnd) this.onDragEnd()
     }
     if (d.moved) {
