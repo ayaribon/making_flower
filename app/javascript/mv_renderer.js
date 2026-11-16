@@ -16,28 +16,37 @@
 // }
 
 export const MV_TEMPLATES = Object.freeze({
-  simple: { label: "🌊 シンプル", hint: "背景＋下に音の波＋左上に曲名。どんな曲にも合う" },
-  jacket: { label: "💿 ジャケット", hint: "真ん中に画像をジャケットのように。ゆっくり動く" },
-  visualizer: { label: "🌀 ビジュアライザー", hint: "曲名のまわりを、音に合わせて輪がはねる" },
-  particles: { label: "🎆 パーティクル", hint: "光のつぶが音に合わせてふわっと舞う。しっとりした曲に" },
-  bars: { label: "📊 バー", hint: "画面の下いっぱいに音のバー。ノリのいい曲に" }
+  simple: { label: "🌊 下に音の波", hint: "画像の下に音の波、左上に曲名。どんな曲にも合う" },
+  jacket: { label: "💿 ジャケット風", hint: "画像をCDジャケットのように真ん中に置いて、まわりはぼかす" },
+  visualizer: { label: "🌀 曲名のまわりに輪", hint: "曲名のまわりを、音に合わせて輪がはねる" },
+  particles: { label: "🎆 光のつぶ", hint: "光のつぶが音に合わせてふわっと舞う" },
+  bars: { label: "📊 音のバー", hint: "画面の下いっぱいに音のバー。ノリのいい曲に" },
+  plain: { label: "🖼 画像だけ", hint: "画像と文字だけ。音の波は出しません" }
 })
 
 // 🎞 アニメーションの選び方（K30）。どれも「曲の時間 t だけで決まる」（⚡速い書き出しでも同じ絵）
 // 最初の値（fade / flash / slow）は、今までと同じ見た目
 export const MV_ANIMS = Object.freeze({
   lyric: {
-    fade: "ふわっと（今まで）", pop: "ポンと出る", rise: "下からスッと", type: "1文字ずつ"
+    fade: "ふわっと（今まで）", pop: "ポンと出る", rise: "下からスッと", type: "1文字ずつ",
+    bounce: "ぴょんぴょん", wave: "うねうね", neon: "ネオン", scatter: "ばらばら（はげしく）", kinetic: "ドン！ドン！（大きく）",
+    slidein: "横から入って横へ出る", dropin: "上から1文字ずつ落ちてくる", flyin: "まわりから文字が飛んでくる"
   },
   transition: {
     flash: "フラッシュ（今まで）", zoom: "ズームでドン", invert: "色が反転", glitch: "グリッチ", none: "なし"
   },
   bg: {
-    slow: "ゆっくり（今まで）", kenburns: "大きくズーム＆パン", sway: "ゆらゆら", still: "動かない"
+    slow: "ゆっくり（今まで）", kenburns: "大きくズーム＆パン", sway: "ゆらゆら", still: "動かない",
+    beat: "拍でドンドン", bounce: "ぽよんぽよん", spin: "くるんと回る", shake: "拍でぶるぶる",
+    pandown: "ゆっくり上から下へ", panup: "ゆっくり下から上へ", panright: "ゆっくり横に流れる"
+  },
+  // 🖼 背景（画像）が切りかわるときの入り方。今までは「ふわっと入れかわる」
+  enter: {
+    fade: "ふわっと（今まで）", blur: "ぼかしから、くっきり", slideD: "上から入ってくる", slideL: "右から入ってくる", slideU: "下から入ってくる", drop: "上から落ちてくる（はずむ）", zoomin: "奥から飛び出す"
   }
 })
 
-export const DEFAULT_MV_ANIM = Object.freeze({ lyric: "fade", transition: "flash", bg: "slow" })
+export const DEFAULT_MV_ANIM = Object.freeze({ lyric: "fade", transition: "flash", bg: "slow", enter: "fade" })
 
 const animOf = (scene) => ({ ...DEFAULT_MV_ANIM, ...(scene.anim || {}) })
 
@@ -242,6 +251,33 @@ function hsl(h, s, l) {
 // ---------- 描く部品 ----------
 
 const FONT = '"Noto Sans JP", "Hiragino Sans", "Yu Gothic", sans-serif'
+
+// 🔤 文字のフォント（歌詞・曲名・テロップ）。Google Fonts から読み込む（キャンバスで使う前に document.fonts.load で待つ）
+// gf：Google Fonts の family の書き方（なし＝いつもの字）
+export const MV_FONTS = Object.freeze({
+  standard: { label: "ふつう", family: null, weight: 800 },
+  maru: { label: "まるもじ", family: "M PLUS Rounded 1c", weight: 800, gf: "M+PLUS+Rounded+1c:wght@800" },
+  pop: { label: "ポップ", family: "Hachi Maru Pop", weight: 400, gf: "Hachi+Maru+Pop" },
+  magic: { label: "マジック", family: "Yusei Magic", weight: 400, gf: "Yusei+Magic" },
+  hand: { label: "手書き", family: "Yomogi", weight: 400, gf: "Yomogi" },
+  rock: { label: "ロック", family: "RocknRoll One", weight: 400, gf: "RocknRoll+One" },
+  heavy: { label: "ごんぶと", family: "Dela Gothic One", weight: 400, gf: "Dela+Gothic+One" },
+  brush: { label: "筆", family: "Reggae One", weight: 400, gf: "Reggae+One" },
+  dot: { label: "ドット", family: "DotGothic16", weight: 400, gf: "DotGothic16" }
+})
+export const MV_FONTS_CSS = "https://fonts.googleapis.com/css2?" +
+  Object.values(MV_FONTS).filter((f) => f.gf).map((f) => `family=${f.gf}`).join("&") + "&display=swap"
+// フォントの CSS の書き方（document.fonts.load 用）
+export function mvFontSpec(key, size = 40) {
+  const f = MV_FONTS[key] || MV_FONTS.standard
+  return `${f.weight} ${size}px ${f.family ? `"${f.family}", ${FONT}` : FONT}`
+}
+// renderFrame の中だけで使う「今のフォント」（1コマ描く間だけ切りかえる）
+let curFont = FONT
+let curWeight = null // null＝それぞれの太さのまま
+function fontOf(weight, size) {
+  return `${curWeight !== null ? curWeight : weight} ${size}px ${curFont}`
+}
 const smooth = (x) => x * x * (3 - 2 * x)
 const clamp01 = (x) => Math.max(0, Math.min(1, x))
 
@@ -287,8 +323,56 @@ function drawBgOne(g, w, h, image, gradient, zoom = 1, panX = 0, panY = 0, rot =
 }
 
 // 背景。🎬 背景の切りかえ（K40）の途中は、前の背景から今の背景へなめらかに入れかえる
+// 🖼 切りかわるときの入り方（画面の外から入ってくる など）。mix：0（前の背景）→ 1（今の背景）
+// 戻り値：前の背景と今の背景を、どれだけずらして（dx, dy：画面の幅・高さに対する割合）、どの大きさ・濃さで描くか
+export function enterOffsets(kind, mix) {
+  const e = 1 - Math.pow(1 - clamp01(mix), 3) // はじめ速く、最後はゆっくり止まる
+  if (kind === "slideL") return { prev: { dx: -e, dy: 0, s: 1, a: 1 }, cur: { dx: 1 - e, dy: 0, s: 1, a: 1 } }
+  if (kind === "slideU") return { prev: { dx: 0, dy: -e, s: 1, a: 1 }, cur: { dx: 0, dy: 1 - e, s: 1, a: 1 } }
+  if (kind === "slideD") return { prev: { dx: 0, dy: e, s: 1, a: 1 }, cur: { dx: 0, dy: e - 1, s: 1, a: 1 } }
+  if (kind === "drop") {
+    // 上から落ちてきて、少しはずんで止まる
+    const m = clamp01(mix)
+    const b = m < 0.75 ? Math.pow(m / 0.75, 2) : 1 - 0.06 * Math.sin(((m - 0.75) / 0.25) * Math.PI)
+    return { prev: { dx: 0, dy: 0, s: 1, a: 1 }, cur: { dx: 0, dy: b - 1, s: 1, a: 1 } }
+  }
+  if (kind === "zoomin") return { prev: { dx: 0, dy: 0, s: 1 + 0.3 * e, a: 1 - e }, cur: { dx: 0, dy: 0, s: 0.3 + 0.7 * e, a: Math.min(1, e * 1.5) } }
+  return null
+}
+
 function drawBackground(g, w, h, scene, zoom = 1, panX = 0, panY = 0, rot = 0) {
   const prev = scene.bgPrev
+  if (prev && scene.bgMix < 1 && animOf(scene).enter === "blur") {
+    // ぼかしから、くっきり：前の画像がぼやけていき → ぼやけた新しい画像に入れかわり → だんだんくっきり
+    // （Safari でも動くように、ぼかしは「小さく描いてから引き伸ばす」で作る）
+    const m = clamp01(scene.bgMix)
+    drawBgOne(g, w, h, prev.image, prev.gradient || scene.gradient, zoom, panX, panY, rot)
+    drawBlurredOne(g, w, h, prev.image, prev.gradient || scene.gradient, smooth(clamp01(m / 0.4)))
+    drawBlurredOne(g, w, h, scene.image, scene.gradient, smooth(clamp01((m - 0.3) / 0.3)))
+    g.save()
+    g.globalAlpha *= smooth(clamp01((m - 0.5) / 0.5))
+    drawBgOne(g, w, h, scene.image, scene.gradient, zoom, panX, panY, rot, false)
+    g.restore()
+    return
+  }
+  const enter = prev && scene.bgMix < 1 ? enterOffsets(animOf(scene).enter, scene.bgMix) : null
+  if (enter) {
+    g.fillStyle = "#000"
+    g.fillRect(0, 0, w, h)
+    const one = (o, image, gradient) => {
+      if (o.a <= 0.001) return
+      g.save()
+      g.globalAlpha *= clamp01(o.a)
+      g.translate(w / 2 + o.dx * w, h / 2 + o.dy * h)
+      g.scale(o.s, o.s)
+      g.translate(-w / 2, -h / 2)
+      drawBgOne(g, w, h, image, gradient, zoom, panX, panY, rot, false)
+      g.restore()
+    }
+    one(enter.prev, prev.image, prev.gradient || scene.gradient)
+    one(enter.cur, scene.image, scene.gradient)
+    return
+  }
   if (prev && scene.bgMix < 1) {
     drawBgOne(g, w, h, prev.image, prev.gradient || scene.gradient, zoom, panX, panY, rot)
     g.save()
@@ -313,7 +397,51 @@ function bgMotion(t, scene, base) {
   if (kind === "sway") {
     return { zoom: 1.06, panX: Math.sin(t * 0.35) * 0.4, panY: Math.sin(t * 0.27 + 1) * 0.3, rot: Math.sin(t * 0.5) * 0.02 }
   }
+  if (kind === "beat" || kind === "bounce" || kind === "shake") {
+    const b = beatAt(scene, t)
+    const hit = Math.exp(-b.dt / 0.14) * (b.index % 4 === 0 ? 1 : 0.6)
+    if (kind === "beat") return { zoom: 1.05 + 0.05 * hit, panX: Math.sin(t * 0.06) * 0.3, panY: 0, rot: 0 }
+    if (kind === "bounce") {
+      // ぽよん：拍でぴょんと上がって、ゆっくり戻る
+      const up = Math.sin(Math.min(1, b.dt / 0.35) * Math.PI) * Math.exp(-b.dt / 0.4)
+      return { zoom: 1.08, panX: 0, panY: -0.5 * up, rot: 0 }
+    }
+    const d = b.dt
+    const a = Math.exp(-d / 0.12) * (b.index % 2 ? 0.6 : 1)
+    return { zoom: 1.08, panX: Math.sin(d * 80) * 0.25 * a, panY: Math.cos(d * 63) * 0.2 * a, rot: Math.sin(d * 55) * 0.012 * a }
+  }
+  if (kind === "pandown" || kind === "panup" || kind === "panright") {
+    // ゆっくり流れる：背景が切りかわるたびに端から。端まで行ったら、ゆっくり折り返す（28秒で1往復）
+    // drawCover の pan は「+1＝画像の上の端が見える（画像が下にずれる）」なので、
+    // 画像が画面の上から下へ動いて見えるのは pan が -1 → +1 に変わるとき
+    const u = Math.max(0, t - (scene.bgSegStart || 0))
+    const p = -Math.cos((Math.PI * u) / 14) // -1 → 1 → -1
+    if (kind === "panright") return { zoom: 1.4, panX: p, panY: 0, rot: 0 } // 画像が左から右へ流れる
+    return { zoom: 1.4, panX: 0, panY: kind === "pandown" ? p : -p, rot: 0 }
+  }
+  if (kind === "spin") {
+    // 左右にくるんと回る（回しても角がすき間にならない大きさで）
+    return { zoom: 1.3, panX: 0, panY: 0, rot: Math.sin(t * 0.55) * 0.14 }
+  }
   return { zoom: base.zoom, panX: base.panX, panY: 0, rot: 0 }
+}
+
+// 拍（オケから調べた拍。なければ 120BPM のつもり）から何秒たったか
+function beatAt(scene, t) {
+  const beats = scene.beatTimes || scene.fx?.beats
+  if (beats && beats.length && t >= beats[0]) {
+    let lo = 0
+    let hi = beats.length - 1
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1
+      if (beats[mid] <= t) lo = mid
+      else hi = mid - 1
+    }
+    return { dt: t - beats[lo], index: lo }
+  }
+  const p = 0.5
+  const i = Math.floor(Math.max(0, t) / p)
+  return { dt: Math.max(0, t) - i * p, index: i }
 }
 
 // ぼかした背景（Safari でも動くように「小さく描いてから引き伸ばす」）
@@ -355,10 +483,10 @@ function dim(g, w, h, amount) {
 function fitText(g, text, x, y, maxWidth, size, { weight = 700, align = "left", color = "#fff", alpha = 1, shadow = true } = {}) {
   if (!text) return 0
   let s = size
-  g.font = `${weight} ${s}px ${FONT}`
+  g.font = fontOf(weight, s)
   while (s > 10 && g.measureText(text).width > maxWidth) {
     s -= 2
-    g.font = `${weight} ${s}px ${FONT}`
+    g.font = fontOf(weight, s)
   }
   g.save()
   g.globalAlpha *= alpha
@@ -638,10 +766,10 @@ export function lyricIndexAt(lyrics, t) {
 // 1行を書く。karaoke なら、歌っている所まで色が変わる（左から右へ）
 function drawLyricLine(g, text, x, y, maxW, size, scene, { progress = null, alpha = 1, align = "center" } = {}) {
   let s = size
-  g.font = `800 ${s}px ${FONT}`
+  g.font = fontOf(800, s)
   while (s > 12 && g.measureText(text).width > maxW) {
     s -= 2
-    g.font = `800 ${s}px ${FONT}`
+    g.font = fontOf(800, s)
   }
   const tw = g.measureText(text).width
   const left = align === "center" ? x - tw / 2 : x
@@ -682,13 +810,209 @@ function lyricAnchor(scene, w, h, k) {
   return { x: w / 2, y: h * 0.56, maxW: w * 0.88, size: 54 * k, align: "center" }
 }
 
+// ---------- ✍️ 動く歌詞（1文字ずつ動かす） ----------
+// どれも「曲の時間 t と行の時間」だけで決まる（でたらめは hash で、行ごとに同じ並び）
+
+// 1文字を書く（ふち取り＋色）。x は文字のまん中
+function drawGlyph(g, ch, x, y, size, fill, { glow = 0, glowColor = null, stroke = true } = {}) {
+  if (stroke) {
+    g.lineJoin = "round"
+    g.lineWidth = Math.max(3, size * 0.16)
+    g.strokeStyle = "rgba(0,0,0,0.7)"
+    g.strokeText(ch, x, y)
+  }
+  if (glow > 0) {
+    g.shadowColor = glowColor || fill
+    g.shadowBlur = glow
+  }
+  g.fillStyle = fill
+  g.fillText(ch, x, y)
+  if (glow > 0) g.shadowBlur = 0
+}
+
+// 文字の並び（幅に入る大きさにして、1文字ずつの x を出す）
+function layoutChars(g, text, a, size, widthK = 1) {
+  const chars = Array.from(text)
+  let s = size
+  const measure = () => {
+    g.font = fontOf(800, s)
+    const ws = chars.map((c) => g.measureText(c).width)
+    return { ws, total: ws.reduce((x, y) => x + y, 0) * widthK }
+  }
+  let m = measure()
+  while (s > 12 && m.total > a.maxW) { s -= 2; m = measure() }
+  const left = a.align === "center" ? a.x - m.total / 2 : a.x
+  let x = left
+  const xs = m.ws.map((cw) => { const c = x + (cw * widthK) / 2; x += cw * widthK; return c })
+  return { chars, xs, size: s, ws: m.ws }
+}
+
+// 行の何文字目まで歌ったか（カラオケの色）
+function sungChars(scene, line, t, n) {
+  if (!scene.karaoke) return -1
+  const p = clamp01((t - line.startSec) / Math.max(0.3, (line.endSec - line.startSec) * 0.85))
+  return p * n
+}
+
+function drawCharLyric(g, w, h, t, scene, k, line, a, style) {
+  const since = t - line.startSec
+  const fadeOut = clamp01((line.endSec - t) / 0.25)
+  const seed = Math.floor(line.startSec * 10) * 31
+  const accent = scene.colors.accent
+  const accent2 = scene.colors.accent2
+  if (style === "kinetic") return drawKinetic(g, w, h, t, scene, k, line, a, since, fadeOut, seed)
+  const big = style === "scatter" ? 1.25 : 1
+  const L = layoutChars(g, line.text, a, a.size * big, style === "scatter" ? 1.08 : 1)
+  const n = L.chars.length
+  const sung = sungChars(scene, line, t, n)
+  const b = beatAt(scene, t)
+  g.save()
+  g.font = fontOf(800, L.size)
+  g.textAlign = "center"
+  g.textBaseline = "alphabetic"
+  L.chars.forEach((ch, i) => {
+    let dx = 0
+    let dy = 0
+    let rot = 0
+    let sc = 1
+    let alpha = fadeOut
+    let fill = i < sung ? accent : "#ffffff"
+    let glow = 0
+    const s = L.size
+    if (style === "bounce") {
+      // ぴょんぴょん：1文字ずつ上から落ちてきて、はずむ。そのあとは拍で交互にはねる
+      const local = since - i * 0.045
+      if (local < 0) return
+      dy = -s * 0.9 * Math.abs(Math.cos(Math.min(local, 0.6) * 8)) * Math.exp(-local * 7)
+      alpha *= clamp01(local / 0.08)
+      if (i % 2 === b.index % 2) dy -= s * 0.12 * Math.exp(-b.dt / 0.13)
+    } else if (style === "dropin") {
+      // 上から1文字ずつ落ちてくる：画面の上の外から落ちて、少しはずんで止まる。終わりは下へ落ちていく
+      const local = since - i * 0.05
+      if (local < 0) return
+      const m = clamp01(local / 0.45)
+      const fall = m < 0.8 ? Math.pow(m / 0.8, 2) : 1 - 0.08 * Math.sin(((m - 0.8) / 0.2) * Math.PI)
+      dy = -(a.y + s) * (1 - fall)
+      const out = clamp01((t - (line.endSec - 0.4) - (n - 1 - i) * 0.02) / 0.4)
+      dy += out * out * (h - a.y + s)
+      rot = (1 - fall) * (hash(seed + i * 4.1) - 0.5) * 0.8
+      alpha = 1
+    } else if (style === "flyin") {
+      // まわりから文字が飛んでくる：画面の外のいろいろな方向から、くるっと回りながら集まる
+      const local = since - i * 0.04
+      if (local < 0) return
+      const m = clamp01(local / 0.55)
+      const e = 1 - Math.pow(1 - m, 3)
+      const ang = hash(seed + i * 6.7) * Math.PI * 2
+      const dist = Math.hypot(w, h) * 0.75
+      dx = Math.cos(ang) * dist * (1 - e)
+      dy = Math.sin(ang) * dist * (1 - e)
+      rot = (1 - e) * (hash(seed + i * 2.3) - 0.5) * 6
+      sc = 1 + (1 - e) * 0.8
+      alpha *= clamp01(local / 0.1)
+    } else if (style === "wave") {
+      // うねうね：文字が波に乗る
+      const ph = t * 4.2 - i * 0.55
+      dy = Math.sin(ph) * s * 0.16
+      rot = Math.cos(ph) * 0.09
+      alpha *= clamp01((since - i * 0.03) / 0.15)
+    } else if (style === "neon") {
+      // ネオン：出だしにチカチカして、拍で光が強くなる
+      const flick = since < 0.5 && hash(Math.floor(since * 24) + i * 7 + seed) < 0.35 ? 0.25 : 1
+      alpha *= flick * clamp01(since / 0.1)
+      fill = i < sung ? "#ffffff" : accent
+      glow = s * (0.35 + 0.35 * Math.exp(-b.dt / 0.18))
+    } else if (style === "scatter") {
+      // ばらばら：大きさ・角度・高さがばらばらの文字が、1文字ずつドンと押される
+      const local = since - i * 0.05
+      if (local < 0) return
+      const r1 = hash(seed + i * 7.1)
+      const r2 = hash(seed + i * 3.7 + 11)
+      const r3 = hash(seed + i * 5.3 + 23)
+      dy = (r1 - 0.5) * s * 0.7
+      rot = (r2 - 0.5) * 0.55
+      sc = 0.8 + r3 * 0.55
+      const slam = 1 + 2.2 * Math.exp(-local / 0.06)
+      sc *= slam
+      alpha *= clamp01(local / 0.05)
+      const jitter = Math.exp(-b.dt / 0.1) * s * 0.06
+      dx = Math.sin((t + i) * 53) * jitter
+      fill = i < sung ? accent : (r3 > 0.72 ? accent2 : r3 < 0.18 ? accent : "#ffffff")
+    }
+    if (alpha <= 0.01) return
+    g.save()
+    g.globalAlpha *= clamp01(alpha)
+    g.translate(L.xs[i] + dx, a.y + dy)
+    if (rot) g.rotate(rot)
+    if (sc !== 1) g.scale(sc, sc)
+    drawGlyph(g, ch, 0, 0, s, fill, { glow, glowColor: accent })
+    g.restore()
+  })
+  g.restore()
+}
+
+// ドン！ドン！：行をいくつかのかたまりに分けて、1つずつ大きく画面にたたきつける。前のかたまりは小さくなって上へ
+function kineticChunks(text) {
+  const parts = text.split(/[\s　、。,!！?？]+/).filter(Boolean)
+  const out = []
+  ;(parts.length ? parts : [text]).forEach((p) => {
+    const cs = Array.from(p)
+    if (cs.length <= 6) { out.push(p); return }
+    for (let i = 0; i < cs.length; i += 4) out.push(cs.slice(i, i + 4).join(""))
+  })
+  return out
+}
+
+function drawKinetic(g, w, h, t, scene, k, line, a, since, fadeOut, seed) {
+  const chunks = kineticChunks(line.text)
+  if (!chunks.length) return
+  const total = chunks.reduce((x, c) => x + Array.from(c).length, 0)
+  const span = Math.max(0.4, (line.endSec - line.startSec) * 0.85)
+  let acc = 0
+  const starts = chunks.map((c) => { const st = (acc / total) * span; acc += Array.from(c).length; return st })
+  let cur = 0
+  for (let i = 0; i < chunks.length; i++) if (since >= starts[i]) cur = i
+  const cx = a.align === "center" ? a.x : Math.min(w * 0.5, a.x + a.maxW / 2)
+  const cy = a.y - a.size * 0.4
+  const colors = ["#ffffff", scene.colors.accent, scene.colors.accent2]
+  g.save()
+  g.textAlign = "center"
+  g.textBaseline = "alphabetic"
+  // 前の2つは、小さく上に残す
+  for (let j = Math.max(0, cur - 2); j <= cur; j++) {
+    const local = since - starts[j]
+    const back = cur - j
+    let size = a.size * 2.1
+    g.font = fontOf(800, size)
+    while (size > 14 && g.measureText(chunks[j]).width > a.maxW) { size -= 2; g.font = fontOf(800, size) }
+    if (back > 0) size *= back === 1 ? 0.55 : 0.4
+    const punch = back === 0 ? 1 + 0.7 * Math.exp(-local / 0.07) : 1
+    const rot = (hash(seed + j * 9.7) - 0.5) * 0.18
+    const y = cy - (back === 1 ? a.size * 1.45 : back === 2 ? a.size * 2.35 : 0)
+    g.save()
+    g.globalAlpha *= fadeOut * (back === 0 ? clamp01(local / 0.04) : back === 1 ? 0.75 : 0.45)
+    g.translate(cx, y)
+    g.rotate(rot)
+    g.scale(punch, punch)
+    g.font = fontOf(800, size)
+    drawGlyph(g, chunks[j], 0, 0, size, colors[(j + Math.floor(seed / 31)) % colors.length])
+    g.restore()
+  }
+  g.restore()
+}
+
+const CHAR_STYLES = new Set(["bounce", "wave", "neon", "scatter", "kinetic", "dropin", "flyin"])
+
 function drawLyrics(g, w, h, t, scene, k) {
   const lyrics = scene.lyrics
   if (!lyrics || !lyrics.length) return
   const i = lyricIndexAt(lyrics, t)
   const a = lyricAnchor(scene, w, h, k)
   const style = animOf(scene).lyric
-  if (i >= 0) {
+  if (i >= 0 && CHAR_STYLES.has(style)) {
+    drawCharLyric(g, w, h, t, scene, k, lyrics[i], a, style)
+    if (style === "scatter" || style === "kinetic") return // はげしい動きのときは、次の行は出さない
+  } else if (i >= 0) {
     const line = lyrics[i]
     const fadeIn = clamp01((t - line.startSec) / 0.2)
     const fadeOut = clamp01((line.endSec - t) / 0.25)
@@ -696,6 +1020,7 @@ function drawLyrics(g, w, h, t, scene, k) {
     const since = t - line.startSec
     let text = line.text
     let y = a.y
+    let dx = 0
     let scale = 1
     let alpha = Math.min(fadeIn, fadeOut)
     if (style === "pop") {
@@ -707,6 +1032,14 @@ function drawLyrics(g, w, h, t, scene, k) {
       // 下からスッと：少し下から上がってくる
       y = a.y + (1 - smooth(clamp01(since / 0.35))) * a.size * 0.7
       alpha = Math.min(clamp01(since / 0.3), fadeOut)
+    } else if (style === "slidein") {
+      // 横から入って横へ出る：画面の右の外からスッと入って、終わりに左の外へ出ていく
+      const inP = clamp01(since / 0.45)
+      const outP = clamp01((t - (line.endSec - 0.35)) / 0.35)
+      const eIn = 1 - Math.pow(1 - inP, 3)
+      const eOut = outP * outP * outP
+      dx = (1 - eIn) * w * 0.9 - eOut * w * 0.9
+      alpha = 1
     } else if (style === "type") {
       // 1文字ずつ：行の前半（最大1.2秒）で全部出す
       const chars = Array.from(text)
@@ -715,6 +1048,7 @@ function drawLyrics(g, w, h, t, scene, k) {
       alpha = fadeOut
     }
     g.save()
+    if (dx) g.translate(dx, 0)
     if (scale !== 1) {
       g.translate(a.x, y)
       g.scale(scale, scale)
@@ -789,16 +1123,34 @@ function renderJacket(g, w, h, t, scene, k) {
   g.beginPath()
   g.rect(cx - size / 2, cy - size / 2, size, size)
   g.clip()
+  // ジャケットの中の画像も「🖼 背景の動き」で動かす（今まで＝ゆっくり、はこれまでと同じ動き）
+  const jm = bgMotion(t, scene, { zoom: 1.08 + 0.06 * Math.sin(t * 0.1), panX: Math.sin(t * 0.07) })
   const jacket = (img, gradient) => {
-    if (img) drawCover(g, img, cx - size / 2, cy - size / 2, size, size, 1.08 + 0.06 * Math.sin(t * 0.1), Math.sin(t * 0.07))
+    if (img) drawCover(g, img, cx - size / 2, cy - size / 2, size, size, jm.zoom, jm.panX, jm.panY)
     else drawBgOne(g, w, h, null, gradient || scene.gradient)
   }
-  // 🎬 背景の切りかえ（K40）の途中は、ジャケットもなめらかに入れかえる
-  if (scene.bgPrev && scene.bgMix < 1) {
-    jacket(scene.bgPrev.image, scene.bgPrev.gradient)
-    g.globalAlpha = clamp01(scene.bgMix)
+  // 🎬 背景の切りかえ（K40）の途中は、ジャケットもなめらかに入れかえる（入り方を選んでいれば、ジャケットも外から入ってくる）
+  const enter = scene.bgPrev && scene.bgMix < 1 ? enterOffsets(animOf(scene).enter, scene.bgMix) : null
+  if (enter) {
+    const one = (o, img, gradient) => {
+      if (o.a <= 0.001) return
+      g.save()
+      g.globalAlpha *= clamp01(o.a)
+      g.translate(cx + o.dx * size, cy + o.dy * size)
+      g.scale(o.s, o.s)
+      g.translate(-cx, -cy)
+      jacket(img, gradient)
+      g.restore()
+    }
+    one(enter.prev, scene.bgPrev.image, scene.bgPrev.gradient)
+    one(enter.cur, scene.image, scene.gradient)
+  } else {
+    if (scene.bgPrev && scene.bgMix < 1) {
+      jacket(scene.bgPrev.image, scene.bgPrev.gradient)
+      g.globalAlpha = clamp01(scene.bgMix)
+    }
+    jacket(scene.image, scene.gradient)
   }
-  jacket(scene.image, scene.gradient)
   g.restore()
   // 曲名・名前
   const tx = portrait ? w / 2 : cx + size / 2 + 48 * k
@@ -938,7 +1290,16 @@ function renderBars(g, w, h, t, scene, k) {
   else drawCorner(g, w, h, t, scene, k)
 }
 
-const RENDERERS = { simple: renderSimple, jacket: renderJacket, visualizer: renderVisualizer, particles: renderParticles, bars: renderBars }
+// 🖼 なし（波なし）：背景と文字だけ
+function renderPlain(g, w, h, t, scene, k) {
+  const m = bgMotion(t, scene, { zoom: 1.04 + 0.02 * Math.sin(t * 0.15), panX: Math.sin(t * 0.05) * 0.5 })
+  drawBackground(g, w, h, scene, m.zoom, m.panX, m.panY, m.rot)
+  dim(g, w, h, scene.dim)
+  if (layoutOf(w, h) === "tall") drawCorner(g, w, h, t, scene, k, 40 * k, h * 0.12)
+  else drawCorner(g, w, h, t, scene, k)
+}
+
+const RENDERERS = { simple: renderSimple, jacket: renderJacket, visualizer: renderVisualizer, particles: renderParticles, bars: renderBars, plain: renderPlain }
 
 // 🎞 場面転換（K30）：サビ（と落ちサビ）が始まる時間から、どれくらいたったか
 function cutAt(scene, t) {
@@ -1011,9 +1372,11 @@ export function bgLayerAt(scene, t) {
     else break
   }
   const cur = list[i]
-  const fade = Math.max(0.01, Number.isFinite(Number(scene.bgFade)) ? Number(scene.bgFade) : 1)
+  let fade = Math.max(0.01, Number.isFinite(Number(scene.bgFade)) ? Number(scene.bgFade) : 1)
+  // 外から入ってくる入り方は、動きが見えるように少なくとも 0.6 秒かける
+  if (animOf(scene).enter !== "fade") fade = Math.max(0.6, fade)
   const mix = i > 0 ? clamp01((t - cur.startSec) / fade) : 1
-  return { cur, prev: i > 0 && mix < 1 ? list[i - 1] : null, mix: smooth(mix) }
+  return { cur, prev: i > 0 && mix < 1 ? list[i - 1] : null, mix: animOf(scene).enter !== "fade" ? mix : smooth(mix) }
 }
 
 // 🎨 色のフィルター：曲の t 秒目にかけるフィルター（部分の境目は 0.4 秒かけて入れかえる）
@@ -1205,6 +1568,18 @@ export function fadeAlpha(scene, tl, dur) {
 }
 
 export function renderFrame(g, w, h, t, scene) {
+  const font = MV_FONTS[scene.font]
+  curFont = font && font.family ? `"${font.family}", ${FONT}` : FONT
+  curWeight = font && font.family ? font.weight : null
+  try {
+    renderFrameInner(g, w, h, t, scene)
+  } finally {
+    curFont = FONT
+    curWeight = null
+  }
+}
+
+function renderFrameInner(g, w, h, t, scene) {
   const k = Math.min(w, h) / 720 // 720px を基準に、大きさをそろえる
   const draw = RENDERERS[scene.template] || renderSimple
   const anim = animOf(scene)
@@ -1214,8 +1589,8 @@ export function renderFrame(g, w, h, t, scene) {
   // 🖼 背景の切りかえ・スライドショー（K40）：この時間の背景に入れかえて描く
   const layer = bgLayerAt(scene, t)
   const base = layer
-    ? { ...scene, image: layer.cur.image || null, gradient: layer.cur.gradient || scene.gradient, bgPrev: layer.prev, bgMix: layer.mix }
-    : scene
+    ? { ...scene, image: layer.cur.image || null, gradient: layer.cur.gradient || scene.gradient, bgPrev: layer.prev, bgMix: layer.mix, bgSegStart: layer.cur.startSec }
+    : { ...scene, bgSegStart: clipStart(scene) }
   // サビ・拍では、音の波も大きめに
   const boost = 1 + f.chorus * 0.35 + f.pulse * 0.25
   const s2 = boost !== 1 && base.features?.bands

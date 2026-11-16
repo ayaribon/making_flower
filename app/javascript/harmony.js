@@ -461,3 +461,117 @@ export function shiftPitchCurve(ctx, buffer, semis, hop, { silentWhenUnvoiced = 
   for (let i = 0; i < len; i++) d[i] = norm[i] > 1e-3 ? Math.max(-1, Math.min(1, out[i] / norm[i])) : 0
   return buf
 }
+
+// ---------- 🎶 ハモリの声を自然に（11/16：機械っぽさを減らす） ----------
+// 前の作り方（WSOLA で音の区切りごとにずらす）は、声の「こもり方・響き」（フォルマント）まで一緒に高く／低くなって、
+// 声がうすく・ロボットっぽく聞こえやすかった。ここでは PSOLA（声の1周期ごとの粒を、ずらしたい音程の間隔で並べ直す）で、
+// 声の響きはそのままに音程だけ変える。さらに、人が重ねて歌ったように
+//   ・ほんの少し遅らせる（約18ms）・音程をゆっくり少しだけゆらす（±6セントくらい）・高い所のザラザラを少し丸める
+// をする。どれも同じ入力なら毎回同じ結果（乱数なし）＝試聴・WAV・動画で同じ音（N：同じ音になること）
+// pitch：detectPitch の結果（semis と同じフレーム）。semis[f]：ずらす半音（NaN＝ハモらない）
+export function harmonyVoiceNatural(ctx, buffer, semis, pitch, { delaySec = 0.018, driftCents = 6, smoothHz = 7000 } = {}) {
+  const src = toMonoData(buffer)
+  const sr = buffer.sampleRate
+  const len = src.length
+  const hop = pitch.hop
+  const n = semis.length
+  // 子音などの短いすき間（0.06秒まで）は、前の音のつづき（＝ハモる）にする
+  const vals = Array.from(semis)
+  const gapMax = Math.round(0.06 / hop)
+  for (let f = 0; f < n; f++) {
+    if (!Number.isNaN(vals[f])) continue
+    let g = f
+    while (g < n && Number.isNaN(vals[g])) g++
+    if (f > 0 && g < n && g - f <= gapMax) for (let k = f; k < g; k++) vals[k] = vals[f - 1]
+    f = g
+  }
+  const frameAt = (i) => Math.min(n - 1, Math.max(0, Math.floor(i / sr / hop)))
+  // 声の1周期（サンプル数）。音程が取れないフレームは 0
+  const periodAt = (i) => {
+    const m = pitch.midi[Math.min(pitch.midi.length - 1, frameAt(i))]
+    return m ? sr / midiToHz(m) : 0
+  }
+  const out = new Float32Array(len)
+  const norm = new Float32Array(len)
+  const UNV = Math.round(0.01 * sr) // 音程がない所（子音・息）は 10ms の粒でそのまま写す
+  // 粒の窓（大きさごとに作り直さないように、長さで覚えておく）
+  const wins = new Map()
+  const hann = (L) => {
+    let w = wins.get(L)
+    if (!w) {
+      w = new Float32Array(L)
+      for (let i = 0; i < L; i++) w[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * (i + 0.5)) / L)
+      wins.set(L, w)
+    }
+    return w
+  }
+  // 合成する位置 ts を、ずらした音程の1周期ずつ進める。粒は元の声の同じ時間あたりから取る（長さは変わらない）
+  let ts = 0
+  let anchor = -1 // 元の声の中の「粒のまん中」（周期ごとにそろえる）
+  while (ts < len) {
+    const f = frameAt(ts)
+    const s = vals[f]
+    if (Number.isNaN(s)) {
+      ts += UNV
+      anchor = -1
+      continue
+    }
+    const P = periodAt(ts)
+    if (!P || P < 16) {
+      // 音程がない所（ハモる音符の中の子音など）：ずらさずに、粒をそのまま重ねる
+      const L = UNV * 2
+      const w = hann(L)
+      const c0 = Math.round(ts)
+      for (let i = 0; i < L; i++) {
+        const o = c0 - UNV + i
+        if (o < 0 || o >= len) continue
+        out[o] += src[o] * w[i]
+        norm[o] += w[i]
+      }
+      ts += UNV
+      anchor = -1
+      continue
+    }
+    // 元の声の粒のまん中：前の粒から1周期ずつ進めて、いまの合成位置にいちばん近いもの（周期がそろうので、つなぎ目がにごらない）
+    if (anchor < 0 || anchor > ts + P) anchor = ts
+    while (anchor + P <= ts + P / 2) anchor += P
+    const t = ts / sr
+    const cents = driftCents * (0.6 * Math.sin(2 * Math.PI * 0.23 * t) + 0.4 * Math.sin(2 * Math.PI * 0.61 * t + 1.3))
+    const ratio = Math.pow(2, (s + cents / 100) / 12)
+    const Ps = P / ratio // ずらしたあとの1周期
+    const L = Math.max(8, Math.round(P * 2))
+    const w = hann(L)
+    const a0 = Math.round(anchor) - Math.floor(L / 2)
+    const s0 = Math.round(ts) - Math.floor(L / 2)
+    for (let i = 0; i < L; i++) {
+      const o = s0 + i
+      const p = a0 + i
+      if (o < 0 || o >= len || p < 0 || p >= len) continue
+      out[o] += src[p] * w[i]
+      norm[o] += w[i]
+    }
+    ts += Ps
+  }
+  // 粒の重なりで大きさが変わらないようにそろえる（重なりがうすい所を持ち上げすぎないように、0.5 より下は割らない）
+  for (let i = 0; i < len; i++) if (norm[i] > 0.5) out[i] /= norm[i]
+  // ハモらない所は無音に（境目は 30ms でなめらかに）
+  const P30 = Math.round(0.03 * sr)
+  const gate = new Float32Array(len)
+  for (let i = 0; i < len; i++) gate[i] = Number.isNaN(vals[frameAt(i)]) ? 0 : 1
+  let g = 0
+  const step = 1 / P30
+  for (let i = 0; i < len; i++) { g = gate[i] > g ? Math.min(gate[i], g + step) : Math.max(gate[i], g - step); gate[i] = g }
+  // 少し遅らせて、高い所を丸める（1次のローパス）
+  const D = Math.round(delaySec * sr)
+  const k = 1 - Math.exp((-2 * Math.PI * smoothHz) / sr)
+  const buf = ctx.createBuffer(1, len, sr)
+  const d = buf.getChannelData(0)
+  let y = 0
+  for (let i = 0; i < len; i++) {
+    const j = i - D
+    const x = j >= 0 ? out[j] * gate[j] : 0
+    y += k * (x - y)
+    d[i] = Math.max(-1, Math.min(1, y))
+  }
+  return buf
+}

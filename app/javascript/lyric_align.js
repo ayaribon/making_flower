@@ -105,6 +105,47 @@ function softSplit(segs, db, fs) {
   return out
 }
 
+// ---------- 歌い出しより前の声を捨てる（イントロに歌詞が入らないように） ----------
+// イントロの所にも、息・マイクのさわる音・ヘッドホンからもれたオケなどの「小さい声のかたまり」ができる。
+// それが1行目に割り当てられて、歌詞がイントロに出てしまうことがあったので、歌い出しを見つけてそれより前を捨てる。
+//   歌い出し＝「しっかりした声」（大きさが歌声の中くらい以上・0.3秒以上・音程がある）の最初のかたまり。
+//   そのすぐ前（1秒以内）につながっている小さいかたまり（弱起・小さい歌い出し）は残す。
+//   notBefore（声の時間）があれば、それより前は捨てる（④でイントロを付けたとき＝イントロの終わり）
+export function trimBeforeSinging(segs, db, fs, { pitched = null, notBefore = null } = {}) {
+  if (!segs.length) return segs
+  const sorted = Array.from(db).sort((a, b) => a - b)
+  const q = (p) => sorted[Math.min(sorted.length - 1, Math.floor(p * sorted.length))]
+  const floor = q(0.15)
+  const loud = q(0.95)
+  const strongTh = floor + 0.55 * (loud - floor)
+  const meanDb = (s) => {
+    const a = Math.max(0, Math.floor(s.start / fs))
+    const b = Math.min(db.length, Math.max(a + 1, Math.ceil(s.end / fs)))
+    let sum = 0
+    for (let f = a; f < b; f++) sum += db[f]
+    return sum / (b - a)
+  }
+  let list = segs
+  if (Number.isFinite(notBefore) && notBefore > 0) {
+    const cut = notBefore - 0.6 // 少し前から歌い出す（弱起）ことがあるので、0.6秒だけゆとり
+    const kept = list.filter((s) => s.end > cut)
+    if (kept.length) list = kept.map((s) => (s.start < cut ? { ...s, start: cut } : s))
+  }
+  const strong = (s) => s.end - s.start >= 0.3 && meanDb(s) >= strongTh && (!pitched || pitched(s.start, s.end) >= 0.35)
+  const first = list.findIndex(strong)
+  if (first <= 0) return list
+  // 歌い出しのすぐ前につながっている「声らしい」所は残す（弱起・小さい歌い出し）。
+  // 音程が分かるときは音程があること、分からないときは近くて（0.5秒以内）そこそこ大きいこと
+  const pickup = (prev, next) => {
+    const gap = next.start - prev.end
+    if (pitched) return gap < 1.0 && pitched(prev.start, prev.end) >= 0.3
+    return gap < 0.5 && meanDb(prev) >= floor + 0.4 * (loud - floor)
+  }
+  let from = first
+  while (from > 0 && pickup(list[from - 1], list[from])) from--
+  return list.slice(from)
+}
+
 // ---------- 割り当て ----------
 
 // 1行の「長さ」：始まり〜終わりと、声が出ていた時間のあいだ（すき間を半分だけ数える）
@@ -122,6 +163,8 @@ function assign(weights, segs, rate) {
   const kind = Array.from({ length: N + 1 }, () => new Int8Array(M + 1))
   cost[0][0] = 0
   const skipCost = (k) => 0.6 + 1.5 * (segs[k].end - segs[k].start) // 歌詞にない声（手拍子・アドリブ）を飛ばすムリ
+  // 1行目より前（イントロ）の声は、歌詞でないことが多いので、飛ばしやすくする
+  const leadSkipCost = (k) => 0.15 + 0.4 * (segs[k].end - segs[k].start)
   const spanCost = (i, a, b) => {
     // かたまり a..b-1 を i 行目にする
     const start = segs[a].start
@@ -147,8 +190,9 @@ function assign(weights, segs, rate) {
       const c = cost[i][j]
       if (c >= INF) continue
       // かたまり j を飛ばす
-      if (j < M && c + skipCost(j) < cost[i][j + 1]) {
-        cost[i][j + 1] = c + skipCost(j)
+      const sk = j < M ? (i === 0 ? leadSkipCost(j) : skipCost(j)) : 0
+      if (j < M && c + sk < cost[i][j + 1]) {
+        cost[i][j + 1] = c + sk
         back[i][j + 1] = j
         kind[i][j + 1] = 0
       }
@@ -188,10 +232,12 @@ function assign(weights, segs, rate) {
 
 // 歌詞の行 texts[] と歌声 → 行ごとの { startSec, endSec, cost, sure }（声の時間）
 // 歌う速さ（1モーラ何秒か）は分からないので、全体から見積もって、割り当てたあとにもう一度見積もり直す
-export function alignLyrics(texts, data, sr) {
+// opts.pitched(start, end)：その間で音程が取れたフレームの割合（0〜1・あれば歌い出しを見つけやすい）
+// opts.notBefore：これより前（声の時間・秒）には歌詞を置かない（④の「イントロ」の終わりなど）
+export function alignLyrics(texts, data, sr, opts = {}) {
   const weights = texts.map(lineWeight)
   const found = findVoiceSegments(data, sr)
-  const segs = softSplit(found.segments, found.db, found.frame)
+  const segs = softSplit(trimBeforeSinging(found.segments, found.db, found.frame, opts), found.db, found.frame)
   if (!segs.length || !texts.length) return { lines: null, reason: "声が見つかりませんでした" }
   let guard = 0
   while (segs.length < texts.length && guard++ < texts.length * 2) {
@@ -232,11 +278,12 @@ export function alignLyrics(texts, data, sr) {
 // ---------- 手で直した行を目印にして、残りだけ合わせ直す（K35 案1） ----------
 // anchors[i]：固定した行の { startSec, endSec|null }（声の時間）。null の行だけ合わせ直す。
 // 固定した行と固定した行のあいだの声だけを使って、あいだの行を割り当てる → 1か所のずれが後ろに広がらない
-export function alignLyricsAnchored(texts, data, sr, anchors) {
-  if (!anchors || !anchors.some(Boolean)) return alignLyrics(texts, data, sr)
+export function alignLyricsAnchored(texts, data, sr, anchors, opts = {}) {
+  if (!anchors || !anchors.some(Boolean)) return alignLyrics(texts, data, sr, opts)
   const weights = texts.map(lineWeight)
   const found = findVoiceSegments(data, sr)
-  const all = softSplit(found.segments, found.db, found.frame)
+  // 1行目を固定していないときだけ、歌い出しより前を捨てる
+  const all = softSplit(anchors[0] ? found.segments : trimBeforeSinging(found.segments, found.db, found.frame, opts), found.db, found.frame)
   if (!all.length) return { lines: null, reason: "声が見つかりませんでした" }
 
   // 固定した行の終わりが分からないとき（👆タップで合わせた行）：始まりから、息つぎ（0.35秒）までの声を1行とみなす
