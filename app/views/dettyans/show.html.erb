@@ -1,0 +1,18 @@
+<%# 🧑‍💼 Dettyan 育成ゲーム。いまは「じゅんび中」の画面だけ。見た目は app/assets/stylesheets/dettyan.css %>
+<div class="dt">
+  <div class="dt-inner">
+    <a class="dt-home-link" href="<%= root_path %>" data-turbo="false">🏠 メニュー</a>
+
+    <header class="dt-header">
+      <p class="dt-eyebrow">KotoBouquet</p>
+      <h1 class="dt-title">Dettyan 育成ゲーム</h1>
+    </header>
+
+    <%# Dettyan：黒髪のマンバン（おだんご）、茶色のジャケット %>
+    <div class="dt-stage" data-controller="dettyan">
+      <canvas class="dt-chara" data-dettyan-target="canvas" role="img" aria-label="Dettyan"></canvas>
+    </div>
+
+    <p class="dt-soon">ただいま じゅんび中です。<br>もうすぐ Dettyan に会えるよ。</p>
+  </div>
+</div>

@@ -17,7 +17,7 @@
 .hm-title { margin: 6px 0 0; font-size: clamp(1.8rem, 5vw, 2.6rem); }
 .hm-hello { margin: 8px 0 0; opacity: 0.85; }
 
-.hm-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.hm-menu { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .hm-card {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
   min-height: 220px; padding: 24px 16px; border-radius: 24px;
@@ -28,6 +28,7 @@
 }
 .hm-card--sing { background: linear-gradient(145deg, #2f7dff 0%, #4fb6ff 100%); }
 .hm-card--art { background: linear-gradient(145deg, #ff5fa2 0%, #ffa86b 100%); }
+.hm-card--dettyan { background: linear-gradient(145deg, #7a4a24 0%, #c8894a 100%); }
 .hm-card:hover, .hm-card:focus-visible { transform: translateY(-4px); box-shadow: 0 16px 36px rgba(0, 0, 0, 0.32); }
 .hm-card:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 .hm-card:active { transform: scale(0.98); }
