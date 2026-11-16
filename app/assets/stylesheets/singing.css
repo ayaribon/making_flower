@@ -1158,3 +1158,86 @@
   .sg .sg-mvstep__sum { max-width: 100%; flex-basis: 100%; padding-left: 32px; }
   .sg .sg-mvstep > summary { min-height: 44px; }
 }
+
+/* 🎤 ▶ 試聴しているあいだ、再生バーの右上で歌うドット絵の子（飾りだけ。さわれない） */
+.sg-singer {
+  position: fixed; /* body の直下（再生バーのすぐ上。高さは JS で合わせる） */
+  right: 12px;
+  bottom: 90px;
+  z-index: 55;
+  width: 102px;
+  height: 90px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  pointer-events: none;
+  touch-action: none;
+  transform: translateY(30px);
+  opacity: 0;
+  transition: transform 0.25s cubic-bezier(0.3, 1.6, 0.5, 1), opacity 0.2s;
+}
+.sg-singer.is-on { transform: translateY(0); opacity: 1; pointer-events: auto; } /* 出ている間は、さわって運べる */
+.sg-singer.is-leaving { transform: translateY(30px); opacity: 0; transition: transform 0.3s ease-in, opacity 0.3s; }
+@media (max-width: 640px) {
+  .sg-singer { width: 77px; height: 68px; right: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sg-singer, .sg-singer.is-leaving { transition: opacity 0.2s; transform: none; }
+}
+
+/* 🎬 歌詞・保存のところに写す動画（⑤の動画と同じもの） */
+.sg .sg-mirror { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 12px; align-items: center; margin: 8px 0 14px; }
+.sg .sg-mirror__canvas { display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: 10px; background: #000; cursor: pointer; }
+.sg[data-mv-ratio="9:16"] .sg-mirror__canvas { width: auto; height: min(52vh, 460px); margin: 0 auto; }
+.sg[data-mv-ratio="1:1"] .sg-mirror__canvas { width: auto; height: min(46vh, 400px); margin: 0 auto; }
+.sg .sg-mirror__side { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.sg .sg-mirror__side .sg-help { margin: 0; }
+.sg .sg-mirror__time { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--sg-ink); }
+/* 歌詞を直している間も見えるように、上にくっつける（小さめ） */
+.sg .sg-mirror--sticky { position: sticky; top: 0; z-index: 4; padding: 8px; margin: 8px -8px 14px; background: rgba(255, 255, 255, 0.96); border-radius: 12px; box-shadow: 0 4px 12px rgba(14, 26, 51, 0.08); grid-template-columns: minmax(0, 360px) minmax(0, 1fr); }
+.sg[data-mv-ratio="9:16"] .sg-mirror--sticky .sg-mirror__canvas { height: min(34vh, 300px); }
+.sg[data-mv-ratio="1:1"] .sg-mirror--sticky .sg-mirror__canvas { height: min(30vh, 260px); }
+
+/* ✏️ 直したい所へ戻る */
+.sg .sg-final, .sg .sg-backto { margin: 6px 0 16px; padding: 12px 14px; border-radius: 12px; background: #f7faff; border: 1px solid var(--sg-line); }
+.sg .sg-backto__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 6px 0 10px; }
+.sg .sg-backto__btn { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 12px; border-radius: 10px; border: 2px solid var(--sg-line); background: #fff; color: var(--sg-ink); font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
+.sg .sg-backto__btn span { font-size: 1.2rem; }
+.sg .sg-backto__btn:hover { border-color: #9dbaf5; background: var(--sg-primary-soft); }
+.sg .sg-backto__chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+
+@media (max-width: 640px) {
+  .sg .sg-mirror { grid-template-columns: 1fr; }
+  .sg .sg-mirror--sticky { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 6px; }
+  .sg .sg-mirror--sticky .sg-mirror__side .sg-help { display: none; }
+  .sg[data-mv-ratio="9:16"] .sg-mirror--sticky .sg-mirror__canvas { height: 26vh; }
+  .sg .sg-backto__grid { grid-template-columns: 1fr 1fr; }
+}
+.sg .sg-lyric__text[data-action] { cursor: pointer; }
+
+/* 📑 動画の設定を1つずつ（タブ） */
+.sg .sg-mvtabs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; position: sticky; top: 0; z-index: 3; padding: 4px; margin-bottom: 4px; border-radius: 12px; background: rgba(255, 255, 255, 0.96); box-shadow: 0 2px 8px rgba(14, 26, 51, 0.06); }
+.sg .sg-mvtab { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border: 2px solid transparent; border-radius: 10px; background: var(--sg-primary-soft); color: var(--sg-ink); font: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer; min-height: 44px; }
+.sg .sg-mvtab__num { font-size: 0.7rem; color: var(--sg-primary); }
+.sg .sg-mvtab:hover { border-color: #9dbaf5; }
+.sg .sg-mvtab.is-active { background: var(--sg-primary); color: #fff; }
+.sg .sg-mvtab.is-active .sg-mvtab__num { color: #dfe8ff; }
+.sg .sg-mvsteps.is-tabbed > .sg-mvstep > summary { cursor: default; pointer-events: none; }
+.sg .sg-mvsteps.is-tabbed > .sg-mvstep > summary::after { content: none; }
+.sg .sg-mvsteps.is-tabbed > .sg-mvstep[hidden] { display: none; }
+.sg .sg-mvtab-nav { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 4px; }
+@media (max-width: 640px) {
+  .sg .sg-mvtabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+.sg .sg-help.is-warn { color: #b45309; font-weight: 700; }
+.sg .sg-qt__badge--main { z-index: 2; left: 10px; top: 10px; font-size: 0.85rem; padding: 4px 10px; background: rgba(47, 111, 237, 0.88); pointer-events: none; }
+
+/* 👆 タップで部分・画像の切りかえ場所を決める */
+.sg .sg-ptap__parts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
+.sg .sg-ptap__part { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 56px; padding: 6px; border: 2px solid rgba(255, 255, 255, 0.4); border-radius: 12px; background: rgba(255, 255, 255, 0.12); color: #fff; font: inherit; font-size: 1.05rem; font-weight: 800; cursor: pointer; touch-action: manipulation; }
+.sg .sg-ptap__part small { font-size: 0.7rem; opacity: 0.7; }
+.sg .sg-ptap__part:active { transform: scale(0.96); }
+.sg .sg-ptap__part.is-now { background: var(--sg-primary); border-color: #fff; }
+.sg .sg-ptap__next { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.sg .sg-ptap__next img { width: 64px; height: 36px; object-fit: cover; border-radius: 6px; }
+.sg .sg-partlinks { margin: 4px 0 10px; padding: 8px 10px; border-radius: 10px; background: var(--sg-primary-soft); }
+.sg .sg-partlinks .sg-help { margin: 2px 0 4px; }

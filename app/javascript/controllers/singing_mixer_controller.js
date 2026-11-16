@@ -16,6 +16,7 @@ import {
   MV_PART_STYLES, DEFAULT_PART_STYLES, MV_FONTS, MV_FONTS_CSS, mvFontSpec
 } from "mv_renderer"
 import { MV_POINT_FX, MV_QUICK_TEMPLATES, sampleSrcs, demoScene, demoFeatures } from "mv_templates"
+import { PixelSinger } from "pixel_singer"
 import {
   storeSupported, newProjectId, putProject, getProject, listProjects, deleteProject, putAudio, getAudio,
   deleteAudioExcept, storageEstimate, askPersist, encodeAudioBuffer, decodeAudioRecord, formatBytes
@@ -118,8 +119,8 @@ const FLOW_STEPS = [
   {
     id: "sg-mv", short: "動画", optional: true,
     title: "🎬 動画（MV）を作りましょう",
-    lead: "5-1 で見本の動画を選んで「✨ これと同じように作る」→ 5-2 で画像を自分のものに差し替え → 5-4 で曲名を入れれば完成。5-3 動き・5-5 演出・5-6 仕上げは好みで。",
-    tips: ["横（YouTube）・縦（TikTok・ショート）・正方形を選べます", "5-5 演出で、サビなどの部分ごとに、始まり・終わりの演出（ピカッ・ズームなど）や色を選べます", "動画を押すか ▶ 再生で、好きな所から確かめてね"],
+    lead: "5-1 で見本の動画を選んで「✨ これと同じように作る」→ 5-2 で画像を自分のものに差し替え → 5-5 で曲名を入れれば完成。5-3 動き・5-4 演出・5-6 仕上げは好みで。",
+    tips: ["横（YouTube）・縦（TikTok・ショート）・正方形を選べます", "5-4 演出で、サビなどの部分ごとに、始まり・終わりの演出（ピカッ・ズームなど）や色を選べます", "動画を押すか ▶ 再生で、好きな所から確かめてね"],
     wait: ""
   },
   {
@@ -198,7 +199,10 @@ export default class extends Controller {
     "fxPlaceKind", "fxPlaceWhere", "fxRangeList",
     // 🔤 フォント・▶ 動画の見本の再生
     "mvFontPanel", "mvPlayButton", "mvPlayOverlay",
-    "mixTemplateList", "mixTemplateInfo", "mixTemplateName"
+    "mixTemplateList", "mixTemplateInfo", "mixTemplateName",
+    "singer", "mvMirror", "mvMirrorPlay", "mvMirrorTime",
+    "mvSteps", "mvTab", "mvTabNav", "mvShortWarn", "qtBadge", "mvWave",
+    "ptapPanel", "ptapBody", "ptapTime"
   ]
 
   // KotoBouquet の背景素材（サーバーが一覧を入れる）
@@ -238,6 +242,7 @@ export default class extends Controller {
     this.dragging = false
     this.mode = "idle" // idle / playing / micRecording / punching / calibrating / processing / exporting
     this.mix = this.loadMix()
+    this.singer = this.hasSingerTarget ? new PixelSinger(this.singerTarget) : null // 🎤 試聴中に歌う子
     this.mixPreset = this.mix.preset || "recommended"
     delete this.mix.preset
     this.mixBypass = false
@@ -303,6 +308,7 @@ export default class extends Controller {
     this.stopMeter()
     this.stopMicStream()
     if (this.drawId) cancelAnimationFrame(this.drawId)
+    if (this.singer) this.singer.destroy()
     if (this.ctx) this.ctx.close()
   }
 
@@ -2200,7 +2206,7 @@ export default class extends Controller {
     else if (!this.backingBuffer) text = "まずは ① で 🎼オケ（伴奏）のファイルを入れよう"
     else if (!this.vocalBase) text = "次は ② の「🎙 マイクで録音」。ヘッドホンをつけて、カウントの4つ目で手拍子 👏"
     else if (!this.sections.length && this.mixPreset === "recommended") text = "④ の「🪄 おまかせミックス」を押すと、声とオケを分析していい感じに整えます"
-    else if (!this.mv?.title) text = "⑤ 動画の 5-1 で見本を選んで「✨ これと同じように作る」→ 5-4 で曲名を入れよう"
+    else if (!this.mv?.title) text = "⑤ 動画の 5-1 で見本を選んで「✨ これと同じように作る」→ 5-5 で曲名を入れよう"
     else text = "▶ 試聴して気に入ったら ⑥ で保存。もっと細かくしたいときは ④ の「🛠 詳細モード」"
     if (this.guideTarget.textContent !== text) this.guideTarget.textContent = text
   }
@@ -2849,6 +2855,7 @@ export default class extends Controller {
     }
     this.mode = mode
     if (mode === "idle") this.playhead = null
+    if (this.singer) this.singer.setPlaying(mode === "playing", this.analyser)
     this.updateButtons()
   }
 
@@ -4179,7 +4186,7 @@ export default class extends Controller {
     try {
       const lg = this.mv.edit ? this.mv.edit.logo : null
       const logo = lg ? { enabled: lg.enabled && lg.kind === "text", kind: "text", text: lg.text, corner: lg.corner, size: lg.size, opacity: lg.opacity } : null
-      window.localStorage.setItem(MV_KEY, JSON.stringify({ template: this.mv.template, artist: this.mv.artist, dim: this.mv.dim, fx: this.fxPrefs, ratio: this.mv.ratio, anim: this.mv.anim, font: this.mv.font, logo }))
+      window.localStorage.setItem(MV_KEY, JSON.stringify({ template: this.mv.template, wave: !!this.mv.wave, artist: this.mv.artist, dim: this.mv.dim, fx: this.fxPrefs, ratio: this.mv.ratio, anim: this.mv.anim, font: this.mv.font, logo }))
     } catch (e) {}
   }
 
@@ -4193,8 +4200,11 @@ export default class extends Controller {
       document.head.appendChild(link)
     }
     const prefs = this.loadMvPrefs()
+    // 🌊 前の「下に音の波」の見た目は、「画像だけ」＋音の波 に直す
+    const oldWave = !MV_TEMPLATES[prefs.template] || prefs.template === "simple"
     this.mv = {
-      template: MV_TEMPLATES[prefs.template] ? prefs.template : "simple",
+      template: oldWave ? "plain" : prefs.template,
+      wave: oldWave || prefs.wave === true, // 🌊 下に音の波（どの見た目とも組み合わせられる）
       image: null,
       gradient: MV_GRADIENTS[0],
       colors: gradientColors(MV_GRADIENTS[0]),
@@ -4252,6 +4262,10 @@ export default class extends Controller {
     this.qt = { id: "ballad" }
     this.migrateMvSettings()
     this.renderQuickTemplates()
+    // 📑 前に開いていたタブ（なければ 5-1）
+    let tab = 0
+    try { tab = Number(window.localStorage.getItem("kb-mv-tab")) || 0 } catch (e) {}
+    this.showMvTab(tab)
   }
 
   // 背景の候補：色（グラデーション）→ KotoBouquet の背景素材 → マイ画像（あとから足す）
@@ -4386,6 +4400,7 @@ export default class extends Controller {
     }
     await this.reloadMvSlidesForRatio() // 🎬 切りかえる背景も、その向き用の画像があれば（K40）
     this.updateMvControls()
+    this.updateMvEditControls() // ✂️ 縦にしたら、60秒をこえていないかの知らせも
     const tip = ratio === "9:16" ? "。うすい赤の所は TikTok・ショートでボタンや説明が重なるので、大事な文字は入れていません" : ""
     this.setStatus(`📐 ${MV_RATIOS[ratio].label} にしました${tip}`)
   }
@@ -4538,6 +4553,7 @@ export default class extends Controller {
       this.mvRatioButtonTargets.forEach((el) => el.setAttribute("aria-pressed", String(el.dataset.mvRatio === this.mv.ratio)))
     }
     if (this.hasMvTemplateHintTarget) this.mvTemplateHintTarget.textContent = MV_TEMPLATES[this.mv.template].hint
+    if (this.hasMvWaveTarget) this.mvWaveTarget.checked = !!this.mv.wave
     if (this.hasMvBgListTarget) {
       this.mvBgListTarget.querySelectorAll("[data-bg-key]").forEach((el) => el.setAttribute("aria-pressed", String(el.dataset.bgKey === this.mv.bgKey)))
     }
@@ -4554,7 +4570,59 @@ export default class extends Controller {
       this.mvPlayButtonTarget.setAttribute("aria-pressed", String(playing))
     }
     if (this.hasMvPlayOverlayTarget) this.mvPlayOverlayTarget.hidden = playing || !canPlay
+    // 🎬 歌詞・保存のところの動画（同じ動画を写している）の ▶／⏸
+    this.mvMirrorPlayTargets.forEach((b) => {
+      b.disabled = !canPlay
+      b.textContent = playing ? "⏸ 一時停止" : "▶ 再生"
+      b.setAttribute("aria-pressed", String(playing))
+    })
     if (!playing) this.mvPreviewPlaying = false
+  }
+
+  // 🌊 下に音の波（見た目とは別に、出す・出さない）
+  toggleMvWave(event) {
+    if (!this.mv) return
+    this.mv.wave = event.currentTarget.checked
+    this.saveMvPrefs()
+    this.updateMvControls()
+    this.setStatus(this.mv.wave ? "🌊 下に音の波を出します" : "🌊 音の波を出さないようにしました")
+  }
+
+  // ---------- 📑 動画の設定を1つずつ（5-1〜5-6 をタブで切りかえる） ----------
+
+  get mvStepEls() {
+    return this.hasMvStepsTarget ? Array.from(this.mvStepsTarget.querySelectorAll(":scope > details.sg-mvstep")) : []
+  }
+
+  showMvTab(i, { scroll = false } = {}) {
+    const steps = this.mvStepEls
+    if (!steps.length) return
+    const n = Math.max(0, Math.min(steps.length - 1, Number(i) || 0))
+    this.mvTabIndex = n
+    try { window.localStorage.setItem("kb-mv-tab", String(n)) } catch (e) {}
+    steps.forEach((d, k) => {
+      d.hidden = k !== n
+      if (k === n) d.open = true
+    })
+    this.mvTabTargets.forEach((b) => {
+      const on = Number(b.dataset.mvTab) === n
+      b.setAttribute("aria-selected", String(on))
+      b.classList.toggle("is-active", on)
+    })
+    if (this.hasMvTabNavTarget) {
+      const names = this.mvTabTargets.map((b) => b.querySelector(".sg-mvtab__label")?.textContent.trim() || "")
+      const prev = n > 0 ? `<button type="button" class="sg-btn" data-mv-tab="${n - 1}" data-action="singing-mixer#selectMvTab">← ${names[n - 1]}</button>` : "<span></span>"
+      const next = n < steps.length - 1
+        ? `<button type="button" class="sg-btn sg-btn--primary" data-mv-tab="${n + 1}" data-action="singing-mixer#selectMvTab">次：${names[n + 1]} →</button>`
+        : '<span class="sg-help">これで動画の設定はおしまい。次は「歌詞テロップ」</span>'
+      this.mvTabNavTarget.innerHTML = prev + next
+    }
+    if (scroll && this.hasMvStepsTarget) this.mvStepsTarget.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
+
+  selectMvTab(event) {
+    const fromNav = !!event.currentTarget.closest(".sg-mvtab-nav")
+    this.showMvTab(event.currentTarget.dataset.mvTab, { scroll: fromNav })
   }
 
   // ---------- 🪄 5-1 見本を選ぶ（テンプレート） ----------
@@ -4630,23 +4698,19 @@ export default class extends Controller {
     this.setStatus(`🪄 見本「${MV_QUICK_TEMPLATES[id].label}」を流しています。気に入ったら「✨ これと同じように作る」`)
   }
 
-  // ▶ 見本の動画。見えているときだけ描く（スマホの電池のため）
+  // ▶ 見本の動画は、左の動画の所で流す（5-1 を開いていて、止まっているときだけ。▶ 再生すると、いま作っている動画に戻る）
+  // 「✨ これと同じように作る」を押したあとは、自分の動画を見せる（ほかの見本を押すと、また見本を流す）
+  get qtShowing() {
+    return !!(this.qt && this.mv && this.qtTemplate && this.mvTabIndex === 0 && this.mode === "idle" && this.hasCanvasTarget &&
+      this.mvEdit.tpl !== this.qt.id)
+  }
+
   drawQuickPreview() {
-    if (!this.hasQtPreviewTarget || !this.qt || !this.mv || this.mode === "exporting") return
-    const canvas = this.qtPreviewTarget
-    if (!this.qtObserver && window.IntersectionObserver) {
-      this.qtObserver = new IntersectionObserver((entries) => { this.qtVisible = entries.some((x) => x.isIntersecting) })
-      this.qtObserver.observe(canvas)
-    }
-    if (this.qtObserver && !this.qtVisible) return
+    const showing = this.qtShowing
+    if (this.hasQtBadgeTarget && this.qtBadgeTarget.hidden === showing) this.qtBadgeTarget.hidden = !showing
+    if (!showing) return
+    const canvas = this.canvasTarget
     const tpl = this.qtTemplate
-    if (!tpl) return
-    const size = { "16:9": [640, 360], "9:16": [360, 640], "1:1": [480, 480] }[this.mv.ratio] || [640, 360]
-    if (canvas.width !== size[0] || canvas.height !== size[1]) {
-      canvas.width = size[0]
-      canvas.height = size[1]
-      canvas.style.aspectRatio = `${size[0]} / ${size[1]}`
-    }
     const looks = tpl.slots.map((_, i) => {
       const s = this.qtSampleOf(tpl, i)
       return { image: s.img, gradient: MV_GRADIENTS[0] }
@@ -4667,10 +4731,10 @@ export default class extends Controller {
     } catch (e) {
       console.error(e)
     }
-    if (this.hasQtPreviewInfoTarget) {
+    if (this.hasQtBadgeTarget) {
       const part = d.parts.find((p) => t >= p.startSec && t < p.endSec)
-      const txt = part ? `いま：${part.name}` : ""
-      if (this.qtPreviewInfoTarget.textContent !== txt) this.qtPreviewInfoTarget.textContent = txt
+      const txt = `見本：${tpl.label}${part ? `　いま：${part.name}` : ""}`
+      if (this.qtBadgeTarget.textContent !== txt) this.qtBadgeTarget.textContent = txt
     }
   }
 
@@ -4694,7 +4758,8 @@ export default class extends Controller {
     }
     if (this.hasQtApplyButtonTarget) this.qtApplyButtonTarget.disabled = false
     // 見た目・動き・フォント・暗さ（「サビの入りの切りかえ」は 5-5 演出の「始まり」で決めるので、なしにする）
-    this.mv.template = tpl.look
+    this.mv.template = tpl.look === "simple" ? "plain" : tpl.look
+    this.mv.wave = tpl.look === "simple" || !!tpl.wave
     this.mv.anim = { ...DEFAULT_MV_ANIM, ...tpl.anim, transition: "none" }
     this.mv.font = MV_FONTS[tpl.font] ? tpl.font : "standard"
     this.mv.dim = tpl.dim
@@ -4742,6 +4807,7 @@ export default class extends Controller {
       filter: tpl.filter,
       filterAmount: tpl.filterAmount,
       filterNames: { ...tpl.filterNames },
+      geoNames: { ...(tpl.geoNames || {}) },
       pointFx: Object.fromEntries(Object.entries(tpl.pointFx).map(([k, v]) => [k, { ...v }])),
       fadeIn: tpl.fadeIn,
       fadeOut: tpl.fadeOut
@@ -4760,9 +4826,9 @@ export default class extends Controller {
     const where = !this.backingBuffer
       ? "オケを入れると、サビを自動で探して演出を付けます"
       : !parts.length
-        ? "サビが見つからなかったので、部分ごとの演出はまだ動きません。5-5 演出の「🪄 曲の構成を推測」をしてね"
+        ? "サビが見つからなかったので、部分ごとの演出はまだ動きません。5-4 演出の「🪄 曲の構成を推測」をしてね"
         : this.fxSections.from === "auto"
-          ? `自動で見つけたサビ ${parts.length}か所に演出を付けました。5-5 演出の「🪄 曲の構成を推測」をすると、落ちサビ・間奏などにも付きます`
+          ? `自動で見つけたサビ ${parts.length}か所に演出を付けました。5-4 演出の「🪄 曲の構成を推測」をすると、落ちサビ・間奏などにも付きます`
           : `④の部分 ${parts.length}か所に演出を付けました`
     this.setStatus(`🪄「${tpl.label}」と同じように作りました。${where}。画像は 5-2 で自分の画像に差し替えられます`)
   }
@@ -4806,7 +4872,7 @@ export default class extends Controller {
     const text = {
       tpl: tpl ? `${tpl.label} をもとに作成中` : "まだ選んでいません",
       image: `${(MV_TEMPLATES[this.mv.template] || {}).label || ""}${slides ? `・切りかえ ${slides}枚` : ""}${e.filter !== "none" ? `・${MV_FILTERS[e.filter].label}` : ""}`,
-      anim: `歌詞：${MV_ANIMS.lyric[anim.lyric] || ""}`.replace("（今まで）", ""),
+      anim: `歌詞：${MV_ANIMS.lyric[anim.lyric] || ""}${anim.deco && anim.deco !== "none" ? `＋${MV_ANIMS.deco[anim.deco] || ""}` : ""}${anim.geo && anim.geo !== "none" ? `・図形：${MV_ANIMS.geo[anim.geo] || ""}` : ""}`.replace("（今まで）", ""),
       text: `${this.mv.title ? `「${this.mv.title}」` : "曲名なし"}・${(MV_FONTS[this.mv.font] || MV_FONTS.standard).label}${e.telops.length ? `・テロップ ${e.telops.length}` : ""}`,
       fx: `${this.fxPrefs && this.fxPrefs.strength ? `強さ ${this.fxPrefs.strength}` : "演出なし"}・部分 ${new Set(parts.map((p) => p.key)).size}種類${pf ? `・ポイント ${pf}` : ""}`,
       finish: `${range ? `${this.formatSec(range.startSec)}〜${this.formatSec(range.endSec)} だけ` : "曲の最初から最後まで"}${e.fadeIn || e.fadeOut ? "・フェードあり" : ""}`
@@ -4823,7 +4889,7 @@ export default class extends Controller {
     const e = this.mvEdit
     const parts = this.mvPartList
     const byName = (this.fxPrefs && this.fxPrefs.byName) || DEFAULT_PART_STYLES
-    const sig = JSON.stringify([e.pointFx, e.points, e.filterNames, byName, parts.map((p) => [p.key, p.startSec.toFixed(1), p.endSec.toFixed(1)]),
+    const sig = JSON.stringify([e.pointFx, e.points, e.filterNames, e.geoNames, byName, parts.map((p) => [p.key, p.startSec.toFixed(1), p.endSec.toFixed(1)]),
       (this.pins || []).map((p) => [p.id, p.name, Number(p.sec).toFixed(1)]), (this.sections || []).map((s) => s.id)])
     if (!force && sig === this.qtPointsSig) return
     // 選んでいる途中（<select> を開いている間）は作り直さない
@@ -4852,6 +4918,7 @@ export default class extends Controller {
     const fxEntries = Object.entries(MV_POINT_FX)
     const styleEntries = Object.entries(MV_PART_STYLES).map(([k, st]) => [k, st.label])
     const colorEntries = [["same", "全体と同じ"]].concat(Object.entries(MV_FILTERS).map(([k, f]) => [k, k === "none" ? "フィルターなし" : f.label]))
+    const geoEntries = [["same", "全体と同じ"]].concat(Object.entries(MV_ANIMS.geo).map(([k, label]) => [k, k === "none" ? "図形なし" : label]))
     const playBtn = (sec, label) => {
       const b = mk("button", "sg-btn sg-btn--small sg-qt__time", `▶ ${label}`)
       b.type = "button"
@@ -4886,7 +4953,8 @@ export default class extends Controller {
         cell("雰囲気", select(styleEntries, byName[k] || DEFAULT_PART_STYLES[k], { partName: k, action: "change->singing-mixer#changeFxNameStyle" }, `${k}の雰囲気`)),
         cell("始まり", select(fxEntries, r.start || "none", { partName: k, edge: "start", action: "change->singing-mixer#changePointRule" }, `${k}の始まりの演出`)),
         cell("終わり", select(fxEntries, r.end || "none", { partName: k, edge: "end", action: "change->singing-mixer#changePointRule" }, `${k}の終わりの演出`)),
-        cell("色", select(colorEntries, (e.filterNames || {})[k] || "same", { partName: k, action: "change->singing-mixer#changePartColor" }, `${k}の色`))
+        cell("色", select(colorEntries, (e.filterNames || {})[k] || "same", { partName: k, action: "change->singing-mixer#changePartColor" }, `${k}の色`)),
+        cell("図形", select(geoEntries, (e.geoNames || {})[k] || "same", { partName: k, action: "change->singing-mixer#changePartGeo" }, `${k}の図形の動き`))
       )
       row.append(head, edges)
       return row
@@ -4967,6 +5035,28 @@ export default class extends Controller {
     this.renderQuickPoints({ force: true })
     this.updateMvEditControls()
     this.setStatus(`🎨「${name}」の色：${MV_FILTERS[v] ? MV_FILTERS[v].label : "曲全体と同じ"}`)
+  }
+
+  // 🔷 部分ごとの図形の動き（名前ごと）。「全体と同じ」は 5-3 の図形の動き
+  changePartGeo(event) {
+    const name = event.currentTarget.dataset.partName
+    const v = event.currentTarget.value
+    if (!name) return
+    const names = { ...(this.mvEdit.geoNames || {}) }
+    if (MV_ANIMS.geo[v]) names[name] = v
+    else delete names[name]
+    this.mvEdit.geoNames = names
+    this.renderQuickPoints({ force: true })
+    this.saveMvPrefs()
+    this.updateMvStepSums()
+    this.setStatus(`🔷「${name}」の図形：${MV_ANIMS.geo[v] ? MV_ANIMS.geo[v] : "全体（5-3）と同じ"}`)
+  }
+
+  // 🔷 部分ごとの図形 → [{ startSec, endSec, kind }]
+  get mvGeoSpans() {
+    const names = this.mvEdit.geoNames || {}
+    if (!Object.keys(names).length) return []
+    return this.mvPartList.filter((p) => names[p.key]).map((p) => ({ startSec: p.startSec, endSec: p.endSec, kind: names[p.key] }))
   }
 
   changePointRule(event) {
@@ -5193,6 +5283,7 @@ export default class extends Controller {
       filter: e.filter,
       filterAmount: e.filterAmount,
       filterSpans: this.mvFilterSpans,
+      geoSpans: this.mvGeoSpans,
       telops: e.telops.filter((t) => t.text && t.endSec > t.startSec),
       logo: lg.enabled ? { ...lg, image: lg.kind === "image" ? this.mvLogoImage : null } : null,
       fadeIn: e.fadeIn,
@@ -5546,6 +5637,7 @@ export default class extends Controller {
       if (e.range) { e.range.enabled = true; this.updateMvEditControls(); return }
       const r = this.mixSel || this.editingSection
       if (r) this.setMvRange(r.startSec, r.endSec, "選んだ範囲")
+      else if (this.mv && this.mv.ratio === "9:16") this.mvRangeShort({ currentTarget: { dataset: { len: "60" } } }) // 縦の動画は、ショート向けに60秒
       else this.setMvRange(this.mvNowSec(), this.mvNowSec() + 30, "今の位置から30秒")
     } else if (e.range) {
       e.range.enabled = false
@@ -5574,6 +5666,38 @@ export default class extends Controller {
     const r = mine[0] || (this.autoChoruses || [])[0]
     if (!r) { this.setStatus("🔥 サビの場所が分かりません。④で部分に「サビ」を付けるか、🪄曲の構成を推測してね"); return }
     this.setMvRange(r.startSec, r.endSec, mine[0] ? "④で付けたサビ" : "自動で見つけたサビっぽい所（目安）")
+  }
+
+  // 📱 サビを中心に◯秒（サビの少し前から始める。サビがなければ今の位置から）
+  mvRangeShort(event) {
+    const len = Number(event.currentTarget.dataset.len) || 60
+    const d = this.duration || 0
+    if (!d) { this.setStatus("✂️ 先にオケか歌声を入れてね"); return }
+    const mine = (this.sections || []).filter((s) => s.name === "サビ" || s.name === "ラスサビ")
+    const chorus = mine[0] || (this.autoChoruses || [])[0]
+    let start = chorus ? Math.max(0, chorus.startSec - 6) : this.mvNowSec()
+    let end = Math.min(d, start + len)
+    if (end - start < len) start = Math.max(0, end - len)
+    this.setMvRange(start, end, chorus ? `サビ（${this.formatSec(chorus.startSec)}〜）を中心に${len}秒` : `今の位置から${len}秒（サビが見つからなかったので）`)
+  }
+
+  // 長さだけ変える（始まりはそのまま）
+  mvRangeLen(event) {
+    const len = Number(event.currentTarget.dataset.len) || 60
+    const r = this.mvEdit.range && this.mvEdit.range.enabled !== false ? this.mvEdit.range : null
+    const start = r ? r.startSec : this.mvNowSec()
+    const d = this.duration || 0
+    const end = Math.min(d, start + len)
+    this.setMvRange(end - start < len ? Math.max(0, end - len) : start, end, `${len}秒`)
+  }
+
+  // 始まり・終わりを1秒ずつ動かす
+  nudgeMvRange(event) {
+    const r = this.mvEdit.range
+    if (!r || r.enabled === false) { this.setStatus("✂️ 先に切り取る範囲を決めてね（上の 📱 か 長さ のボタン）"); return }
+    const dd = Number(event.currentTarget.dataset.d) || 0
+    if (event.currentTarget.dataset.side === "start") this.setMvRange(Math.min(r.startSec + dd, r.endSec - 1), r.endSec)
+    else this.setMvRange(r.startSec, Math.max(r.endSec + dd, r.startSec + 1))
   }
 
   mvRange30() {
@@ -5901,9 +6025,19 @@ export default class extends Controller {
     if (this.hasMvRangeStartTarget && document.activeElement !== this.mvRangeStartTarget) this.mvRangeStartTarget.value = r ? this.formatSec(r.startSec) : ""
     if (this.hasMvRangeEndTarget && document.activeElement !== this.mvRangeEndTarget) this.mvRangeEndTarget.value = r ? this.formatSec(r.endSec) : ""
     if (this.hasMvRangeInfoTarget) {
-      this.mvRangeInfoTarget.textContent = clip
-        ? `✂️ ${this.formatSec(clip.startSec)}〜${this.formatSec(clip.endSec)}（${(clip.endSec - clip.startSec).toFixed(1)}秒）だけ書き出します`
-        : r && r.enabled !== false ? "⚠ 範囲が短すぎるか、曲の外です（1秒以上にしてね）" : "曲の最初から最後まで書き出します"
+      const len = clip ? clip.endSec - clip.startSec : this.duration || 0
+      const tall = this.mv && this.mv.ratio === "9:16"
+      // 縦の動画で60秒をこえるときは知らせる（ショートは長さの上限があることが多い）
+      const warn = tall && len > 60.05 ? `　⚠ ${Math.round(len)}秒あります。ショートに出すなら「📱 60秒で切り取る」` : ""
+      this.mvRangeInfoTarget.textContent = (clip
+        ? `✂️ ${this.formatSec(clip.startSec)}〜${this.formatSec(clip.endSec)}（${len.toFixed(1)}秒）だけ書き出します`
+        : r && r.enabled !== false ? "⚠ 範囲が短すぎるか、曲の外です（1秒以上にしてね）" : `曲の最初から最後まで書き出します（${this.formatSec(len)}）`) + warn
+      this.mvRangeInfoTarget.classList.toggle("is-warn", !!warn)
+      // ⑥ 保存のところにも同じ知らせを出す
+      if (this.hasMvShortWarnTarget) {
+        this.mvShortWarnTarget.hidden = !warn
+        this.mvShortWarnTarget.textContent = warn ? `⚠ 縦の動画が ${Math.round(len)}秒あります。ショートに出すなら、5-6 仕上げの「📱 60秒で切り取る」で短くできます` : ""
+      }
     }
     if (this.hasMvRangePlayButtonTarget) this.mvRangePlayButtonTarget.disabled = !(clip && this.mode === "idle")
     if (this.hasMvFadeInTarget && document.activeElement !== this.mvFadeInTarget) this.mvFadeInTarget.value = String(e.fadeIn)
@@ -6078,6 +6212,7 @@ export default class extends Controller {
 
   // スペース・エンターでタップ、E か「.」で⏹ここで消す（合わせている間だけ）
   tapKey(event) {
+    if (this.ptap) { this.ptapKey(event); return } // 👆 部分・画像の切りかえをタップで決めている間
     // 歌詞のタップ合わせ中でなければ、P キーで📍ピン（K32）。タップ合わせ中はピンを立てない
     if (this.tapIndex === null || this.tapIndex === undefined) { this.pinKey(event); return }
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(event.target?.tagName || "")) return
@@ -6108,6 +6243,232 @@ export default class extends Controller {
     this.tapCountTarget.textContent = `${this.tapIndex + 1} / ${this.lyrics.length}`
   }
 
+  // ---------- 👆 再生しながらタップで決める：④の部分（サビなど）・🖼 画像の切りかえ場所 ----------
+  // 歌詞のタップ合わせと同じ使い方。曲を流しながら、その場所でボタンを押すだけ
+  //   this.ptap = { kind: "part" | "slide", backup, open（いま開いている部分）, index（次に決める画像）, added（足した「いつもの背景に戻す」） }
+
+  // ④の部分を1つ作る（🪄 曲の構成を推測 と同じ形。サビ・ラスサビは🔥盛り上げる）
+  newSectionFor(name, startSec, endSec) {
+    const loud = name === "サビ" || name === "ラスサビ"
+    return {
+      id: `s${Date.now()}${Math.floor(Math.random() * 1000)}`,
+      name, startSec, endSec,
+      preset: loud ? "hype" : this.mixPreset,
+      settings: loud
+        ? (({ reverbLength, ...rest }) => ({ ...rest, pro: {} }))(MIX_PRESETS.hype.settings)
+        : (({ reverbLength, pro, ...rest }) => ({ ...rest, pro: { ...(pro || {}) } }))(this.mix)
+    }
+  }
+
+  async startPartTap() {
+    if (this.mode !== "idle" || (!this.backingBuffer && !this.vocalBuffer)) {
+      if (this.mode === "idle") this.setStatus("先に 🎼オケを入れてね")
+      return
+    }
+    if (this.sections.length && !window.confirm("④の部分（サビなど）を、タップで付け直します。\nいまの部分は消えます（とちゅうで「やめる」を押せば元に戻ります）。\nよろしいですか？")) return
+    this.ptap = { kind: "part", backup: this.sections.map((s) => ({ ...s })), open: null }
+    this.sections = []
+    this.refreshMix({ save: false })
+    await this.startPtapPlayback()
+    this.setStatus("👆 部分が始まった所で、その名前のボタンを押してね（数字キー 1〜9 でもOK）")
+  }
+
+  async startSlideTap() {
+    const e = this.mvEdit
+    if (this.mode !== "idle" || (!this.backingBuffer && !this.vocalBuffer)) {
+      if (this.mode === "idle") this.setStatus("先に 🎼オケを入れてね")
+      return
+    }
+    if (!e.slides.length) { this.setStatus("先に「＋ 切りかえる画像を足す」で、切りかえる画像を足してね"); return }
+    this.ptap = { kind: "slide", backup: e.slides.map((s) => ({ ...s, anchor: s.anchor ? { ...s.anchor } : null })), backupMode: e.bgMode, index: 0, added: [] }
+    e.bgMode = "points"
+    this.updateMvEditControls()
+    await this.startPtapPlayback()
+    this.setStatus("👆 画像を切りかえたい所で「🖼 ここで切りかえ」を押してね（スペースキーでもOK）。上から順に決まります")
+  }
+
+  async startPtapPlayback() {
+    this.ensureContext()
+    await this.ctx.resume()
+    this.setMode("playing")
+    this.startSources(() => this.finishPtap("曲が終わりました"), { fromSec: 0 })
+    this.ptapPanelTarget.hidden = false
+    this.renderPtap()
+  }
+
+  ptapAt() {
+    const now = this.songNow
+    return now === null ? null : Math.max(0, now - TAP_LEAD) // 人は少し遅れて押すので、そのぶん前に
+  }
+
+  tapPart(event) {
+    if (!this.ptap || this.ptap.kind !== "part") return
+    event?.preventDefault?.()
+    const name = event.currentTarget?.dataset?.partName || event.partName
+    const at = this.ptapAt()
+    if (!name || at === null) return
+    const open = this.ptap.open
+    if (open && at - open.startSec < 0.5) {
+      // すぐ押し直した：名前だけ変える
+      Object.assign(open, this.newSectionFor(name, open.startSec, open.endSec), { id: open.id })
+    } else {
+      if (open) open.endSec = at
+      const s = this.newSectionFor(name, at, this.duration || at + 1)
+      this.sections.push(s)
+      this.ptap.open = s
+    }
+    this.sections.sort((a, b) => a.startSec - b.startSec)
+    this.refreshMix({ save: false })
+    this.renderPtap()
+  }
+
+  tapSlide(event) {
+    if (!this.ptap || this.ptap.kind !== "slide") return
+    event?.preventDefault?.()
+    const e = this.mvEdit
+    const s = e.slides[this.ptap.index]
+    const at = this.ptapAt()
+    if (!s || at === null) return
+    s.anchor = { type: "time", sec: Math.round(at * 10) / 10 }
+    s.backAtEnd = false
+    this.ptap.index++
+    this.renderMvEdit()
+    if (this.ptap.index >= e.slides.length) {
+      this.stopSources()
+      this.finishPtap("全部の画像の切りかえ場所を決めました！")
+      return
+    }
+    this.renderPtap()
+  }
+
+  // ↩ ここで「いつもの背景」に戻す（次に決める画像の前に、戻る所を1つ足す）
+  tapSlideMain(event) {
+    if (!this.ptap || this.ptap.kind !== "slide") return
+    event?.preventDefault?.()
+    const at = this.ptapAt()
+    if (at === null) return
+    const id = this.newMvId("b")
+    this.mvEdit.slides.splice(this.ptap.index, 0, { id, useMain: true, label: "いつもの背景に戻す", anchor: { type: "time", sec: Math.round(at * 10) / 10 } })
+    this.ptap.added.push(id)
+    this.ptap.index++
+    this.renderMvEdit()
+    this.renderPtap()
+  }
+
+  ptapBack() {
+    const p = this.ptap
+    if (!p) return
+    if (p.kind === "part") {
+      const last = p.open
+      if (!last) return
+      this.sections = this.sections.filter((s) => s !== last)
+      const prev = this.sections[this.sections.length - 1] || null
+      if (prev) prev.endSec = this.duration || prev.endSec
+      p.open = prev
+      this.refreshMix({ save: false })
+    } else {
+      if (p.index === 0) return
+      p.index--
+      const s = this.mvEdit.slides[p.index]
+      if (s && p.added.includes(s.id)) this.mvEdit.slides.splice(p.index, 1) // 足した「戻す」は消す
+      this.renderMvEdit()
+    }
+    this.renderPtap()
+  }
+
+  // ✅ おわり：いまの所までで決める
+  stopPtap() {
+    if (!this.ptap) return
+    const done = this.ptap.kind === "part" ? "部分を付けました" : "画像の切りかえ場所を決めました"
+    this.stopSources()
+    this.finishPtap(done)
+  }
+
+  // ✖ やめる：始める前に戻す
+  cancelPtap() {
+    const p = this.ptap
+    if (!p) return
+    if (p.kind === "part") this.sections = p.backup
+    else {
+      this.mvEdit.slides = p.backup
+      this.mvEdit.bgMode = p.backupMode
+    }
+    p.cancelled = true
+    this.stopSources()
+    this.finishPtap("やめました（前のとおりに戻しました）")
+  }
+
+  finishPtap(message) {
+    const p = this.ptap
+    if (!p) return
+    this.ptap = null
+    this.ptapPanelTarget.hidden = true
+    this.setMode("idle")
+    if (p.kind === "part") {
+      this.sections.sort((a, b) => a.startSec - b.startSec)
+      this.refreshMix({ save: true })
+      this.renderQuickPoints({ force: true })
+      const names = this.sections.map((s) => s.name).join(" → ")
+      this.setStatus(p.cancelled ? `👆 ${message}` : `👆 ${message}（${this.sections.length}か所：${names}）。④の帯の端をドラッグすると細かく直せます。5-2 の「場所ごと」や 5-4 演出は、この部分を使います`)
+    } else {
+      this.renderMvEdit()
+      this.updateMvEditControls()
+      this.setStatus(`👆 ${message}${p.cancelled ? "" : "。▶ 再生で確かめてね（時間は 5-2 の一覧で直せます）"}`)
+    }
+  }
+
+  renderPtap() {
+    const p = this.ptap
+    if (!p || !this.hasPtapBodyTarget) return
+    const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c])
+    const foot = `<div class="sg-row sg-row--center">
+        <button class="sg-btn" data-action="singing-mixer#ptapBack">↩ 1つ戻る</button>
+        <button class="sg-btn sg-btn--primary" data-action="singing-mixer#stopPtap">✅ おわり</button>
+        <button class="sg-btn sg-btn--ghost" data-action="singing-mixer#cancelPtap">✖ やめる</button>
+      </div>`
+    if (p.kind === "part") {
+      const names = Object.keys(DEFAULT_PART_STYLES)
+      const cur = p.open ? p.open.name : "まだ"
+      this.ptapBodyTarget.innerHTML = `
+        <p class="sg-tap__count">👆 タップで部分を付ける　<span data-singing-mixer-target="ptapTime"></span></p>
+        <p class="sg-tap__current">いま：${esc(cur)}</p>
+        <div class="sg-ptap__parts">${names.map((n, i) => `<button type="button" class="sg-ptap__part${p.open && p.open.name === n ? " is-now" : ""}" data-part-name="${esc(n)}" data-action="pointerdown->singing-mixer#tapPart"><small>${i + 1}</small>${esc(n)}</button>`).join("")}</div>
+        <p class="sg-help sg-tap__help">部分が始まった所で、その名前を押す（数字キーでもOK）。まちがえたら、すぐ押し直せば名前だけ変わります</p>${foot}`
+    } else {
+      const slides = this.mvEdit.slides
+      const s = slides[p.index]
+      const label = s ? `${p.index + 1}. ${s.label || "画像"}` : ""
+      const thumb = s && s.thumb ? `<img src="${esc(s.thumb)}" alt="">` : ""
+      this.ptapBodyTarget.innerHTML = `
+        <p class="sg-tap__count">👆 タップで画像を切りかえる　${Math.min(p.index + 1, slides.length)} / ${slides.length}　<span data-singing-mixer-target="ptapTime"></span></p>
+        <p class="sg-tap__current sg-ptap__next">${thumb}<span>次：${esc(label)}</span></p>
+        <button class="sg-tap__button" data-action="pointerdown->singing-mixer#tapSlide">🖼 ここで切りかえ</button>
+        <div class="sg-row sg-row--center"><button class="sg-btn" data-action="pointerdown->singing-mixer#tapSlideMain">↩ ここで いつもの背景に戻す</button></div>
+        <p class="sg-help sg-tap__help">切りかえたい所で押す（スペースキーでもOK）。上の一覧の順に決まります</p>${foot}`
+    }
+  }
+
+  // 👆 タップ中の今の時間（毎コマ）
+  updatePtapTime() {
+    if (!this.ptap || !this.hasPtapTimeTarget) return
+    const now = this.songNow
+    const txt = now === null ? "" : `${this.formatSec(Math.max(0, now))} / ${this.formatSec(this.duration || 0)}`
+    if (this.ptapTimeTarget.textContent !== txt) this.ptapTimeTarget.textContent = txt
+  }
+
+  // キーボード：数字で部分、スペースで切りかえ、Backspace で1つ戻る
+  ptapKey(event) {
+    const p = this.ptap
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(event.target?.tagName || "")) return
+    if (event.key === "Backspace") { event.preventDefault(); this.ptapBack(); return }
+    if (p.kind === "part" && /^[1-9]$/.test(event.key)) {
+      const name = Object.keys(DEFAULT_PART_STYLES)[Number(event.key) - 1]
+      if (name) this.tapPart({ preventDefault: () => event.preventDefault(), partName: name })
+    } else if (p.kind === "slide" && (event.key === " " || event.key === "Enter")) {
+      this.tapSlide(event)
+    }
+  }
+
   // 行ごとに少しずらす・消す・その行から試聴
   nudgeLyric(event) {
     const i = Number(event.currentTarget.dataset.lyricIndex)
@@ -6118,7 +6479,9 @@ export default class extends Controller {
     if (l.endSec) l.endSec = Math.max(l.startSec + 0.3, l.endSec + d)
     l.unsure = false // 手で直した → 確認ずみ
     l.locked = true  // 🔒 自動で合わせ直しても動かさない（K35 案1）
+    this.lyricSel = i
     this.renderLyricList()
+    this.previewLyricAt(l.startSec + 0.3) // 🎬 動画でどう見えるか
   }
 
   // 終わりの時間を ±0.1秒（K27）。まだ終わりがない行は、今の表示の終わりから動かす
@@ -6132,7 +6495,9 @@ export default class extends Controller {
     l.endSec = Math.max(l.startSec + 0.3, Math.round((cur + d) * 100) / 100)
     l.unsure = false
     l.locked = true
+    this.lyricSel = i
     this.renderLyricList()
+    this.previewLyricAt(l.endSec - 0.15) // 🎬 消える直前の所
   }
 
   // 終わりを「自動」に戻す（声が止まった所・次の行の前で消える）
@@ -6229,6 +6594,9 @@ export default class extends Controller {
       const text = document.createElement("span")
       text.className = "sg-lyric__text"
       text.textContent = `${l.locked ? "🔒 " : ""}${l.unsure ? "⚠ " : ""}${l.text}`
+      text.dataset.action = "click->singing-mixer#selectLyricRow"
+      text.dataset.lyricIndex = String(i)
+      text.title = "押すと、上の動画がこの行の所になります"
       // 終わりの時間（K27）：決めていれば数字、決めていなければ「自動」（声が止まった所・次の行の前）
       const shown = l.startSec === null ? null : (l.endSec ?? endOf(l))
       const e = document.createElement("span")
@@ -7713,7 +8081,7 @@ export default class extends Controller {
   collectState(refs) {
     const P = (v) => this.packValue(v, refs)
     const mv = this.mv ? {
-      template: this.mv.template, dim: this.mv.dim, title: this.mv.title, artist: this.mv.artist, credit: this.mv.credit,
+      template: this.mv.template, wave: !!this.mv.wave, dim: this.mv.dim, title: this.mv.title, artist: this.mv.artist, credit: this.mv.credit,
       ratio: this.mv.ratio, karaoke: this.mv.karaoke, bgKey: this.mv.bgKey, gradientId: this.mv.gradient ? this.mv.gradient.id : null,
       bgSrc: this.mv.bgSrc || null, bgSrcs: this.mv.bgSrcs || null, anim: this.mv.anim || null, font: this.mv.font || "standard",
       edit: this.mvEditForSave() // 🎬 もっと編集（K40）
@@ -8144,7 +8512,8 @@ export default class extends Controller {
     if (!mv || !this.mv) return
     try {
       Object.assign(this.mv, {
-        template: MV_TEMPLATES[mv.template] ? mv.template : this.mv.template,
+        template: mv.template === "simple" ? "plain" : MV_TEMPLATES[mv.template] ? mv.template : this.mv.template,
+        wave: typeof mv.wave === "boolean" ? mv.wave : mv.template === "simple",
         dim: Number.isFinite(mv.dim) ? mv.dim : this.mv.dim,
         title: mv.title || "", artist: mv.artist || this.mv.artist, credit: mv.credit || "",
         ratio: MV_RATIOS[mv.ratio] ? mv.ratio : this.mv.ratio,
@@ -8370,6 +8739,8 @@ export default class extends Controller {
       if (d.orig.endSec !== null && d.orig.endSec !== undefined) l.endSec = Math.min(hi, l.startSec + len)
     }
     this.lyricLastDraw = null
+    // 🎬 動かしている間も、動画をその行の所に（止まっているとき）
+    if (this.mode === "idle") this.mvSeekSec = d.part === "end" && l.endSec ? l.endSec - 0.15 : l.startSec + 0.3
   }
 
   lyricTimelineUp() {
@@ -8382,6 +8753,7 @@ export default class extends Controller {
       this.lyricSel = d.i
       this.renderLyricList()
       this.lyricListTarget?.querySelector(`[data-lyric-row="${d.i}"]`)?.scrollIntoView?.({ block: "nearest" })
+      if (l.startSec !== null) this.previewLyricAt(l.startSec + 0.3)
       this.setStatus(`「${l.text}」${this.formatSec(l.startSec)}〜。端をドラッグで伸び縮み、真ん中で移動（▶は一覧から）`)
       return
     }
@@ -8389,6 +8761,7 @@ export default class extends Controller {
     l.unsure = false
     this.lyricSel = d.i
     this.renderLyricList()
+    this.previewLyricAt(d.part === "end" && l.endSec ? l.endSec - 0.15 : l.startSec + 0.3)
     this.setStatus(`🔒「${l.text}」を ${this.formatSec(l.startSec)}〜${l.endSec ? this.formatSec(l.endSec) : "（自動）"} にしました（固定）。🪄で残りを合わせ直せます`)
   }
 
@@ -8591,12 +8964,19 @@ export default class extends Controller {
       this.flowHeaderHtml = html
     }
     const next = FLOW_STEPS[i + 1]
+    const saveIdx = FLOW_STEPS.findIndex((s) => s.id === "sg-save")
+    if (i === saveIdx) this.flowSawSave = true
+    // ✏️ 保存のところから直しに戻ってきたときは、すぐ保存へ戻れるように
+    const backToSave = this.flowSawSave && i < saveIdx && i + 1 !== saveIdx
+      ? `<button type="button" class="sg-btn sg-btn--ghost" data-step="${saveIdx}" data-action="singing-mixer#goStep">💾 保存に戻る</button>`
+      : ""
     const nav = `
       <button type="button" class="sg-btn" data-action="singing-mixer#prevStep"${i === 0 ? " disabled" : ""}>← 戻る</button>
-      ${step.id === "sg-mix" ? '<button type="button" class="sg-btn sg-btn--ghost" data-action="singing-mixer#skipToSave">🎵 音声だけでいい → 保存へ</button>' : ""}
+      ${step.id === "sg-mix" && !backToSave ? '<button type="button" class="sg-btn sg-btn--ghost" data-action="singing-mixer#skipToSave">🎵 音声だけでいい → 保存へ</button>' : ""}
+      ${backToSave}
       ${next
         ? `<button type="button" class="sg-btn sg-btn--primary sg-flow__next${ready ? " is-ready" : ""}" data-action="singing-mixer#nextStep"${ready ? "" : " disabled"}>次へ：${next.short} →</button>`
-        : '<span class="sg-help">🎉 おつかれさま！ 気になる所はいつでも ← 戻る で直せます</span>'}
+        : '<span class="sg-help">🎉 おつかれさま！ 直したい所は、上の「✏️ 直したい所へ戻る」から1回で戻れます</span>'}
       ${ready ? "" : `<p class="sg-help sg-flow__wait">${step.wait}</p>`}`
     if (this.flowNavHtml !== nav) {
       this.flowNavTarget.innerHTML = nav
@@ -8789,7 +9169,7 @@ export default class extends Controller {
     this.mv.anim = { ...DEFAULT_MV_ANIM, ...(this.mv.anim || {}), [kind]: value }
     this.saveMvPrefs()
     this.updateMvAnimControls()
-    const name = { lyric: "歌詞の出し方", transition: "サビの入りの切りかえ", bg: "背景の動き", enter: "背景が切りかわるときの入り方" }[kind]
+    const name = { lyric: "歌詞の出し方", transition: "サビの入りの切りかえ", bg: "背景の動き", enter: "背景が切りかわるときの入り方", geo: "図形の動き", deco: "文字の飾り" }[kind]
     const tip = kind === "transition" && value !== "none" && value !== "flash" ? "（サビ・落ちサビの始まりで動きます。④で「サビ」を付けるとそこで、付けていなければ自動で見つけた所で）" : ""
     this.setStatus(`🎞 ${name}：${MV_ANIMS[kind][value]}${tip}`)
   }
@@ -8894,6 +9274,71 @@ export default class extends Controller {
     this.highlightLyricRow(t)
   }
 
+  // 🎬 歌詞・保存のところにも、いま作っている動画を写す（⑤の動画をそのまま写すだけ。書き出しには関係しない）
+  // 見えているものだけ描く（ステップで進めるときは、今のページの分だけ）
+  drawMvMirrors(src) {
+    if (!this.hasMvMirrorTarget) return
+    this.mvMirrorTargets.forEach((c) => {
+      if (!c.offsetParent) return // 見えていない
+      const r = c.getBoundingClientRect()
+      if (r.bottom < 0 || r.top > window.innerHeight) return // 画面の外
+      // 小さく写すので、表示の大きさ（×画面の細かさ）で描く
+      const dpr = Math.min(2, window.devicePixelRatio || 1)
+      const w = Math.max(2, Math.round(r.width * dpr))
+      const h = Math.max(2, Math.round((w * src.height) / src.width))
+      if (c.width !== w || c.height !== h) {
+        c.width = w
+        c.height = h
+      }
+      const ar = `${src.width} / ${src.height}`
+      if (c.style.aspectRatio !== ar) c.style.aspectRatio = ar
+      c.getContext("2d").drawImage(src, 0, 0, w, h)
+    })
+    if (this.hasMvMirrorTimeTarget) {
+      const now = this.songNow
+      const t = now !== null ? Math.max(0, now) : this.mvSeekSec || 0
+      const txt = `${this.formatSec(Math.min(this.duration || 0, t))} / ${this.formatSec(this.duration || 0)}`
+      this.mvMirrorTimeTargets.forEach((el) => { if (el.textContent !== txt) el.textContent = txt })
+    }
+  }
+
+  // 歌詞の行を選んだ・動かしたとき、止まっていれば動画をその行の所にする（どう見えるかすぐ分かるように）
+  previewLyricAt(sec) {
+    if (this.mode !== "idle" || !Number.isFinite(sec)) return
+    this.mvSetSeek(sec)
+  }
+
+  // 一覧の歌詞の文字を押した：その行を選んで、動画をその行の所に
+  selectLyricRow(event) {
+    const i = Number(event.currentTarget.dataset.lyricIndex)
+    const l = this.lyrics && this.lyrics[i]
+    if (!l) return
+    this.lyricSel = i
+    this.lyricListTarget.querySelectorAll("[data-lyric-row]").forEach((el) => el.classList.toggle("is-selected", Number(el.dataset.lyricRow) === i))
+    this.lyricLastDraw = null
+    if (l.startSec !== null) this.previewLyricAt(l.startSec + 0.3)
+  }
+
+  // ✏️ 保存のところから、直したい所へ戻る（ステップで進めるときは、そのページを開く）
+  jumpToSection(event) {
+    const id = event.currentTarget.dataset.jumpTo
+    const sub = event.currentTarget.dataset.mvStep
+    const i = FLOW_STEPS.findIndex((s) => s.id === id)
+    if (i < 0) return
+    if (this.flow === "wizard") {
+      this.flowStep = i
+      this.applyFlow()
+    }
+    const card = this.element.querySelector(`#${id}`)
+    let target = card
+    if (card && sub !== undefined) {
+      this.showMvTab(Number(sub))
+      if (this.hasMvStepsTarget) target = this.mvStepsTarget
+    }
+    requestAnimationFrame(() => target?.scrollIntoView({ behavior: "smooth", block: "start" }))
+    this.setStatus(`✏️「${FLOW_STEPS[i].short}」に戻りました。直したら、上の ⑥保存 からいつでも保存に戻れます`)
+  }
+
   // MV の絵（録画にも写る）と、波形たち（録画には写らない）をずっと描き続ける
   drawWaveform() {
     const canvas = this.canvasTarget
@@ -8902,6 +9347,8 @@ export default class extends Controller {
     const draw = () => {
       try {
         this.drawMv(g, canvas.width, canvas.height)
+        this.drawMvMirrors(canvas)
+        this.updatePtapTime()
       } catch (e) {
         console.error(e)
       }
