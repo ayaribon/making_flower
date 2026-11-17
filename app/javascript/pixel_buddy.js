@@ -416,6 +416,9 @@ export class BuddyHandle {
   hide() {
     store(`kb-buddy-hidden-${this.name}`, loginId())
     this.el.hidden = true
+    this.el.style.display = "none" // CSS で display を決めている箱でも、かならず消えるように
+    this.clearSay()
+    this.hideWa()
     if (this.onHide) this.onHide()
   }
 }

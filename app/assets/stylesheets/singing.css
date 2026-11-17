@@ -1241,3 +1241,22 @@
 .sg .sg-ptap__next img { width: 64px; height: 36px; object-fit: cover; border-radius: 6px; }
 .sg .sg-partlinks { margin: 4px 0 10px; padding: 8px 10px; border-radius: 10px; background: var(--sg-primary-soft); }
 .sg .sg-partlinks .sg-help { margin: 2px 0 4px; }
+
+/* ==========================
+   下の再生バーを かくす・すきま（controllers/transport_toggle_controller.js）
+   ・画面の何もない所をタップで かくす／出す。かくしている間は右下に「▲ 再生バー」
+   ・ページの下の すきま は、再生バーの本当の高さ（--sg-transport-space）に合わせる
+   ※ スマホ用の .sg の padding-bottom より強くするため、一番最後に置く
+========================== */
+.sg.has-transport-space { padding-bottom: calc(var(--sg-transport-space, 120px) + 24px); }
+.sg .sg-transport { transition: border-color 0.2s, transform 0.25s ease; }
+.sg.is-transport-hidden .sg-transport { transform: translateY(calc(100% + 4px)); pointer-events: none; }
+body:has(.sg.is-transport-hidden) .sg-singer { display: none; }
+.sg-transport-handle {
+  position: fixed; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 51;
+  padding: 10px 16px; border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 999px; cursor: pointer;
+  background: rgba(14, 26, 51, 0.92); color: #fff; font: inherit; font-size: 0.9rem; font-weight: 700;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25); touch-action: manipulation;
+}
+.sg-transport-handle[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { .sg .sg-transport { transition: none; } }

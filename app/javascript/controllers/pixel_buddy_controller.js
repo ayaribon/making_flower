@@ -52,6 +52,7 @@ export default class extends Controller {
     // 「けす」を選んでいたら、ログインし直すまで出ない
     if (buddyHidden("painter")) {
       this.element.hidden = true
+      this.element.style.display = "none" // .studio-buddy の display: flex に負けないように
       return
     }
     // ✋ 指でなぞると運べる。たたくと応援、10回たたくと「じゃま？」

@@ -1,5 +1,5 @@
 <%# 🎤 歌ってみた（手順3：ミックス・かんたん／詳細モード・スマホ対応）。見た目は app/assets/stylesheets/singing.css %>
-<div class="sg" data-controller="singing-mixer" data-action="keydown@window->singing-mixer#tapKey" data-singing-mixer-backgrounds-value="<%= @mv_backgrounds.to_json %>">
+<div class="sg" data-controller="singing-mixer transport-toggle" data-action="keydown@window->singing-mixer#tapKey" data-singing-mixer-backgrounds-value="<%= @mv_backgrounds.to_json %>">
   <div class="sg-inner">
     <header class="sg-header">
       <div>

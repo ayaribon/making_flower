@@ -19,12 +19,13 @@
       <span class="dt-stat">げんき <span class="dt-meter"><span class="dt-meter__fill dt-meter__fill--genki" data-dettyan-game-target="genki"></span></span> <span class="dt-stat__num" data-dettyan-game-target="genkiNum"></span></span>
       <span class="dt-stat">ごきげん <span class="dt-meter"><span class="dt-meter__fill dt-meter__fill--gokigen" data-dettyan-game-target="gokigen"></span></span></span>
     </div>
+    <%# 📖 いまの目標（dettyan_story.js の GOALS） %>
+    <p class="dt-goal" data-dettyan-game-target="goal"></p>
 
     <div class="dt-stage">
       <canvas class="dt-room" data-dettyan-game-target="canvas" data-action="pointerdown->dettyan-game#tap" role="img" aria-label="事務所の部屋を歩く Dettyan"></canvas>
       <div class="dt-bubble" data-dettyan-game-target="bubble" hidden></div>
       <div class="dt-toast" data-dettyan-game-target="toast" role="status" hidden></div>
-      <div class="dt-skip" data-dettyan-game-target="skip" hidden>タップで とばす ▶▶</div>
 
       <%# おせわのメニュー（Dettyan をタップすると出る） %>
       <div class="dt-care" data-dettyan-game-target="menu" hidden>
@@ -44,6 +45,16 @@
         <div class="dt-sheet__list" data-dettyan-game-target="sheetList"></div>
       </div>
 
+      <%# 📖 おはなし（タップで つぎへ。中身は dettyan_story.js の SCENES） %>
+      <div class="dt-story" data-dettyan-game-target="story" data-action="click->dettyan-game#storyNext" hidden>
+        <button type="button" class="dt-story__skip" data-action="dettyan-game#storySkip:stop">スキップ ▶▶</button>
+        <div class="dt-story__box">
+          <div class="dt-story__who" data-dettyan-game-target="storyWho" hidden></div>
+          <p class="dt-story__text" data-dettyan-game-target="storyText"></p>
+          <span class="dt-story__next" aria-hidden="true">▼</span>
+        </div>
+      </div>
+
       <%# はじめる画面（音が出ることを先に知らせる。タップで音が鳴り始める） %>
       <button type="button" class="dt-start" data-dettyan-game-target="start" data-action="dettyan-game#start">
         <span class="dt-start__text" data-dettyan-game-target="startText">よみこみ中…</span>
@@ -51,13 +62,20 @@
       </button>
     </div>
 
+    <%# ⚔️ バトル中だけ、下のボタンの代わりに出る コマンド（中身は renderCmd） %>
+    <div class="dt-cmd" data-dettyan-game-target="cmd" hidden>
+      <div class="dt-cmd__status" data-dettyan-game-target="cmdStatus" role="status"></div>
+      <div class="dt-cmd__buttons" data-dettyan-game-target="cmdButtons"></div>
+    </div>
+
     <div class="dt-actions">
       <button type="button" data-action="dettyan-game#openQuest">🗺️<span>ぼうけん</span></button>
       <button type="button" data-action="dettyan-game#openShop">🛒<span>ショップ</span></button>
       <button type="button" data-action="dettyan-game#openBag">🎒<span>もちもの</span></button>
       <button type="button" data-action="dettyan-game#openGear">👕<span>そうび</span></button>
+      <button type="button" data-action="dettyan-game#openStatus" data-dettyan-game-target="statusButton">📊<span>つよさ</span></button>
     </div>
 
-    <p class="dt-help">Dettyan をタップすると、おせわができるよ。<br>🗺️ ぼうけん は げんき を使って、すぐ帰ってくるよ。<br>見ていると、PC で作業したり 歌ったりするよ。</p>
+    <p class="dt-help">Dettyan をタップすると、おせわができるよ。<br>🗺️ ぼうけん は げんき を使うよ。じぶんで えらんでも、🤖オートでも たたかえるよ。<br>見ていると、PC で作業したり 歌ったりするよ。</p>
   </div>
 </div>

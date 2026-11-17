@@ -8,30 +8,53 @@
 // - 名前を変える・消す・意味を変えるときは SAVE_VERSION を上げて、MIGRATIONS に移しかえを書く
 // - 知らない項目は消さずに残す（新しいコードが書いたセーブを、古い画面が開いても壊さないため）
 
-export const SAVE_VERSION = 1
+import { FURNITURE } from "dettyan_home"
+
+export const SAVE_VERSION = 3
 
 export function defaultState() {
   return {
     version: SAVE_VERSION,
     money: 0,
     stats: { genki: 80, gokigen: 70 }, // げんき の上限はレベルで増える（dettyan_care.js の maxGenki）
-    dettyan: { level: 1, exp: 0 },
+    // job：職業（dettyan_battle.js の JOBS）、points：まだ ふっていない ポイント、alloc：ふった ポイント
+    dettyan: { level: 1, exp: 0, job: "warrior", points: 0, alloc: { hp: 0, atk: 0, def: 0, mag: 0, spd: 0 } },
     items: {},             // { junsai: 2 } のように、持っているごはん・アイテムの数（id は dettyan_foods.js）
     daily: { day: null, careCoins: 0, rewardDay: null }, // その日（日本の日付）の数。おせわのコインの上限・毎日のごほうび
     care: { lastAt: {} },  // おせわごとに、最後にした時間（続けてしても効かないように）
     room: { cleanedAt: null }, // 最後にそうじした時間。ここからの時間で ほこり が増える
+    // すまい：type は "tent"（さいしょ・野宿）か "house"（マイホーム）。furniture は 持っている家具（id は dettyan_home.js）
+    home: { type: "tent", furniture: {} },
+    // おはなし：prologue は はじまりの おはなし を見たか、seen は たっせい した目標（id は dettyan_story.js の GOALS）
+    story: { prologue: false, seen: {} },
     adventure: { count: 0, wins: 0 }, // モンスター退治に行った回数・ぜんぶたおした回数
     // 持っている そうび（id は dettyan_gear.js）と、体のパーツごとに そうびしているもの
     // head：あたま・outfit：からだ・weapon：て・back：せなか・feet：あし（outfit と weapon は前からある名前なので変えない）
     gear: { owned: {}, head: null, outfit: null, weapon: null, back: null, feet: null },
-    settings: { bgm: true, se: true, soundAsked: false }, // soundAsked：「音が出ます」を一度見せたか
+    // soundAsked：「音が出ます」を一度見せたか、autoBattle：ぼうけん を オートで たたかう
+    settings: { bgm: true, se: true, soundAsked: false, autoBattle: false },
     createdAt: null,       // はじめて遊んだ時間（サーバーの時計・ミリ秒）
     lastSeenAt: null       // 最後に遊んだ時間（サーバーの時計・ミリ秒）。放置の計算に使う
   }
 }
 
 // 古い version から1つずつ新しくする。例：2: (s) => { s.foo = s.bar; delete s.bar; return s }
-const MIGRATIONS = {}
+const MIGRATIONS = {
+  // 2：ステータスの ふりわけ（レベルが1つ上がるごとに 3ポイント）。前から遊んでいる人には、今のレベルまでの ポイントを まとめて わたす
+  2: (s) => {
+    const level = Math.max(1, Number(s.dettyan?.level) || 1)
+    s.dettyan = { ...(s.dettyan || {}), level }
+    if (!Number.isFinite(s.dettyan.points)) s.dettyan.points = (level - 1) * 3
+    return s
+  },
+  // 3：おはなし と すまい。前から遊んでいる人は、もう マイホーム と ぜんぶの家具を 持っている（いままでの へや のまま）
+  //    第1章の目標も たっせい ずみ（はじまりの おはなし だけ 1回 見る）
+  3: (s) => {
+    if (!s.home) s.home = { type: "house", furniture: Object.fromEntries(FURNITURE.map((f) => [f.id, true])) }
+    if (!s.story) s.story = { prologue: false, seen: { adventure: true, house: true, pc: true } }
+    return s
+  }
+}
 
 function isObject(v) {
   return v !== null && typeof v === "object" && !Array.isArray(v)

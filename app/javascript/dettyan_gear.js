@@ -6,8 +6,8 @@
 //   id     セーブに入る名前（あとから変えない）
 //   slot   SLOTS の id。"head" | "outfit" | "weapon" | "back" | "feet"
 //          ※ "weapon"（て）と "outfit"（からだ）は、前からあるセーブの名前なので変えない
-//   atk    こうげきが上がる量
-//   hp     たいりょく（バトルの体力）が上がる量
+//   hp・atk・def・mag・spd  上がる強さ（たいりょく・こうげき・まもり・まほう・すばやさ。書かないものは 0）
+//          強さの つけかた：て＝こうげき・まほう、からだ・あたま＝たいりょく・まもり、あし・はね＝すばやさ
 //   price  ショップのねだん（コイン）。書いたものだけ ショップの「いしょう」に出る
 //   colors 絵の色（文字 → 色）。K は書かなければ ふちの色
 //   絵：
@@ -70,27 +70,27 @@ const BUTTERFLY = { x: -4, y: 12, rows: mirror(BUTTERFLY_LEFT, 12) }
 
 export const GEAR = [
   // ---- て ----
-  { id: "stick", name: "木のぼう", slot: "weapon", atk: 2, hp: 0,
+  { id: "stick", name: "木のぼう", slot: "weapon", atk: 1,
     hand: ["..w", ".w.", ".w.", "w..", "w.."], colors: { w: "#9a6a3a" } },
-  { id: "harisen", name: "ハリセン", slot: "weapon", atk: 5, hp: 0,
+  { id: "harisen", name: "ハリセン", slot: "weapon", atk: 2,
     hand: ["www", "wfw", "www", ".h.", ".h."], colors: { w: "#fff6d6", f: "#e8d49a", h: "#c0392b" } },
-  { id: "mic", name: "マイク", slot: "weapon", atk: 8, hp: 0,
+  { id: "mic", name: "マイク", slot: "weapon", atk: 2, mag: 2,
     hand: [".m.", "mMm", ".m.", ".s.", ".s."], colors: { m: "#4a4a58", M: "#9aa0b0", s: "#2b2b35" } },
-  { id: "goldmic", name: "金のマイク", slot: "weapon", atk: 13, hp: 0,
+  { id: "goldmic", name: "金のマイク", slot: "weapon", atk: 3, mag: 3,
     hand: [".m.", "mMm", ".m.", ".s.", ".s."], colors: { m: "#b8860b", M: "#ffe066", s: "#8a6a10" } },
 
   // ---- からだ ----
-  { id: "jersey", name: "ジャージ", slot: "outfit", atk: 0, hp: 8,
+  { id: "jersey", name: "ジャージ", slot: "outfit", hp: 3, spd: 1,
     colors: { J: "#2f6fd0", j: "#1d4a96", W: "#ffffff", P: "#2f6fd0" } },
-  { id: "suit", name: "スーツ", slot: "outfit", atk: 1, hp: 15,
+  { id: "suit", name: "スーツ", slot: "outfit", hp: 4, def: 1,
     colors: { J: "#2b2b35", j: "#16161c", W: "#ffffff", P: "#2b2b35" } },
-  { id: "stage", name: "ステージいしょう", slot: "outfit", atk: 2, hp: 25,
+  { id: "stage", name: "ステージいしょう", slot: "outfit", hp: 5, def: 1, mag: 1,
     colors: { J: "#ff5fa2", j: "#c23a7a", W: "#ffe066", P: "#3a2a6b" } },
-  { id: "kira", name: "キラキラいしょう", slot: "outfit", atk: 4, hp: 40,
+  { id: "kira", name: "キラキラいしょう", slot: "outfit", hp: 8, def: 2, mag: 2,
     colors: { J: "#f0f0ff", j: "#b0a0ff", W: "#ffd84d", P: "#7a5fd0" } },
 
   // ---- あたま ----
-  { id: "cap", name: "キャップ", slot: "head", atk: 0, hp: 4,
+  { id: "cap", name: "キャップ", slot: "head", hp: 2, def: 1,
     colors: { C: "#d94a3a", c: "#ffffff", B: "#a8322a" },
     art: { x: 3, y: 4, rows: [
       "..KKKKKKKKKK..",
@@ -112,7 +112,7 @@ export const GEAR = [
       "............",
       "............"
     ] },
-  { id: "headphones", name: "ヘッドホン", slot: "head", atk: 1, hp: 7,
+  { id: "headphones", name: "ヘッドホン", slot: "head", hp: 2, mag: 1,
     colors: { b: "#2b2b35", C: "#e0484d", c: "#ff9a9a" },
     art: { x: 2, y: 4, rows: [
       "...bbbbbbbbbb...",
@@ -139,7 +139,7 @@ export const GEAR = [
       "............",
       "............"
     ] },
-  { id: "helmet", name: "ライトつきヘルメット", slot: "head", atk: 1, hp: 12,
+  { id: "helmet", name: "ライトつきヘルメット", slot: "head", hp: 3, def: 2,
     colors: { Y: "#f0c020", y: "#c89a10", L: "#fffbe0", l: "#9aa0b0" },
     art: { x: 2, y: 0, rows: [
       "......KKKK......",
@@ -175,7 +175,7 @@ export const GEAR = [
       "............",
       "............"
     ] },
-  { id: "crown", name: "おうかん", slot: "head", atk: 3, hp: 18,
+  { id: "crown", name: "おうかん", slot: "head", hp: 4, def: 1, mag: 2,
     colors: { Y: "#ffd84d", o: "#8a6a10", r: "#e0484d", g: "#3fbf7f" },
     art: { x: 5, y: 1, rows: [
       "o...oo...o",
@@ -201,7 +201,7 @@ export const GEAR = [
     ] },
 
   // ---- せなか ----
-  { id: "backpack", name: "リュック", slot: "back", atk: 0, hp: 5,
+  { id: "backpack", name: "リュック", slot: "back", hp: 2,
     colors: { R: "#3f8fd0", r: "#2a6aa0", s: "#24507a" },
     behind: { x: 1, y: 15, rows: [
       "...KKKKKKKKKKKK...",
@@ -237,7 +237,7 @@ export const GEAR = [
       "..KKKKKKKK..",
       "............"
     ] },
-  { id: "cape", name: "マント", slot: "back", atk: 1, hp: 9,
+  { id: "cape", name: "マント", slot: "back", hp: 3, def: 1,
     colors: { M: "#c0392b", m: "#8a2a20", g: "#ffd84d" },
     behind: { x: 0, y: 15, rows: [
       "....KKKKKKKKKKKK....",
@@ -276,7 +276,7 @@ export const GEAR = [
       ".KKKKKKKKKK.",
       "............"
     ] },
-  { id: "guitar", name: "ギター", slot: "back", atk: 3, hp: 6,
+  { id: "guitar", name: "ギター", slot: "back", atk: 2, mag: 1,
     colors: { G: "#d9822b", g: "#8a4a1a", n: "#5e3a1f", w: "#2b2220", t: "#d0d0d0", s: "#2b2b35" },
     behind: { x: 0, y: 5, rows: [
       ".................KKK",
@@ -339,7 +339,7 @@ export const GEAR = [
       ".KgGGGgK....",
       "..KKKKK....."
     ] },
-  { id: "wings", name: "てんしのはね", slot: "back", atk: 2, hp: 16,
+  { id: "wings", name: "てんしのはね", slot: "back", hp: 4, mag: 1, spd: 1,
     colors: { W: "#ffffff", w: "#d8e0f0", K: "#8a9ab8" },
     behind: WINGS,
     backView: WINGS,
@@ -359,19 +359,19 @@ export const GEAR = [
     ] },
 
   // ---- あし ----
-  { id: "sneakers", name: "スニーカー", slot: "feet", atk: 1, hp: 2,
+  { id: "sneakers", name: "スニーカー", slot: "feet", spd: 1,
     colors: { F: "#f4f1ea", f: "#e0484d" } },
-  { id: "loafers", name: "かわぐつ", slot: "feet", atk: 1, hp: 5,
+  { id: "loafers", name: "かわぐつ", slot: "feet", def: 1, spd: 1,
     colors: { F: "#4a2a14", f: "#b07a4a" } },
-  { id: "boots", name: "ブーツ", slot: "feet", atk: 2, hp: 8,
+  { id: "boots", name: "ブーツ", slot: "feet", hp: 2, def: 1,
     colors: { F: "#5a3a1f", f: "#8a5a33", Q: "#6b4626" } },
-  { id: "kirashoes", name: "キラキラくつ", slot: "feet", atk: 3, hp: 12,
+  { id: "kirashoes", name: "キラキラくつ", slot: "feet", hp: 2, spd: 2,
     colors: { F: "#ff7ab6", f: "#fff6c0", Q: "#ffd84d" } },
 
   // ==== ここから ショップで買う かわいい いしょう（price あり） ====
 
   // ---- あたま ----
-  { id: "nekomimi", name: "ねこみみ", slot: "head", atk: 0, hp: 4, price: 90,
+  { id: "nekomimi", name: "ねこみみ", slot: "head", spd: 1, price: 90,
     colors: { p: "#ff9ec4", H: "#4a4a5a", h: "#6a6a7e" },
     art: { x: 3, y: 0, rows: [
       ".K..........K.",
@@ -401,7 +401,7 @@ export const GEAR = [
       "............",
       "............"
     ] },
-  { id: "ribbon", name: "おおきなリボン", slot: "head", atk: 1, hp: 3, price: 120,
+  { id: "ribbon", name: "おおきなリボン", slot: "head", hp: 1, mag: 1, price: 120,
     colors: { R: "#ff5fa2", r: "#ffc0dc" },
     art: { x: 4, y: 1, rows: [
       ".KK......KK.",
@@ -424,7 +424,7 @@ export const GEAR = [
       ".....KK.....",
       "............"
     ] },
-  { id: "usamimi", name: "うさみみ", slot: "head", atk: 1, hp: 5, price: 150,
+  { id: "usamimi", name: "うさみみ", slot: "head", hp: 1, spd: 1, price: 150,
     colors: { W: "#ffffff", p: "#ffb0d0", b: "#ff8ac6" },
     art: { x: 5, y: -3, rows: [
       ".K......K.",
@@ -460,7 +460,7 @@ export const GEAR = [
       "............",
       "............"
     ] },
-  { id: "hanakanmuri", name: "はなかんむり", slot: "head", atk: 0, hp: 6, price: 100,
+  { id: "hanakanmuri", name: "はなかんむり", slot: "head", hp: 2, mag: 1, price: 100,
     colors: { P: "#ff8ac6", Y: "#ffe066", B: "#8ad0ff", g: "#5cc46a" },
     art: { x: 4, y: 3, rows: [
       ".PP..YY..BB.",
@@ -483,7 +483,7 @@ export const GEAR = [
     ] },
 
   // ---- からだ ----
-  { id: "parka", name: "ゆめかわパーカー", slot: "outfit", atk: 0, hp: 10, price: 150,
+  { id: "parka", name: "ゆめかわパーカー", slot: "outfit", hp: 3, def: 1, price: 150,
     colors: { J: "#ffb0d0", j: "#ff8ac6", W: "#ffc8e0", P: "#b8b0d0", w: "#ffffff" },
     art: { x: 5, y: 15, rows: [
       "JJ......JJ",
@@ -498,7 +498,7 @@ export const GEAR = [
       ".JjjjjjjJ.",
       "..JJJJJJ.."
     ] } },
-  { id: "sailor", name: "セーラーふく", slot: "outfit", atk: 1, hp: 12, price: 180,
+  { id: "sailor", name: "セーラーふく", slot: "outfit", hp: 3, def: 1, spd: 1, price: 180,
     colors: { J: "#f4f4f8", j: "#2a3a7a", W: "#e0484d", P: "#2a3a7a", n: "#2a3a7a", w: "#ffffff" },
     art: { x: 5, y: 16, rows: ["nnn....nnn"] },
     backArt: { x: 5, y: 16, rows: [
@@ -506,7 +506,7 @@ export const GEAR = [
       "nwwwwwwwwn",
       "nnnnnnnnnn"
     ] } },
-  { id: "kuma", name: "くまの きぐるみ", slot: "outfit", atk: 1, hp: 16, price: 220,
+  { id: "kuma", name: "くまの きぐるみ", slot: "outfit", hp: 5, def: 1, price: 220,
     colors: { J: "#a8743f", j: "#7a4a24", W: "#e8c89a", P: "#a8743f", b: "#a8743f", c: "#e8c89a" },
     art: { x: 3, y: 3, rows: [
       ".KK........KK.",
@@ -520,7 +520,7 @@ export const GEAR = [
       "KbbK......KbbK",
       ".KK........KK."
     ] } },
-  { id: "yukata", name: "ゆかた", slot: "outfit", atk: 1, hp: 12, price: 200,
+  { id: "yukata", name: "ゆかた", slot: "outfit", hp: 3, mag: 1, price: 200,
     colors: { J: "#3a4a8a", j: "#f4f1ea", W: "#3a4a8a", P: "#3a4a8a", w: "#c8d8ff", o: "#e0484d", y: "#ffd84d" },
     art: { x: 4, y: 17, rows: [
       "..w.....w...",
@@ -534,7 +534,7 @@ export const GEAR = [
       "oooooyyooooo",
       "....yyyy...."
     ] } },
-  { id: "ouji", name: "おうじさまの ふく", slot: "outfit", atk: 2, hp: 14, price: 250,
+  { id: "ouji", name: "おうじさまの ふく", slot: "outfit", hp: 4, atk: 1, def: 1, price: 250,
     colors: { J: "#f4f4ff", j: "#d8b040", W: "#f4f4ff", P: "#3a4aa0", g: "#ffd84d", r: "#e0484d" },
     art: { x: 4, y: 16, rows: [
       "gg........gg",
@@ -546,15 +546,15 @@ export const GEAR = [
     backArt: { x: 4, y: 16, rows: ["gg........gg"] } },
 
   // ---- て ----
-  { id: "penlight", name: "ペンライト", slot: "weapon", atk: 2, hp: 0, price: 60,
+  { id: "penlight", name: "ペンライト", slot: "weapon", mag: 1, spd: 1, price: 60,
     hand: [".L.", ".L.", ".l.", ".s.", ".s."], colors: { L: "#ff7ab6", l: "#ffb0d8", s: "#f4f4f8" } },
-  { id: "uchiwa", name: "ハートのうちわ", slot: "weapon", atk: 3, hp: 0, price: 80,
+  { id: "uchiwa", name: "ハートのうちわ", slot: "weapon", atk: 1, mag: 1, price: 80,
     hand: ["ppp", "pHp", "ppp", ".s.", ".s."], colors: { p: "#ffd0e4", H: "#ff3a7a", s: "#c8965a" } },
-  { id: "magicwand", name: "まほうのステッキ", slot: "weapon", atk: 4, hp: 0, price: 110,
+  { id: "magicwand", name: "まほうのステッキ", slot: "weapon", mag: 2, price: 110,
     hand: [".y.", "yYy", ".y.", ".w.", ".w."], colors: { y: "#ffd84d", Y: "#fff6c0", w: "#ff9ec4" } },
 
   // ---- せなか ----
-  { id: "kumapack", name: "くまリュック", slot: "back", atk: 0, hp: 8, price: 160,
+  { id: "kumapack", name: "くまリュック", slot: "back", hp: 3, price: 160,
     colors: { B: "#a8743f", b: "#7a4a24", c: "#e8c89a", s: "#7a4a24" },
     behind: { x: 1, y: 13, rows: [
       "..KK..........KK..",
@@ -594,7 +594,7 @@ export const GEAR = [
       "..KKKKKKKK..",
       "............"
     ] },
-  { id: "chouchou", name: "ちょうちょのはね", slot: "back", atk: 1, hp: 10, price: 200,
+  { id: "chouchou", name: "ちょうちょのはね", slot: "back", mag: 1, spd: 1, price: 200,
     colors: { P: "#ffb0d0", p: "#ffffff", y: "#ffe066", L: "#c8a0ff", l: "#ffffff", K: "#8a5a9a" },
     behind: BUTTERFLY,
     backView: BUTTERFLY,
@@ -612,7 +612,7 @@ export const GEAR = [
       "...K....K...",
       "............"
     ] },
-  { id: "shippo", name: "ねこのしっぽ", slot: "back", atk: 1, hp: 3, price: 90,
+  { id: "shippo", name: "ねこのしっぽ", slot: "back", spd: 1, price: 90,
     colors: { H: "#2a2a32", w: "#ffffff" },
     behind: { x: 13, y: 13, rows: [
       ".....KK.",
@@ -651,11 +651,11 @@ export const GEAR = [
     ] },
 
   // ---- あし ----
-  { id: "geta", name: "げた", slot: "feet", atk: 1, hp: 2, price: 60,
+  { id: "geta", name: "げた", slot: "feet", def: 1, spd: 1, price: 60,
     colors: { F: "#c8965a", f: "#e0484d" } },
-  { id: "usaslipper", name: "うさぎスリッパ", slot: "feet", atk: 0, hp: 4, price: 70,
+  { id: "usaslipper", name: "うさぎスリッパ", slot: "feet", hp: 2, price: 70,
     colors: { F: "#ffffff", f: "#ffb0d0" } },
-  { id: "yumeboots", name: "ゆめかわブーツ", slot: "feet", atk: 1, hp: 6, price: 130,
+  { id: "yumeboots", name: "ゆめかわブーツ", slot: "feet", hp: 1, spd: 1, price: 130,
     colors: { F: "#c8a0ff", f: "#ffffff", Q: "#ffb0d0" } }
 ]
 
@@ -686,16 +686,19 @@ export function equipped(s) {
   return out
 }
 
-// そうびの強さの合計
+// そうびの強さの合計 { hp, atk, def, mag, spd }
+export const GEAR_STATS = ["hp", "atk", "def", "mag", "spd"]
+
 export function gearBonus(s) {
   const set = equipped(s)
-  let atk = 0
-  let hp = 0
+  const out = {}
+  for (const k of GEAR_STATS) out[k] = 0
   for (const slot of SLOTS) {
-    atk += set[slot.id]?.atk || 0
-    hp += set[slot.id]?.hp || 0
+    const g = set[slot.id]
+    if (!g) continue
+    for (const k of GEAR_STATS) out[k] += g[k] || 0
   }
-  return { atk, hp }
+  return out
 }
 
 // そうびする・はずす（同じものをもう一度えらぶと はずす）

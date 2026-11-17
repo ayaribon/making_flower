@@ -10,6 +10,8 @@
   align-items: flex-end;
   pointer-events: none;
 }
+/* 「じゃま？」→「けす」で hidden が付いたら、本当に消す（上の display: flex が hidden に勝ってしまうため） */
+.studio-buddy[hidden], .sg-singer[hidden] { display: none !important; }
 .studio-buddy__body {
   pointer-events: auto;
   padding: 0;
