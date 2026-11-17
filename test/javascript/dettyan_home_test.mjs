@@ -27,16 +27,42 @@ test("はじめての人は テントで 野宿・家具なし・はじまりの
   assert.equal(story.currentGoal(s).id, "adventure")
 })
 
-test("前から遊んでいる人（version 2）は、マイホーム と ぜんぶの家具を 持っていて、第1章は たっせい ずみ", () => {
-  const s = migrate({ version: 2, money: 50, dettyan: { level: 4, exp: 1, points: 0 } })
-  assert.equal(s.home.type, "house")
-  for (const f of home.FURNITURE) assert.ok(home.hasFurniture(s, f.id), f.id)
-  assert.ok(home.canWork(s))
-  assert.equal(s.story.prologue, false) // はじまりの おはなし は 1回 見る
-  assert.deepEqual(story.checkStory(s), []) // たっせい の おはなし は 出ない
-  assert.equal(story.currentGoal(s), null) // 第1章は クリア あつかい
-  // 2回読んでも かわらない・テントに もどらない
-  assert.equal(migrate(s).home.type, "house")
+test("前から遊んでいる人（version 2）も テントで 野宿から。レベル・お金・そうび は そのまま", () => {
+  const s = migrate({ version: 2, money: 50, dettyan: { level: 4, exp: 1, points: 2 }, gear: { owned: { cap: true }, head: "cap" } })
+  assert.equal(s.version, SAVE_VERSION)
+  assert.equal(s.home.type, "tent")
+  assert.deepEqual(s.home.furniture, {})
+  assert.equal(s.story.prologue, false)
+  assert.deepEqual(s.story.seen, {})
+  assert.equal(s.money, 50)
+  assert.equal(s.dettyan.level, 4)
+  assert.equal(s.gear.head, "cap")
+  assert.equal(story.currentGoal(s).id, "adventure")
+})
+
+test("前の version 3 で マイホーム と ぜんぶの家具を わたしていた セーブは、テントから やりなおす", () => {
+  const given = {
+    version: 3, money: 60, dettyan: { level: 8, exp: 3, points: 21 },
+    home: { type: "house", furniture: Object.fromEntries(home.FURNITURE.map((f) => [f.id, true])) },
+    story: { prologue: true, seen: { adventure: true, house: true, pc: true } }
+  }
+  const s = migrate(given)
+  assert.equal(s.home.type, "tent")
+  assert.deepEqual(s.home.furniture, {})
+  assert.equal(s.story.prologue, false) // はじまりの おはなし（テント）を もう一度
+  assert.equal(s.money, 60)
+  assert.equal(s.dettyan.level, 8)
+  assert.equal(s.dettyan.points, 21)
+})
+
+test("version 3 で 自分で マイホーム を買った人・テントの人は そのまま", () => {
+  const bought = migrate({ version: 3, home: { type: "house", furniture: { desk: true } }, story: { prologue: true, seen: { adventure: true, house: true } } })
+  assert.equal(bought.home.type, "house")
+  assert.deepEqual(bought.home.furniture, { desk: true })
+  assert.equal(bought.story.prologue, true)
+  const tent = migrate({ version: 3, home: { type: "tent", furniture: {} }, story: { prologue: true, seen: { adventure: true } } })
+  assert.equal(tent.home.type, "tent")
+  assert.equal(tent.story.prologue, true)
 })
 
 test("マイホーム：お金が たりないと 買えない。買うと テントから ひっこす。2回は 買えない", () => {

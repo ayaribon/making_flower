@@ -10,7 +10,7 @@
 
 import { FURNITURE } from "dettyan_home"
 
-export const SAVE_VERSION = 3
+export const SAVE_VERSION = 4
 
 export function defaultState() {
   return {
@@ -47,13 +47,28 @@ const MIGRATIONS = {
     if (!Number.isFinite(s.dettyan.points)) s.dettyan.points = (level - 1) * 3
     return s
   },
-  // 3：おはなし と すまい。前から遊んでいる人は、もう マイホーム と ぜんぶの家具を 持っている（いままでの へや のまま）
-  //    第1章の目標も たっせい ずみ（はじまりの おはなし だけ 1回 見る）
+  // 3：おはなし と すまい。前から遊んでいる人も、みんな テントで 野宿から（レベル・お金・そうび は そのまま）
   3: (s) => {
-    if (!s.home) s.home = { type: "house", furniture: Object.fromEntries(FURNITURE.map((f) => [f.id, true])) }
-    if (!s.story) s.story = { prologue: false, seen: { adventure: true, house: true, pc: true } }
+    if (!s.home) s.home = { type: "tent", furniture: {} }
+    if (!s.story) s.story = { prologue: false, seen: {} }
+    return s
+  },
+  // 4：前の 3 では、前から遊んでいる人に マイホーム と ぜんぶの家具を わたしていた（要件とちがった）
+  //    その人も テントから やりなおす（はじまりの おはなし も もう一度）。自分で買った人は そのまま
+  4: (s) => {
+    if (wasGivenHouse(s)) {
+      s.home = { type: "tent", furniture: {} }
+      s.story = { prologue: false, seen: {} }
+    }
     return s
   }
+}
+
+// 前の 3 で わたした セーブか（マイホーム と ぜんぶの家具 を持っていて、第1章の目標が ぜんぶ たっせい ずみ）
+function wasGivenHouse(s) {
+  const f = s.home?.furniture || {}
+  const seen = s.story?.seen || {}
+  return s.home?.type === "house" && FURNITURE.every((x) => f[x.id]) && seen.adventure && seen.house && seen.pc
 }
 
 function isObject(v) {

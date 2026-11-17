@@ -50,15 +50,6 @@ export const SCENES = {
     { bg: "camp", pose: "front", text: "家も お金も ない。しかたなく、まちはずれに テントを はった。" },
     { bg: "camp", pose: "front", text: "スライムを たおして お金を ためて、マイホーム を 手に入れよう！" }
   ],
-  // 前から遊んでいる人（もう マイホーム と 家具がある）
-  prologueHome: [
-    { bg: "stream", pose: "back", text: "いつものように 配信していた、ある夜のこと。" },
-    { bg: "stream", pose: "back", who: "Dettyan", text: "「みんな ありがとう〜！ じゃあ つぎの 曲 いきます！」" },
-    { bg: "flash", pose: "none", text: "そのとき、画面が まぶしく ひかりだして……" },
-    { bg: "town", pose: "front", text: "……きがつくと、見たこともない まち『はじまりのまち』に いた。" },
-    { bg: "room", pose: "front", text: "あれから しばらく たって。いまは この まちで マイホーム に すんでいる。" },
-    { bg: "room", pose: "front", who: "Dettyan", text: "「もとの世界に かえる 方法は まだ わからんけど… きょうも がんばろ」" }
-  ],
   house: [
     { bg: "room", pose: "front", text: "ついに マイホーム を 手に入れた！" },
     { bg: "room", pose: "front", who: "Dettyan", text: "「なんにも ないけど… ここから はじめよう」" },

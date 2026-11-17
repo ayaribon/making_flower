@@ -164,11 +164,11 @@ export default class extends Controller {
     })
     this.renderHud(this.store.state)
     this.idleTimer = setInterval(() => this.idleTick(), IDLE_TICK_MS)
-    // はじめて遊ぶ人（と、前から遊んでいる人も 1回だけ）は、はじまりの おはなし から
+    // はじめて遊ぶ人（前から遊んでいる人も）は、はじまりの おはなし から（1回だけ）
     const s = this.store.state
     if (!s.story.prologue) {
       this.store.update((st) => { st.story.prologue = true })
-      this.playStory([hasHouse(s) ? "prologueHome" : "prologue"], () => this.welcome(reward, idle))
+      this.playStory(["prologue"], () => this.welcome(reward, idle))
       return
     }
     this.welcome(reward, idle)
@@ -1063,6 +1063,7 @@ export default class extends Controller {
     // ステータス
     const pts = s.dettyan.points || 0
     list.append(el("div", "dt-sheet__section", `📊 ステータス　のこり ${pts} ポイント`))
+    list.append(el("div", "dt-sheet__note", "1ポイントで たいりょく は +4（HP は 数が大きいので）、ほかは +1"))
     for (const k of STATS) {
       const row = el("div", "dt-stat-row")
       const name = el("div", "dt-stat-row__name", k.name)
