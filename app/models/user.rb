@@ -18,6 +18,15 @@ class User < ApplicationRecord
   # ✂️ 切り抜き動画の依頼（ひとり1回1依頼）
   has_many :clip_requests, dependent: :destroy
 
+  # 🧑‍💼 Dettyan 本人のアカウントか（育成ゲームのドット絵の Dettyan が「俺やん」と言う）
+  # 呼び名（name）で決める。ふだんは dettyan。変えたいときは ENV["DETTYAN_OWNER_NAMES"] にカンマ区切りで書く
+  DETTYAN_OWNER_NAMES = "dettyan"
+
+  def dettyan_owner?
+    names = ENV.fetch("DETTYAN_OWNER_NAMES", DETTYAN_OWNER_NAMES).split(",").map { |n| n.strip.downcase }.reject(&:empty?)
+    names.include?(name.to_s.downcase)
+  end
+
   # いま作業中の切り抜きの依頼（なければ nil）
   def working_clip_request
     clip_requests.working.order(:created_at).last

@@ -40,6 +40,21 @@
   image-rendering: crisp-edges; image-rendering: pixelated;
 }
 .hm-card__title { font-size: 1.35rem; font-weight: 700; }
+/* Dettyan 本人のときだけ出る「俺やん！」のふきだし（PC はカーソルをのせたとき、スマホは いつも） */
+.hm-card__iconwrap { position: relative; display: inline-block; }
+.hm-card__bubble {
+  position: absolute; left: 72%; top: 2px; transform: translateY(-40%);
+  padding: 3px 9px; border-radius: 10px; white-space: nowrap;
+  background: #fff; color: #5a3a22; font-size: 0.78rem; font-weight: 800;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25); pointer-events: none;
+  opacity: 0; transition: opacity 0.15s ease;
+}
+.hm-card__bubble::after {
+  content: ""; position: absolute; left: 6px; bottom: -5px;
+  border: 5px solid transparent; border-top-color: #fff; border-bottom: 0;
+}
+.hm-card--dettyan:hover .hm-card__bubble, .hm-card--dettyan:focus-visible .hm-card__bubble { opacity: 1; }
+@media (hover: none) { .hm-card__bubble { opacity: 1; } }
 .hm-card__desc { font-size: 0.9rem; opacity: 0.9; }
 .hm-card__note { font-size: 0.72rem; opacity: 0.6; }
 

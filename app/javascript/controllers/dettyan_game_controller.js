@@ -43,10 +43,25 @@ const WORK_LINES = ["MV の へんしゅう できた！", "サムネ できた�
 const SING_LINES = ["きもちよかった〜", "いい声 でた！", "歌ってみた、とろうかな", "ラララ〜♪"]
 const NOTE_COLORS = ["#ff7ab6", "#5ec8ff", "#ffd84a", "#9b7bff"]
 
+// 🧑‍💼 Dettyan 本人が遊んでいるときだけの セリフ（ドット絵の Dettyan が「俺やん」と気づく）
+// 本人かどうかはサーバーが決める（User#dettyan_owner?）。ほかの人には出ない
+const OWNER_LINES = {
+  hello: ["お、俺やん！", "本物の 俺やん", "俺が 俺を 育てるん？"],
+  tap: ["俺やん", "なに？ 俺", "俺のこと 見すぎやろ", "本物の 俺も がんばってや"],
+  pet: ["俺に なでられてる…", "俺やん", "俺に なでられるの へんな感じ"],
+  talk: ["これ 俺やん…", "俺 ドット絵でも イケてるやん", "俺 育てて どうするん", "俺やん"],
+  idle: ["俺やん", "…俺やん", "やっぱ 俺やん"],
+  work: ["俺 仕事 できるやん", "さすが 俺やん"],
+  sing: ["俺 歌 うまいやん", "さすが 俺やん"],
+  favorite: ["じゅんさい わかってるやん 俺", "さすが 俺、好物 わかってる"],
+  win: ["俺 つよいやん", "ただいま。俺 つよかったやろ"]
+}
+const OWNER_IDLE_CHANCE = 0.08 // 止まったとき、ひとりで「俺やん」と言う確率
+
 export default class extends Controller {
   static targets = ["canvas", "start", "startText", "startNote", "money", "genki", "gokigen", "soundButton", "soundPanel", "bgmToggle", "seToggle", "bubble",
     "menu", "sheet", "sheetTitle", "sheetMoney", "sheetList", "toast", "level", "genkiNum", "skip"]
-  static values = { userId: Number }
+  static values = { userId: Number, owner: Boolean } // owner：Dettyan 本人のアカウント
 
   connect() {
     this.store = new DettyanStore({ userId: this.userIdValue })
@@ -141,7 +156,16 @@ export default class extends Controller {
         this.toast(`🎁 きょうの ごほうび 💰+${reward}`)
         for (let i = 0; i < 5; i++) this.dropCoin(this.chara.x - 16 + i * 8, this.chara.y - SPRITE_H - i * 4)
       }, 400)
-    } else if (idle.hours >= 1) {
+    }
+    if (this.ownerValue) {
+      // 本人が来たら、まず気づく
+      setTimeout(() => {
+        if (this.battle) return
+        this.lookAtMe(3)
+        this.sound.se("talk")
+        this.say(pick(OWNER_LINES.hello))
+      }, reward ? 1200 : 500)
+    } else if (!reward && idle.hours >= 1) {
       this.say("おかえり！")
     }
     this.idleTimer = setInterval(() => this.idleTick(), IDLE_TICK_MS)
@@ -187,6 +211,7 @@ export default class extends Controller {
         ch.frame = 0
         ch.until = 1 + Math.random() * 2.5
         if (ch.plan) this.startActivity(ch.plan)
+        else if (this.ownerValue && Math.random() < OWNER_IDLE_CHANCE) this.say(pick(OWNER_LINES.idle))
         return
       }
       const move = Math.min(dist, SPEED * dt)
@@ -303,7 +328,7 @@ export default class extends Controller {
         this.chara.hop = 0.6
         this.hearts(2)
       }
-      this.say(pick(act.kind === "work" ? WORK_LINES : SING_LINES))
+      this.say(this.ownerLine(act.kind, pick(act.kind === "work" ? WORK_LINES : SING_LINES)))
     }
   }
 
@@ -463,7 +488,7 @@ export default class extends Controller {
       // Dettyan をタップ：止まってこっちを向き、おせわのメニューが出る
       this.lookAtMe(MENU_SEC)
       this.sound.se("talk")
-      this.say("なに？")
+      this.say(this.ownerLine("tap", "なに？", 0.7))
       this.showMenu()
     } else if (y >= FLOOR_TOP - 4 && !this.eating) {
       // 床をタップ：そこまで歩いていく
@@ -514,7 +539,7 @@ export default class extends Controller {
     } else {
       this.sound.se("talk")
     }
-    this.say(result.line)
+    this.say(OWNER_LINES[kind] ? this.ownerLine(kind, result.line) : result.line)
 
     if (result.coins > 0) {
       setTimeout(() => {
@@ -677,7 +702,7 @@ export default class extends Controller {
       this.chara.hop = 0.5
       this.hearts(1)
     }
-    this.say(result.food.line)
+    this.say(result.food.favorite ? this.ownerLine("favorite", result.food.line) : result.food.line)
     this.pop(`げんき+${Math.round(result.genki)} ごきげん+${Math.round(result.gokigen)}`)
   }
 
@@ -957,7 +982,7 @@ export default class extends Controller {
     ch.y = 74
     this.lookAtMe(3)
     const r = this.lastBattle?.result
-    if (r) this.say(r.battle.win ? "ただいま！" : "いたた… ただいま")
+    if (r) this.say(r.battle.win ? this.ownerLine("win", "ただいま！") : "いたた… ただいま")
   }
 
   renderResult(list, s) {
@@ -1052,6 +1077,12 @@ export default class extends Controller {
     p.style.top = `${(y / H) * 100}%`
     this.canvasTarget.parentElement.append(p)
     setTimeout(() => p.remove(), 1500)
+  }
+
+  // Dettyan 本人が遊んでいるときは、chance の確率で 本人だけの セリフにする
+  ownerLine(kind, normal, chance = 0.5) {
+    if (!this.ownerValue || !OWNER_LINES[kind] || Math.random() >= chance) return normal
+    return pick(OWNER_LINES[kind])
   }
 
   say(text) {
