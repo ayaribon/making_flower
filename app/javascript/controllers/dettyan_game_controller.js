@@ -4,7 +4,7 @@ import { DettyanStore } from "dettyan_save"
 import { DettyanSound } from "dettyan_sound"
 import { FOODS, findFood, foodGokigen, drawFood } from "dettyan_foods"
 import { applyIdle, claimDailyReward, doCare, buyFood, feedFood, dirtCount, maxGenki } from "dettyan_care"
-import { PLACES, MONSTERS, canGo, startAdventure, grantEvents, finishAdventure, drawSlime, findFriend } from "dettyan_adventure"
+import { PLACES, MONSTERS, canGo, startAdventure, grantEvents, finishAdventure, drawMonster, monsterSprite, findFriend } from "dettyan_adventure"
 import { STATS, JOBS, SKILLS, POINTS_PER_LEVEL, JOB_CHANGE_LEVEL, HP_PER_VIT, findJob, findSkill, dettyanStats, expToNext, addPoint, removePoint, resetPoints, autoAllocate, setJob, canChangeJob, applyLevelUps, takeTurn, autoAction, runAuto } from "dettyan_battle"
 import { GEAR, SLOTS, slotName, findGear, equipped, gearBonus, toggleGear, drawGearIcon, drawDressed, drawHeldMic, shopGear, buyGear } from "dettyan_gear"
 import { ROOM_W, ROOM_H, createRoom, drawRoomLive, drawChair, drawSpeaker, drawNightLight, drawWindowLight, CHAIR, SPEAKER, SEAT, WORK_SPOT, SING_SPOT } from "dettyan_room"
@@ -1687,18 +1687,20 @@ export default class extends Controller {
       }
       g.restore()
     }
-    // スライム（右）。2倍の大きさ
+    // モンスター（右）。2倍の大きさ。とぶ モンスター は 少し 上で ふわふわ
     if (v.foe && v.dying < 1) {
       const fl = v.foeLunge > 0 ? Math.round(Math.sin((v.foeLunge / 0.3) * Math.PI) * 10) : 0
       const squash = (Math.sin(v.bob * 6) + 1) / 2
+      const rows = monsterSprite(v.foe).length
+      const lift = v.foe.fly ? 10 + Math.round(Math.sin(v.bob * 5) * 2) : 0
       g.fillStyle = "rgba(0, 0, 0, 0.2)"
       g.fillRect(BATTLE_FOE_X - 10 - fl, BATTLE_FEET - 1, 20, 2)
       if (!(v.flashFoe > 0 && Math.floor(v.flashFoe * 30) % 2)) {
         g.save()
         g.globalAlpha = 1 - v.dying
-        g.translate(BATTLE_FOE_X - 12 - fl, BATTLE_FEET - 20)
+        g.translate(BATTLE_FOE_X - 12 - fl, BATTLE_FEET - rows * 2 - lift)
         g.scale(2, 2)
-        drawSlime(g, v.foe, 0, 0, squash * 0.5 + v.dying)
+        drawMonster(g, v.foe, 0, 0, squash * 0.5 + v.dying)
         g.restore()
       }
     }
