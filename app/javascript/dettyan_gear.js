@@ -1,17 +1,20 @@
-// 🗡️ そうび（モンスター退治でときどき落ちる。そうびすると強くなり、見た目も変わる）
+// 🗡️ そうび（ぼうけん でときどき落ちる・ショップで買える。そうびすると強くなり、見た目も変わる）
 // 体のパーツごとに1つずつ：あたま・からだ・て・せなか・あし（SLOTS）
 // 増やすときは GEAR に1つ足して、落ちる行き先（dettyan_adventure.js の PLACES の gear）に id を書く
+// ショップで売るものは price（ねだん）を書く（ぼうけん では落ちない）
 //
 //   id     セーブに入る名前（あとから変えない）
 //   slot   SLOTS の id。"head" | "outfit" | "weapon" | "back" | "feet"
 //          ※ "weapon"（て）と "outfit"（からだ）は、前からあるセーブの名前なので変えない
 //   atk    こうげきが上がる量
 //   hp     たいりょく（バトルの体力）が上がる量
+//   price  ショップのねだん（コイン）。書いたものだけ ショップの「いしょう」に出る
 //   colors 絵の色（文字 → 色）。K は書かなければ ふちの色
 //   絵：
 //     て      ：hand（手に持つ絵）
-//     からだ  ：colors だけ（Dettyan の色のうち J：ジャケット・j：えり・W：シャツ・P：ズボン を入れかえる）
-//     あし    ：colors だけ（F：くつ・f：くつの ひかり。Q を書くと ひざから下も その色＝ブーツ）
+//     からだ  ：colors（Dettyan の色のうち J：ジャケット・j：えり・W：シャツ・P：ズボン を入れかえる）
+//               art / backArt があれば上に重ねる（ポケット・おび など）
+//     あし    ：colors（F：くつ・f：くつの ひかり。Q を書くと ひざから下も その色＝ブーツ）
 //     あたま  ：art（Dettyan の絵の上に重ねる）。backArt があれば うしろすがた のときに使う
 //     せなか  ：behind（体のうしろに描く）・front（体の前に描く。ベルトなど）・backView（うしろすがた のとき）
 //   art などは { x, y, rows }。x, y は Dettyan の絵（20×24）の左上からの位置。"." は透明
@@ -44,7 +47,26 @@ const WING_LEFT = [
   "...KWWwWW",
   "....KKWWK"
 ]
-const WINGS = { x: -5, y: 12, rows: WING_LEFT.map((r) => r + ".".repeat(12) + [...r].reverse().join("")) }
+const WINGS = { x: -5, y: 12, rows: mirror(WING_LEFT, 12) }
+
+// 左がわの絵と、まんなかの すきま から、左右おなじ形の絵を作る
+function mirror(left, gap) {
+  return left.map((r) => r + ".".repeat(gap) + [...r].reverse().join(""))
+}
+
+const BUTTERFLY_LEFT = [
+  "KK......",
+  "KPPK....",
+  "KPpPPK..",
+  "KPPyPPK.",
+  ".KPPPPPK",
+  "..KKKPPK",
+  ".KLLLKK.",
+  "KLlLLK..",
+  "KLLLK...",
+  ".KKK...."
+]
+const BUTTERFLY = { x: -4, y: 12, rows: mirror(BUTTERFLY_LEFT, 12) }
 
 export const GEAR = [
   // ---- て ----
@@ -344,8 +366,314 @@ export const GEAR = [
   { id: "boots", name: "ブーツ", slot: "feet", atk: 2, hp: 8,
     colors: { F: "#5a3a1f", f: "#8a5a33", Q: "#6b4626" } },
   { id: "kirashoes", name: "キラキラくつ", slot: "feet", atk: 3, hp: 12,
-    colors: { F: "#ff7ab6", f: "#fff6c0", Q: "#ffd84d" } }
+    colors: { F: "#ff7ab6", f: "#fff6c0", Q: "#ffd84d" } },
+
+  // ==== ここから ショップで買う かわいい いしょう（price あり） ====
+
+  // ---- あたま ----
+  { id: "nekomimi", name: "ねこみみ", slot: "head", atk: 0, hp: 4, price: 90,
+    colors: { p: "#ff9ec4", H: "#4a4a5a", h: "#6a6a7e" },
+    art: { x: 3, y: 0, rows: [
+      ".K..........K.",
+      ".KK........KK.",
+      ".KpK......KpK.",
+      "KhppK....KpphK",
+      "KHHHHK..KHHHHK"
+    ] },
+    backArt: { x: 3, y: 0, rows: [
+      ".K..........K.",
+      ".KK........KK.",
+      ".KhK......KhK.",
+      "KhHHK....KHHhK",
+      "KHHHHK..KHHHHK"
+    ] },
+    icon: [
+      "............",
+      ".K........K.",
+      ".KK......KK.",
+      ".KpK....KpK.",
+      "KhppK..KpphK",
+      "KHHHHKKHHHHK",
+      ".KKKKKKKKKK.",
+      "............",
+      "............",
+      "............",
+      "............",
+      "............"
+    ] },
+  { id: "ribbon", name: "おおきなリボン", slot: "head", atk: 1, hp: 3, price: 120,
+    colors: { R: "#ff5fa2", r: "#ffc0dc" },
+    art: { x: 4, y: 1, rows: [
+      ".KK......KK.",
+      "KRRK....KRRK",
+      "KRrRKRRKRrRK",
+      "KRRK.KK.KRRK",
+      ".KK......KK."
+    ] },
+    icon: [
+      "............",
+      "............",
+      ".KK......KK.",
+      "KRRKK..KKRRK",
+      "KRrRRKKRRrRK",
+      "KRrRRRRRRrRK",
+      "KRrRRKKRRrRK",
+      "KRRKK..KKRRK",
+      ".KK.KRRK.KK.",
+      "....KRRK....",
+      ".....KK.....",
+      "............"
+    ] },
+  { id: "usamimi", name: "うさみみ", slot: "head", atk: 1, hp: 5, price: 150,
+    colors: { W: "#ffffff", p: "#ffb0d0", b: "#ff8ac6" },
+    art: { x: 5, y: -3, rows: [
+      ".K......K.",
+      "KWK....KWK",
+      "KpK....KpK",
+      "KpK....KpK",
+      "KpK....KpK",
+      "KWK....KWK",
+      "KWK....KWK",
+      "KbbbbbbbbK"
+    ] },
+    backArt: { x: 5, y: -3, rows: [
+      ".K......K.",
+      "KWK....KWK",
+      "KWK....KWK",
+      "KWK....KWK",
+      "KWK....KWK",
+      "KWK....KWK",
+      "KWK....KWK",
+      "KbbbbbbbbK"
+    ] },
+    icon: [
+      "..KK....KK..",
+      ".KWWK..KWWK.",
+      ".KWpK..KpWK.",
+      ".KWpK..KpWK.",
+      ".KWpK..KpWK.",
+      ".KWpK..KpWK.",
+      ".KWWK..KWWK.",
+      "..KWKKKKWK..",
+      "..KbbbbbbK..",
+      "...KKKKKK...",
+      "............",
+      "............"
+    ] },
+  { id: "hanakanmuri", name: "はなかんむり", slot: "head", atk: 0, hp: 6, price: 100,
+    colors: { P: "#ff8ac6", Y: "#ffe066", B: "#8ad0ff", g: "#5cc46a" },
+    art: { x: 4, y: 3, rows: [
+      ".PP..YY..BB.",
+      "gPPggYYggBBg",
+      ".g........g."
+    ] },
+    icon: [
+      "............",
+      "............",
+      "...PP..YY...",
+      "..gPPggYYg..",
+      ".g........g.",
+      "BB........PP",
+      "BB........PP",
+      ".g........g.",
+      "..gYYggBBg..",
+      "...YY..BB...",
+      "............",
+      "............"
+    ] },
+
+  // ---- からだ ----
+  { id: "parka", name: "ゆめかわパーカー", slot: "outfit", atk: 0, hp: 10, price: 150,
+    colors: { J: "#ffb0d0", j: "#ff8ac6", W: "#ffc8e0", P: "#b8b0d0", w: "#ffffff" },
+    art: { x: 5, y: 15, rows: [
+      "JJ......JJ",
+      "..........",
+      "...w..w...",
+      "...w..w...",
+      "..........",
+      "..jjjjjj.."
+    ] },
+    backArt: { x: 5, y: 14, rows: [
+      "..JJJJJJ..",
+      ".JjjjjjjJ.",
+      "..JJJJJJ.."
+    ] } },
+  { id: "sailor", name: "セーラーふく", slot: "outfit", atk: 1, hp: 12, price: 180,
+    colors: { J: "#f4f4f8", j: "#2a3a7a", W: "#e0484d", P: "#2a3a7a", n: "#2a3a7a", w: "#ffffff" },
+    art: { x: 5, y: 16, rows: ["nnn....nnn"] },
+    backArt: { x: 5, y: 16, rows: [
+      "nnnnnnnnnn",
+      "nwwwwwwwwn",
+      "nnnnnnnnnn"
+    ] } },
+  { id: "kuma", name: "くまの きぐるみ", slot: "outfit", atk: 1, hp: 16, price: 220,
+    colors: { J: "#a8743f", j: "#7a4a24", W: "#e8c89a", P: "#a8743f", b: "#a8743f", c: "#e8c89a" },
+    art: { x: 3, y: 3, rows: [
+      ".KK........KK.",
+      "KbbK......KbbK",
+      "KbcK......KcbK",
+      ".KK........KK."
+    ] },
+    backArt: { x: 3, y: 3, rows: [
+      ".KK........KK.",
+      "KbbK......KbbK",
+      "KbbK......KbbK",
+      ".KK........KK."
+    ] } },
+  { id: "yukata", name: "ゆかた", slot: "outfit", atk: 1, hp: 12, price: 200,
+    colors: { J: "#3a4a8a", j: "#f4f1ea", W: "#3a4a8a", P: "#3a4a8a", w: "#c8d8ff", o: "#e0484d", y: "#ffd84d" },
+    art: { x: 4, y: 17, rows: [
+      "..w.....w...",
+      ".....w......",
+      "oooooyyooooo",
+      "............",
+      "..w....w...."
+    ] },
+    backArt: { x: 4, y: 18, rows: [
+      "....yyyy....",
+      "oooooyyooooo",
+      "....yyyy...."
+    ] } },
+  { id: "ouji", name: "おうじさまの ふく", slot: "outfit", atk: 2, hp: 14, price: 250,
+    colors: { J: "#f4f4ff", j: "#d8b040", W: "#f4f4ff", P: "#3a4aa0", g: "#ffd84d", r: "#e0484d" },
+    art: { x: 4, y: 16, rows: [
+      "gg........gg",
+      ".........r..",
+      "........r...",
+      ".......r....",
+      "......r....."
+    ] },
+    backArt: { x: 4, y: 16, rows: ["gg........gg"] } },
+
+  // ---- て ----
+  { id: "penlight", name: "ペンライト", slot: "weapon", atk: 2, hp: 0, price: 60,
+    hand: [".L.", ".L.", ".l.", ".s.", ".s."], colors: { L: "#ff7ab6", l: "#ffb0d8", s: "#f4f4f8" } },
+  { id: "uchiwa", name: "ハートのうちわ", slot: "weapon", atk: 3, hp: 0, price: 80,
+    hand: ["ppp", "pHp", "ppp", ".s.", ".s."], colors: { p: "#ffd0e4", H: "#ff3a7a", s: "#c8965a" } },
+  { id: "magicwand", name: "まほうのステッキ", slot: "weapon", atk: 4, hp: 0, price: 110,
+    hand: [".y.", "yYy", ".y.", ".w.", ".w."], colors: { y: "#ffd84d", Y: "#fff6c0", w: "#ff9ec4" } },
+
+  // ---- せなか ----
+  { id: "kumapack", name: "くまリュック", slot: "back", atk: 0, hp: 8, price: 160,
+    colors: { B: "#a8743f", b: "#7a4a24", c: "#e8c89a", s: "#7a4a24" },
+    behind: { x: 1, y: 13, rows: [
+      "..KK..........KK..",
+      ".KbbK........KbbK.",
+      "...KKKKKKKKKKKK...",
+      "..KBBBBBBBBBBBBK..",
+      ".KBBBBBBBBBBBBBBK.",
+      "KBBBBBBBBBBBBBBBBK",
+      "KbBBBBBBBBBBBBBBbK",
+      "KbBBBBBBBBBBBBBBbK",
+      ".KbbbbbbbbbbbbbbK.",
+      "..KKKKKKKKKKKKKK.."
+    ] },
+    front: { x: 6, y: 16, rows: ["s......s", "s......s", "s......s", "s......s"] },
+    backView: { x: 4, y: 13, rows: [
+      ".KK......KK.",
+      "KbbK....KbbK",
+      "KBBBBBBBBBBK",
+      "KBBKBBBBKBBK",
+      "KBBBBccBBBBK",
+      "KBBBcKKcBBBK",
+      "KBBBBccBBBBK",
+      ".KBBBBBBBBK.",
+      "..KKKKKKKK.."
+    ] },
+    icon: [
+      "............",
+      ".KK......KK.",
+      "KbbK....KbbK",
+      "KBBBBBBBBBBK",
+      "KBBKBBBBKBBK",
+      "KBBBBccBBBBK",
+      "KBBBcKKcBBBK",
+      "KBBBBccBBBBK",
+      "KBBBBBBBBBBK",
+      ".KBBBBBBBBK.",
+      "..KKKKKKKK..",
+      "............"
+    ] },
+  { id: "chouchou", name: "ちょうちょのはね", slot: "back", atk: 1, hp: 10, price: 200,
+    colors: { P: "#ffb0d0", p: "#ffffff", y: "#ffe066", L: "#c8a0ff", l: "#ffffff", K: "#8a5a9a" },
+    behind: BUTTERFLY,
+    backView: BUTTERFLY,
+    icon: [
+      "............",
+      "KK........KK",
+      "KPPK....KPPK",
+      "KPpPK..KPpPK",
+      "KPPyPKKPyPPK",
+      ".KPPPKKPPPK.",
+      "..KKKKKKKK..",
+      ".KLLLKKLLLK.",
+      ".KLlLKKLlLK.",
+      "..KLK..KLK..",
+      "...K....K...",
+      "............"
+    ] },
+  { id: "shippo", name: "ねこのしっぽ", slot: "back", atk: 1, hp: 3, price: 90,
+    colors: { H: "#2a2a32", w: "#ffffff" },
+    behind: { x: 13, y: 13, rows: [
+      ".....KK.",
+      "....KwwK",
+      "....KHK.",
+      "....KHK.",
+      ".....KHK",
+      ".....KHK",
+      "....KHK.",
+      "..KKHK..",
+      ".KHHK...",
+      "..KK...."
+    ] },
+    backView: { x: 9, y: 18, rows: [
+      "..KK..",
+      ".KHHK.",
+      ".KHK..",
+      "KHK...",
+      "KHK...",
+      ".KHK..",
+      "..KwK."
+    ] },
+    icon: [
+      "........KK..",
+      ".......KwwK.",
+      ".......KHHK.",
+      "......KHHK..",
+      "......KHK...",
+      ".....KHHK...",
+      "....KHHK....",
+      "...KHHK.....",
+      "..KHHK......",
+      ".KHHK.......",
+      ".KKK........",
+      "............"
+    ] },
+
+  // ---- あし ----
+  { id: "geta", name: "げた", slot: "feet", atk: 1, hp: 2, price: 60,
+    colors: { F: "#c8965a", f: "#e0484d" } },
+  { id: "usaslipper", name: "うさぎスリッパ", slot: "feet", atk: 0, hp: 4, price: 70,
+    colors: { F: "#ffffff", f: "#ffb0d0" } },
+  { id: "yumeboots", name: "ゆめかわブーツ", slot: "feet", atk: 1, hp: 6, price: 130,
+    colors: { F: "#c8a0ff", f: "#ffffff", Q: "#ffb0d0" } }
 ]
+
+// ショップで売っている そうび
+export function shopGear() {
+  return GEAR.filter((g) => g.price > 0)
+}
+
+// ショップで買う。{ ok, gear, reason：「money」（お金が足りない）|「owned」（もう持っている）|「unknown」 }
+export function buyGear(s, id) {
+  const gear = findGear(id)
+  if (!gear || !(gear.price > 0)) return { ok: false, reason: "unknown" }
+  if (s.gear.owned[id]) return { ok: false, reason: "owned", gear }
+  if (s.money < gear.price) return { ok: false, reason: "money", gear }
+  s.money -= gear.price
+  s.gear.owned[id] = true
+  return { ok: true, gear }
+}
 
 export function findGear(id) {
   return GEAR.find((g) => g.id === id) || null
@@ -404,12 +732,16 @@ export function drawDressed(g, left, top, set = {}, opts = {}) {
   const head = set.head
   if (view === "back") {
     drawDettyan(g, left, top, { ...opts, palette })
+    if (set.outfit) drawArt(g, set.outfit.backArt, set.outfit.colors, left, top)
+    if (set.feet) drawArt(g, set.feet.backArt, set.feet.colors, left, top)
     if (back) drawArt(g, back.backView, back.colors, left, top)
     if (head) drawArt(g, head.backArt || head.art, head.colors, left, top)
     return
   }
   if (back) drawArt(g, back.behind, back.colors, left, top)
   drawDettyan(g, left, top, { ...opts, palette })
+  if (set.outfit) drawArt(g, set.outfit.art, set.outfit.colors, left, top)
+  if (set.feet) drawArt(g, set.feet.art, set.feet.colors, left, top)
   if (back) drawArt(g, back.front, back.colors, left, top)
   if (head) drawArt(g, head.art, head.colors, left, top)
   if (set.weapon && !opts.hideHand) drawHand(g, set.weapon, left + 15, top + 15)

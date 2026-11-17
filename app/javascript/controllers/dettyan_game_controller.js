@@ -5,14 +5,15 @@ import { DettyanSound } from "dettyan_sound"
 import { FOODS, findFood, foodGokigen, drawFood } from "dettyan_foods"
 import { applyIdle, claimDailyReward, doCare, buyFood, feedFood, dirtCount, maxGenki } from "dettyan_care"
 import { PLACES, MONSTERS, canGo, goAdventure, expToNext, dettyanPower, drawSlime } from "dettyan_adventure"
-import { GEAR, SLOTS, slotName, findGear, equipped, gearBonus, toggleGear, drawGearIcon, drawDressed, drawHeldMic } from "dettyan_gear"
+import { GEAR, SLOTS, slotName, findGear, equipped, gearBonus, toggleGear, drawGearIcon, drawDressed, drawHeldMic, shopGear, buyGear } from "dettyan_gear"
 import { ROOM_W, ROOM_H, createRoom, drawRoomLive, drawChair, drawSpeaker, drawNightLight, drawWindowLight, CHAIR, SPEAKER, SEAT, WORK_SPOT, SING_SPOT } from "dettyan_room"
 import { drawScene } from "dettyan_scenes"
 
 // 🧑‍💼 Dettyan 育成ゲーム：事務所の部屋の中を Dettyan がちょこちょこ歩く。タップでおせわ、ショップでごはん
 // ときどき PC で編集作業をしたり、マイクを持って歌ったりする（見ているだけ。セーブは変えない）
 // セーブは dettyan_save.js、音は dettyan_sound.js、ごはんの表は dettyan_foods.js、おせわの計算は dettyan_care.js
-// モンスター退治は dettyan_adventure.js（その場で行って帰ってきて、結果を再生する）、そうびは dettyan_gear.js
+// ぼうけん（モンスター退治）は dettyan_adventure.js（その場で行って帰ってきて、結果を再生する）、そうびは dettyan_gear.js
+// ショップは「🍙 たべもの」（dettyan_foods.js）と「👗 いしょう」（dettyan_gear.js の price があるもの）の2つのタブ
 // 部屋の絵は dettyan_room.js、モンスター退治の けしきは dettyan_scenes.js
 // 仕様は docs/dettyan/requirements.md
 
@@ -543,6 +544,73 @@ export default class extends Controller {
     this.sheetTarget.hidden = false
   }
 
+  // ショップのタブ（たべもの・いしょう）
+  shopTabs() {
+    const tabs = el("div", "dt-tabs")
+    tabs.setAttribute("role", "tablist")
+    for (const [id, label] of [["food", "🍙 たべもの"], ["wear", "👗 いしょう"]]) {
+      const on = (this.shopTabId || "food") === id
+      const b = el("button", "dt-tabs__tab" + (on ? " is-on" : ""), label)
+      b.type = "button"
+      b.setAttribute("role", "tab")
+      b.setAttribute("aria-selected", String(on))
+      b.dataset.action = "dettyan-game#shopTab"
+      b.dataset.dettyanGameTabParam = id
+      tabs.append(b)
+    }
+    return tabs
+  }
+
+  shopTab(event) {
+    const tab = event.params.tab
+    if (this.shopTabId === tab) return
+    this.sound.se("tap")
+    this.shopTabId = tab
+    this.renderSheet()
+    this.sheetListTarget.scrollTop = 0
+  }
+
+  // いしょう：パーツごとに。持っているものは「そうびする」
+  renderWearShop(list, s) {
+    for (const slot of SLOTS) {
+      const items = shopGear().filter((g) => g.slot === slot.id)
+      if (!items.length) continue
+      list.append(el("div", "dt-sheet__section", `${slot.icon} ${slot.name}`))
+      for (const gear of items) {
+        let button
+        let sub
+        if (s.gear.owned[gear.id]) {
+          const on = s.gear[gear.slot] === gear.id
+          button = el("button", "dt-item__button" + (on ? " dt-item__button--on" : ""), on ? "はずす" : "そうびする")
+          button.dataset.action = "dettyan-game#equip"
+          sub = on ? "もっている・そうび中" : "もっている"
+        } else {
+          button = el("button", "dt-item__button", "かう")
+          button.disabled = s.money < gear.price
+          button.dataset.action = "dettyan-game#buyWear"
+          sub = `💰${gear.price}`
+        }
+        button.type = "button"
+        button.dataset.dettyanGameIdParam = gear.id
+        list.append(gearRow(gear, sub, button))
+      }
+    }
+  }
+
+  buyWear(event) {
+    let result = null
+    this.store.update((s) => { result = buyGear(s, event.params.id) })
+    if (result.ok) {
+      this.sound.se("buy")
+      this.toast(`${result.gear.name} を かったよ！`)
+    } else {
+      this.sound.se("no")
+      if (result.reason === "money") this.toast("コインが たりないよ")
+    }
+    this.renderHud(this.store.state)
+    this.renderSheet()
+  }
+
   openBag() {
     if (!this.started || this.battle) return
     this.sound.se("tap")
@@ -622,6 +690,8 @@ export default class extends Controller {
 
     if (this.sheetMode === "shop") {
       this.sheetTitleTarget.textContent = "🛒 ショップ"
+      list.append(this.shopTabs())
+      if (this.shopTabId === "wear") return this.renderWearShop(list, s)
       for (const food of FOODS) {
         const have = s.items[food.id] || 0
         const button = el("button", "dt-item__button", "かう")
@@ -682,8 +752,8 @@ export default class extends Controller {
     const preview = document.createElement("canvas")
     preview.className = "dt-gear-top__me"
     preview.width = 30
-    preview.height = 28
-    drawDressed(preview.getContext("2d"), 5, 2, equipped(s))
+    preview.height = 31
+    drawDressed(preview.getContext("2d"), 5, 5, equipped(s))
     const power = dettyanPower(s)
     const bonus = gearBonus(s)
     const stats = el("div", "dt-gear-top__stats")
@@ -697,7 +767,7 @@ export default class extends Controller {
       const owned = GEAR.filter((g) => g.slot === slot.id && s.gear.owned[g.id])
       const wearing = findGear(s.gear[slot.id])
       list.append(el("div", "dt-sheet__section", `${slot.icon} ${slot.name}${wearing ? `：${wearing.name}` : "：なし"}`))
-      if (owned.length === 0) list.append(el("div", "dt-sheet__none", "まだ ない（⚔️ たいじ で ときどき 手に入るよ）"))
+      if (owned.length === 0) list.append(el("div", "dt-sheet__none", "まだ ない（🗺️ ぼうけん や 🛒 ショップ で 手に入るよ）"))
       for (const gear of owned) {
         const on = s.gear[gear.slot] === gear.id
         const button = el("button", "dt-item__button" + (on ? " dt-item__button--on" : ""), on ? "はずす" : "そうびする")
@@ -729,7 +799,7 @@ export default class extends Controller {
   }
 
   renderQuest(list, s) {
-    this.sheetTitleTarget.textContent = "⚔️ モンスターたいじ"
+    this.sheetTitleTarget.textContent = "🗺️ ぼうけん"
     const power = dettyanPower(s)
     list.append(el("div", "dt-sheet__note", `Lv${s.dettyan.level}・たいりょく ${power.hp}・こうげき ${power.atk}　げんき ${Math.floor(s.stats.genki)}/${maxGenki(s)}`))
     for (const place of PLACES) {
