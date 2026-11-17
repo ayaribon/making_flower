@@ -156,6 +156,8 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); pointer-events: none;
 }
 .dt-toast[hidden] { display: none; }
+/* バトル中：上のすみの たいりょくのバー（絵の上から 6〜10%）と重ならないように、少し下に出す */
+.dt-stage.is-battle .dt-toast { top: 15%; }
 
 .dt-pop {
   position: absolute; transform: translate(-50%, -100%); z-index: 5; pointer-events: none; white-space: nowrap;

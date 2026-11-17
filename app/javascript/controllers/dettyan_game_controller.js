@@ -891,6 +891,8 @@ export default class extends Controller {
       lunge: 0, foeLunge: 0, flashMe: 0, flashFoe: 0, dying: 0, hop: 0, bob: 0
     }
     if (this.hasSkipTarget) this.skipTarget.hidden = false
+    // バトル中は、知らせ（あらわれた！など）を たいりょくのバー の下に出す（CSS の .is-battle）
+    this.canvasTarget.parentElement.classList.add("is-battle")
     this.sound.playSong("battle")
     this.nextStep()
   }
@@ -967,6 +969,7 @@ export default class extends Controller {
     if (!b) return
     this.battle = null
     if (this.hasSkipTarget) this.skipTarget.hidden = true
+    this.canvasTarget.parentElement.classList.remove("is-battle")
     this.lastBattle = b
     if (b.result.levelUps > 0) this.sound.se("levelup")
     this.renderHud(this.store.state)
