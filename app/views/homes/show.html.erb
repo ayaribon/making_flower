@@ -22,8 +22,14 @@
       </a>
       <a class="hm-card hm-card--dettyan" href="<%= dettyan_path %>" data-turbo="false" data-action="main-menu#go">
         <%# ドット絵の Dettyan（controllers/dettyan_icon_controller.js が描く。ゲームで着ている そうび のまま） %>
-        <canvas class="hm-card__icon hm-card__icon--dettyan" width="32" height="30" aria-hidden="true"
-                data-controller="dettyan-icon" <%= "data-dettyan-icon-user-id-value=#{current_user.id}" if current_user %>></canvas>
+        <span class="hm-card__iconwrap">
+          <canvas class="hm-card__icon hm-card__icon--dettyan" width="32" height="30" aria-hidden="true"
+                  data-controller="dettyan-icon" <%= "data-dettyan-icon-user-id-value=#{current_user.id}" if current_user %>></canvas>
+          <% if current_user&.dettyan_owner? %>
+            <%# Dettyan 本人がメニューを見たときだけ、ふきだし %>
+            <span class="hm-card__bubble" aria-hidden="true">俺やん！</span>
+          <% end %>
+        </span>
         <span class="hm-card__title">Dettyan を育てる</span>
         <span class="hm-card__desc">オーナーを育てるゲーム</span>
         <span class="hm-card__note">🔊 音が出ます</span>

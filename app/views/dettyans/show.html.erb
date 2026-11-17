@@ -1,5 +1,5 @@
 <%# 🧑‍💼 Dettyan 育成ゲーム。動きは controllers/dettyan_game_controller.js、見た目は app/assets/stylesheets/dettyan.css %>
-<div class="dt" data-controller="dettyan-game" data-dettyan-game-user-id-value="<%= current_user.id %>">
+<div class="dt" data-controller="dettyan-game" data-dettyan-game-user-id-value="<%= current_user.id %>" data-dettyan-game-owner-value="<%= current_user.dettyan_owner? %>">
   <div class="dt-inner">
     <header class="dt-bar">
       <a class="dt-home-link" href="<%= root_path %>" data-turbo="false">🏠 メニュー</a>
