@@ -100,11 +100,17 @@ export class DettyanSound {
 
   setBgm(on) {
     this.bgmOn = on
-    if (this.bgmGain) this.bgmGain.gain.setTargetAtTime(on ? 0.35 : 0, this.ctx.currentTime, 0.05)
+    if (this.bgmGain) this.bgmGain.gain.setTargetAtTime(on ? (this.ducked ? 0.12 : 0.35) : 0, this.ctx.currentTime, 0.05)
   }
 
   setSe(on) {
     this.seOn = on
+  }
+
+  // 歌っている間は BGM を小さくする（Dettyan の歌が聞こえるように）
+  duck(on) {
+    this.ducked = on
+    if (this.bgmGain) this.bgmGain.gain.setTargetAtTime(this.bgmOn ? (on ? 0.12 : 0.35) : 0, this.ctx.currentTime, 0.2)
   }
 
   // ---- BGM ----
@@ -233,6 +239,22 @@ export class DettyanSound {
       case "tap": // ボタン
         this.tone(out, "square", 1046, t, 0.04, 0.1)
         break
+      case "type": // PC のキーボード「カタッ」（小さく）
+        this.noise(t, 0.025, 0.07)
+        this.tone(out, "square", 1800 + Math.random() * 600, t, 0.02, 0.025)
+        break
+      case "sing": { // Dettyan が歌う（事務所の BGM と同じ ハ長調の5つの音から、短いフレーズ）
+        const scale = ["C5", "D5", "E5", "G5", "A5", "C6"]
+        let i = Math.floor(Math.random() * 3) + 1
+        for (let k = 0; k < 4; k++) {
+          i = Math.max(0, Math.min(scale.length - 1, i + Math.floor(Math.random() * 3) - 1))
+          const f = freq(scale[i])
+          const len = k === 3 ? 0.42 : 0.2
+          const at = t + k * 0.22
+          this.tone(out, "triangle", f * 0.985, at, len, 0.22, f)
+        }
+        break
+      }
     }
   }
 

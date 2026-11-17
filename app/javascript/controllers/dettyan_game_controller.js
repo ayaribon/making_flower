@@ -1,23 +1,25 @@
 import { Controller } from "@hotwired/stimulus"
-import { DETTYAN_SPRITE, drawDettyan } from "dettyan_sprite"
+import { SPRITE_W, SPRITE_H } from "dettyan_sprite"
 import { DettyanStore } from "dettyan_save"
 import { DettyanSound } from "dettyan_sound"
 import { FOODS, findFood, foodGokigen, drawFood } from "dettyan_foods"
 import { applyIdle, claimDailyReward, doCare, buyFood, feedFood, dirtCount, maxGenki } from "dettyan_care"
 import { PLACES, MONSTERS, canGo, goAdventure, expToNext, dettyanPower, drawSlime } from "dettyan_adventure"
-import { GEAR, findGear, equipped, toggleGear, drawGearIcon, drawHand } from "dettyan_gear"
+import { GEAR, SLOTS, slotName, findGear, equipped, gearBonus, toggleGear, drawGearIcon, drawDressed, drawHeldMic } from "dettyan_gear"
+import { ROOM_W, ROOM_H, createRoom, drawRoomLive, drawChair, drawSpeaker, drawNightLight, drawWindowLight, CHAIR, SPEAKER, SEAT, WORK_SPOT, SING_SPOT } from "dettyan_room"
+import { drawScene } from "dettyan_scenes"
 
 // 🧑‍💼 Dettyan 育成ゲーム：事務所の部屋の中を Dettyan がちょこちょこ歩く。タップでおせわ、ショップでごはん
+// ときどき PC で編集作業をしたり、マイクを持って歌ったりする（見ているだけ。セーブは変えない）
 // セーブは dettyan_save.js、音は dettyan_sound.js、ごはんの表は dettyan_foods.js、おせわの計算は dettyan_care.js
-// モンスター退治は dettyan_adventure.js（その場で行って帰ってきて、結果を再生する）、ぶき・いしょうは dettyan_gear.js
+// モンスター退治は dettyan_adventure.js（その場で行って帰ってきて、結果を再生する）、そうびは dettyan_gear.js
+// 部屋の絵は dettyan_room.js、モンスター退治の けしきは dettyan_scenes.js
 // 仕様は docs/dettyan/requirements.md
 
-const W = 128 // 部屋の大きさ（ドット）
-const H = 96
+const W = ROOM_W // 部屋の大きさ（ドット）
+const H = ROOM_H
 const FLOOR_TOP = 46 // 足がここより下を歩く
 const FLOOR_BOTTOM = 92
-const SPRITE_W = DETTYAN_SPRITE[0].length
-const SPRITE_H = DETTYAN_SPRITE.length
 const SPEED = 16 // 1秒に進むドット
 const STEP_SEC = 0.22 // 足を入れかえる間かく
 
@@ -25,12 +27,20 @@ const IDLE_TICK_MS = 60 * 1000 // 遊んでいる間も1分ごとに放置の計
 const MENU_SEC = 7 // おせわのメニューを出している間、Dettyan は止まっている
 const EAT_SEC = 1.5
 // ほこりの場所（そうじするまで、床に1つずつ増える）
-const DIRT_SPOTS = [[24, 60], [100, 82], [64, 88], [110, 56], [36, 80]]
+const DIRT_SPOTS = [[24, 60], [100, 84], [66, 90], [120, 66], [36, 82]]
 // バトルの場所（ドット）
 const BATTLE_ME_X = 34
 const BATTLE_FOE_X = 94
 const BATTLE_FEET = 82
 const BATTLE_MAX_SEC = 12 // 長いバトルも、だいたいこの秒数で見終わるように速くする
+
+// 部屋でひとりで すること（PC で作業・歌う）
+const ACT_GAP_SEC = 14   // 前にしてから、これだけたつまで次はしない
+const ACT_CHANCE = 0.4   // 歩き終わって止まったとき、作業か歌を始める確率
+const SING_BEAT = 60 / 104 // 事務所の BGM の1拍
+const WORK_LINES = ["MV の へんしゅう できた！", "サムネ できた！", "切り抜き 1本 できた！", "歌ってみた の ミックス おわり！"]
+const SING_LINES = ["きもちよかった〜", "いい声 でた！", "歌ってみた、とろうかな", "ラララ〜♪"]
+const NOTE_COLORS = ["#ff7ab6", "#5ec8ff", "#ffd84a", "#9b7bff"]
 
 export default class extends Controller {
   static targets = ["canvas", "start", "startText", "startNote", "money", "genki", "gokigen", "soundButton", "soundPanel", "bgmToggle", "seToggle", "bubble",
@@ -47,8 +57,10 @@ export default class extends Controller {
     c.width = W
     c.height = H
     this.g = c.getContext("2d")
-    this.room = drawRoom()
-    this.chara = { x: W / 2, y: 74, tx: W / 2, ty: 74, mode: "idle", until: 1.5, stepT: 0, frame: 0, blink: 0, nextBlink: 3, hop: 0 }
+    this.room = createRoom()
+    // mode："idle" | "walk" | "look" | "work"（PC で作業）| "sing"（歌う）。plan：歩いた先で始めること
+    this.chara = { x: W / 2, y: 74, tx: W / 2, ty: 74, mode: "idle", until: 1.5, stepT: 0, frame: 0, blink: 0, nextBlink: 3, hop: 0, plan: null, act: null, lastActAt: -ACT_GAP_SEC }
+    this.t = 0 // 開いてからの秒（部屋の動くところに使う）
     this.particles = [] // コイン・ハート・きらきら
     this.eating = null  // { food, t }
     this.battle = null  // モンスター退治の再生中
@@ -57,6 +69,7 @@ export default class extends Controller {
     this.loop = (now) => {
       const dt = Math.min(0.1, (now - this.last) / 1000)
       this.last = now
+      this.t += dt
       this.tick(dt)
       this.draw()
       this.raf = requestAnimationFrame(this.loop)
@@ -172,6 +185,7 @@ export default class extends Controller {
         ch.mode = "idle"
         ch.frame = 0
         ch.until = 1 + Math.random() * 2.5
+        if (ch.plan) this.startActivity(ch.plan)
         return
       }
       const move = Math.min(dist, SPEED * dt)
@@ -183,6 +197,8 @@ export default class extends Controller {
         ch.frame = 1 - ch.frame
         this.sound.se("step")
       }
+    } else if (ch.act) {
+      this.tickActivity(dt)
     } else {
       ch.until -= dt
       if (ch.until <= 0) {
@@ -190,46 +206,174 @@ export default class extends Controller {
           this.hideBubble()
           this.hideMenu()
         }
-        this.walkTo(12 + Math.random() * (W - 24), FLOOR_TOP + 2 + Math.random() * (FLOOR_BOTTOM - FLOOR_TOP - 4))
+        this.wander()
       }
     }
   }
 
-  walkTo(x, y) {
+  // 止まっていたあと、次にすること：ときどき PC で作業・歌う。ふだんは ぶらぶら歩く
+  wander() {
     const ch = this.chara
+    if (!this.eating && this.t - ch.lastActAt > ACT_GAP_SEC && Math.random() < ACT_CHANCE) {
+      const plan = Math.random() < 0.5 ? "work" : "sing"
+      const spot = plan === "work" ? WORK_SPOT : SING_SPOT
+      this.walkTo(spot.x, spot.y)
+      ch.plan = plan
+      return
+    }
+    this.walkTo(12 + Math.random() * (W - 24), FLOOR_TOP + 2 + Math.random() * (FLOOR_BOTTOM - FLOOR_TOP - 4))
+  }
+
+  walkTo(x, y) {
+    this.standUp()
+    const ch = this.chara
+    ch.plan = null
     ch.tx = Math.max(SPRITE_W / 2, Math.min(W - SPRITE_W / 2, x))
     ch.ty = Math.max(FLOOR_TOP, Math.min(FLOOR_BOTTOM, y))
     ch.mode = "walk"
+  }
+
+  // ---- 部屋でひとりで すること（PC で作業・歌う） ----
+  startActivity(kind) {
+    const ch = this.chara
+    ch.plan = null
+    ch.mode = kind
+    ch.frame = 0
+    ch.act = { kind, t: 0, dur: kind === "work" ? 9 + Math.random() * 4 : 8 + Math.random() * 3, fx: 0.3, note: 0.2, typing: true }
+    if (kind === "work") {
+      // いすに すわる（うしろすがた）
+      ch.x = SEAT.x
+      ch.y = SEAT.y
+    } else {
+      this.sound.duck(true)
+      this.say("♪")
+    }
+  }
+
+  tickActivity(dt) {
+    const ch = this.chara
+    const act = ch.act
+    act.t += dt
+    act.fx -= dt
+    if (act.kind === "work") {
+      // カタカタ…（ときどき手を止めて考える）
+      if (act.fx <= 0) {
+        if (act.typing && Math.random() < 0.08) {
+          act.typing = false
+          act.fx = 0.6 + Math.random() * 0.8
+        } else {
+          act.typing = true
+          this.sound.se("type")
+          act.fx = 0.07 + Math.random() * 0.12
+        }
+      }
+    } else {
+      if (act.fx <= 0) {
+        this.sound.se("sing")
+        act.fx = SING_BEAT * 4
+      }
+      act.note -= dt
+      if (act.note <= 0) {
+        this.note()
+        act.note = SING_BEAT * 1.5
+      }
+    }
+    if (act.t >= act.dur) this.endActivity(true)
+  }
+
+  // done：さいごまでした（ひとことを言う）。false：タップなどで やめた
+  endActivity(done) {
+    const ch = this.chara
+    const act = ch.act
+    if (!act) return
+    ch.act = null
+    ch.lastActAt = this.t
+    ch.mode = "idle"
+    ch.until = 2.5
+    if (act.kind === "work") {
+      // いすから 立つ
+      ch.x = WORK_SPOT.x
+      ch.y = WORK_SPOT.y
+    } else {
+      this.sound.duck(false)
+    }
+    if (done) {
+      if (act.kind === "sing") {
+        this.chara.hop = 0.6
+        this.hearts(2)
+      }
+      this.say(pick(act.kind === "work" ? WORK_LINES : SING_LINES))
+    }
+  }
+
+  // 作業中・歌っている途中なら やめて立つ
+  standUp() {
+    if (this.chara.act) this.endActivity(false)
   }
 
   draw() {
     const g = this.g
     const ch = this.chara
     if (this.battle) return this.drawBattle(g)
+    const now = this.store.now()
+    const act = ch.act
     g.drawImage(this.room, 0, 0)
+    drawWindowLight(g, now)
+    drawRoomLive(g, { now, t: this.t, mode: act?.kind, workT: act?.kind === "work" ? act.t : 0 })
     if (this.store.state) {
-      const dirt = dirtCount(this.store.state, this.store.now())
+      const dirt = dirtCount(this.store.state, now)
       for (let i = 0; i < dirt; i++) drawDust(g, ...DIRT_SPOTS[i])
+    }
+    // いす・スピーカー・Dettyan を、足もとが上（おく）のものから順に描く
+    const layers = [
+      { y: CHAIR.base, draw: () => drawChair(g) },
+      { y: SPEAKER.base, draw: () => drawSpeaker(g, act?.kind === "sing", this.t) },
+      { y: ch.y + 0.5, draw: () => this.drawChara(g) }
+    ]
+    layers.sort((a, b) => a.y - b.y).forEach((l) => l.draw())
+    drawNightLight(g, now, act?.kind === "work")
+    this.drawParticles(g)
+  }
+
+  drawChara(g) {
+    const ch = this.chara
+    const act = ch.act
+    if (act?.kind === "work") {
+      // うしろすがたで PC に向かう。打っている間は 少し ゆれる
+      const bob = act.typing && Math.floor(act.t * 9) % 2 ? 1 : 0
+      this.drawMe(g, SEAT.left, SEAT.top + bob, { view: "back" })
+      return
     }
     // ぴょん（よろこぶとき）
     const hopY = ch.hop > 0 ? Math.round(Math.abs(Math.sin(ch.hop * Math.PI * 3)) * 4) : 0
     const left = Math.round(ch.x - SPRITE_W / 2)
-    const top = Math.round(ch.y - SPRITE_H) - (ch.frame === 1 ? 1 : 0) - hopY
+    let top = Math.round(ch.y - SPRITE_H) - (ch.frame === 1 ? 1 : 0) - hopY
     // かげ
     g.fillStyle = "rgba(0, 0, 0, 0.18)"
     g.fillRect(Math.round(ch.x) - 6, Math.round(ch.y) - 1, 12, 2)
+    if (act?.kind === "sing") {
+      // マイクを持って歌う：拍に合わせて ゆれて、口をぱくぱく
+      const beat = (act.t / SING_BEAT) % 1
+      top += beat < 0.5 ? 0 : 1
+      const mouth = Math.floor(act.t / (SING_BEAT / 2)) % 2 ? "open" : "close"
+      const eyes = Math.floor(act.t / (SING_BEAT * 4)) % 2 ? "happy" : ch.blink > 0 ? "blink" : "open"
+      this.drawMe(g, left, top, { eyes, mouth, hideHand: true })
+      drawHeldMic(g, left, top, this.gearSet())
+      return
+    }
     // もぐもぐ：食べている間は口のあたりで小さく上下する
     const munch = this.eating ? Math.round(Math.abs(Math.sin(this.eating.t * 10))) : 0
     this.drawMe(g, left, top + munch, { eyes: ch.blink > 0 || this.eating ? "blink" : "open", frame: ch.frame })
     if (this.eating) this.drawEating(g, left, top)
-    this.drawParticles(g)
   }
 
-  // そうびしている いしょう・ぶき で描く
+  gearSet() {
+    return this.store.state ? equipped(this.store.state) : {}
+  }
+
+  // そうびしているもの（あたま・からだ・て・せなか・あし）で描く
   drawMe(g, left, top, opts = {}) {
-    const gear = this.store.state ? equipped(this.store.state) : {}
-    drawDettyan(g, left, top, { ...opts, colors: gear.outfit?.colors })
-    if (gear.weapon) drawHand(g, gear.weapon, left + 15, top + 15)
+    drawDressed(g, left, top, this.gearSet(), opts)
   }
 
   // 食べているごはん（ひと口ごとに右から少しずつ減る）
@@ -259,6 +403,12 @@ export default class extends Controller {
     }
   }
 
+  // 歌っているときの 音符（マイクのあたりから ふわっと上がる）
+  note() {
+    const ch = this.chara
+    this.particles.push({ type: "note", x: ch.x + 4 + Math.random() * 4, y: ch.y - SPRITE_H + 8, vx: 4 + Math.random() * 6, vy: -12 - Math.random() * 6, life: 1.6, color: pick(NOTE_COLORS), wob: Math.random() * 6 })
+  }
+
   sparkle(x, y) {
     for (let i = 0; i < 4; i++) {
       this.particles.push({ type: "spark", x: x + (Math.random() - 0.5) * 8, y: y + (Math.random() - 0.5) * 6, vx: 0, vy: -10, life: 0.6 + Math.random() * 0.3, delay: i * 0.08 })
@@ -271,6 +421,7 @@ export default class extends Controller {
       p.life -= dt
       p.x += p.vx * dt
       p.y += p.vy * dt
+      if (p.type === "note") p.x += Math.sin(p.life * 6 + p.wob) * 0.15
       if (p.type === "coin") {
         p.vy += 160 * dt
         if (p.y >= p.floor && p.vy > 0) {
@@ -291,6 +442,7 @@ export default class extends Controller {
       g.globalAlpha = Math.min(1, p.life / 0.4)
       if (p.type === "coin") drawCoin(g, x, y)
       else if (p.type === "heart") drawHeart(g, x, y)
+      else if (p.type === "note") drawNote(g, x, y, p.color)
       else drawSpark(g, x, y)
       g.globalAlpha = 1
     }
@@ -321,7 +473,9 @@ export default class extends Controller {
   }
 
   lookAtMe(sec) {
+    this.standUp()
     const ch = this.chara
+    ch.plan = null
     ch.mode = "look"
     ch.frame = 0
     ch.until = sec
@@ -481,6 +635,8 @@ export default class extends Controller {
       this.renderQuest(list, s)
     } else if (this.sheetMode === "result") {
       this.renderResult(list, s)
+    } else if (this.sheetMode === "gear") {
+      this.renderGear(list, s)
     } else {
       this.sheetTitleTarget.textContent = "🎒 もちもの"
       const owned = FOODS.filter((f) => s.items[f.id] > 0)
@@ -499,10 +655,50 @@ export default class extends Controller {
         button.dataset.dettyanGameIdParam = food.id
         list.append(itemRow(food, `× ${s.items[food.id]}`, button))
       }
-      // ぶき・いしょう
-      const gears = GEAR.filter((g) => s.gear.owned[g.id])
-      if (gears.length) list.append(el("div", "dt-sheet__section", "🗡️ そうび"))
-      for (const gear of gears) {
+      // そうび は べつの画面
+      const gearCount = GEAR.filter((g) => s.gear.owned[g.id]).length
+      list.append(el("div", "dt-sheet__section", `👕 そうび（${gearCount}/${GEAR.length}）`))
+      const go = el("button", "dt-item__button dt-sheet__wide", "👕 そうび を ひらく")
+      go.type = "button"
+      go.dataset.action = "dettyan-game#openGear"
+      list.append(go)
+    }
+  }
+
+  // ---- そうび（あたま・からだ・て・せなか・あし） ----
+  openGear() {
+    if (!this.started || this.battle) return
+    this.sound.se("tap")
+    this.hideMenu()
+    this.sheetMode = "gear"
+    this.renderSheet()
+    this.sheetTarget.hidden = false
+  }
+
+  renderGear(list, s) {
+    this.sheetTitleTarget.textContent = "👕 そうび"
+    // いまの すがた と つよさ
+    const top = el("div", "dt-gear-top")
+    const preview = document.createElement("canvas")
+    preview.className = "dt-gear-top__me"
+    preview.width = 30
+    preview.height = 28
+    drawDressed(preview.getContext("2d"), 5, 2, equipped(s))
+    const power = dettyanPower(s)
+    const bonus = gearBonus(s)
+    const stats = el("div", "dt-gear-top__stats")
+    stats.append(el("div", "dt-gear-top__lv", `Lv${s.dettyan.level}`))
+    stats.append(el("div", "", `たいりょく ${power.hp}${bonus.hp ? `（そうび +${bonus.hp}）` : ""}`))
+    stats.append(el("div", "", `こうげき ${power.atk}${bonus.atk ? `（そうび +${bonus.atk}）` : ""}`))
+    top.append(preview, stats)
+    list.append(top)
+
+    for (const slot of SLOTS) {
+      const owned = GEAR.filter((g) => g.slot === slot.id && s.gear.owned[g.id])
+      const wearing = findGear(s.gear[slot.id])
+      list.append(el("div", "dt-sheet__section", `${slot.icon} ${slot.name}${wearing ? `：${wearing.name}` : "：なし"}`))
+      if (owned.length === 0) list.append(el("div", "dt-sheet__none", "まだ ない（⚔️ たいじ で ときどき 手に入るよ）"))
+      for (const gear of owned) {
         const on = s.gear[gear.slot] === gear.id
         const button = el("button", "dt-item__button" + (on ? " dt-item__button--on" : ""), on ? "はずす" : "そうびする")
         button.type = "button"
@@ -513,7 +709,6 @@ export default class extends Controller {
     }
   }
 
-  // ---- ぶき・いしょう ----
   equip(event) {
     let result = null
     this.store.update((s) => { result = toggleGear(s, event.params.id) })
@@ -573,6 +768,8 @@ export default class extends Controller {
     this.sheetMode = null
     this.hideBubble()
     this.hideMenu()
+    this.standUp()
+    this.chara.plan = null
     this.particles = []
     this.startBattle(result, before)
   }
@@ -734,13 +931,8 @@ export default class extends Controller {
   drawBattle(g) {
     const b = this.battle
     const p = b.place
-    // けしき
-    g.fillStyle = p.sky
-    g.fillRect(0, 0, W, 56)
-    g.fillStyle = p.ground
-    g.fillRect(0, 56, W, H - 56)
-    g.fillStyle = p.line
-    for (let y = 60; y < H; y += 8) g.fillRect(0, y, W, 1)
+    // けしき（dettyan_scenes.js。くも・ほたる・たいまつ・雪 などが動く）
+    drawScene(g, p, b.bob)
     // Dettyan（左）
     const lunge = b.lunge > 0 ? Math.round(Math.sin((b.lunge / 0.3) * Math.PI) * 10) : 0
     const hop = b.hop > 0 ? Math.round(Math.abs(Math.sin(b.hop * Math.PI * 3)) * 5) : 0
@@ -854,6 +1046,10 @@ export default class extends Controller {
   }
 }
 
+function pick(list) {
+  return list[Math.floor(Math.random() * list.length)]
+}
+
 function clamp(v) {
   return Math.max(0, Math.min(100, Number(v) || 0))
 }
@@ -890,7 +1086,7 @@ function gearRow(gear, sub, button) {
   icon.height = 12
   drawGearIcon(icon.getContext("2d"), gear, 0, 0)
   const body = el("div", "dt-item__body")
-  body.append(el("div", "dt-item__name", `${gear.name}（${gear.slot === "weapon" ? "ぶき" : "いしょう"}）`))
+  body.append(el("div", "dt-item__name", `${gear.name}（${slotName(gear.slot)}）`))
   const fx = [gear.atk ? `こうげき+${gear.atk}` : "", gear.hp ? `たいりょく+${gear.hp}` : ""].filter(Boolean).join(" ")
   body.append(el("div", "dt-item__effect", fx))
   if (sub) body.append(el("div", "dt-item__sub", sub))
@@ -932,46 +1128,9 @@ function drawDust(g, x, y) {
   px(g, "#6f6a62", x + 2, y - 1, 1, 1)
 }
 
-// 事務所の部屋（はじめに1回だけ描いておく）
-function drawRoom() {
-  const c = document.createElement("canvas")
-  c.width = W
-  c.height = H
-  const g = c.getContext("2d")
-  const rect = (color, x, y, w, h) => { g.fillStyle = color; g.fillRect(x, y, w, h) }
-
-  // かべ（たてじま）
-  rect("#e9dcc0", 0, 0, W, 40)
-  for (let x = 0; x < W; x += 8) rect("#e1d1b0", x, 0, 4, 40)
-  rect("#8a5a33", 0, 38, W, 3) // はばき
-  // ゆか（板）
-  rect("#c08a55", 0, 41, W, H - 41)
-  for (let y = 47; y < H; y += 7) rect("#a8743f", 0, y, W, 1)
-  for (let y = 41, row = 0; y < H; y += 7, row++) {
-    for (let x = (row % 2) * 12; x < W; x += 24) rect("#a8743f", x, y, 1, 7)
-  }
-  // まど
-  rect("#5e3a1f", 12, 8, 30, 22)
-  rect("#9fd6ff", 14, 10, 26, 18)
-  rect("#ffffff", 18, 13, 7, 2)
-  rect("#ffffff", 30, 18, 5, 2)
-  rect("#5e3a1f", 26, 10, 2, 18)
-  // ポスター（KB）
-  rect("#3a2a6b", 56, 8, 16, 20)
-  rect("#ff5fa2", 58, 10, 12, 8)
-  rect("#ffe066", 58, 20, 12, 2)
-  rect("#4fb6ff", 58, 24, 8, 2)
-  // つくえと PC
-  rect("#6e4423", 86, 26, 34, 4)
-  rect("#5e3a1f", 88, 30, 3, 16)
-  rect("#5e3a1f", 115, 30, 3, 16)
-  rect("#2b2b35", 96, 14, 16, 11)
-  rect("#4fb6ff", 98, 16, 12, 7)
-  rect("#2b2b35", 103, 25, 2, 1)
-  // かんようしょくぶつ
-  rect("#8a5a33", 4, 40, 8, 7)
-  rect("#3f9a52", 3, 30, 4, 10)
-  rect("#55b866", 7, 27, 4, 13)
-  rect("#3f9a52", 10, 32, 3, 8)
-  return c
+// ♪（4×5）
+function drawNote(g, x, y, color) {
+  px(g, color, x + 2, y - 5, 2, 1)
+  px(g, color, x + 2, y - 4, 1, 3)
+  px(g, color, x, y - 2, 3, 2)
 }

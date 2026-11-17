@@ -259,6 +259,18 @@ bin/rails server
 
 アプリ本体は通常 `http://localhost:3000` で起動する。`docker-compose.yml` では `web` サービスが `3000` ポートを公開し、`db` が MySQL 8 を提供する構成になっている。
 
+### デプロイ（Procfile）
+
+`Procfile` の `web` は、サーバーを起動する前に `rails db:migrate` を流す。新しいマイグレーションがあっても、デプロイするだけで本番の DB に反映される（手でマイグレーションしなくてよい）。
+
+```
+web: bundle exec rails db:migrate && bundle exec puma -C config/puma.rb
+```
+
+- 流すマイグレーションがないときは、すぐに終わって puma が起動する
+- マイグレーションが失敗したときは puma が起動しない（ログにエラーが出るので、直してからもう一度デプロイする）
+- `Procfile` を読まないデプロイ（`Dockerfile` の `CMD` で起動するなど）では使われない
+
 ---
 
 ## 11. 実装上の注意点

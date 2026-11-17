@@ -21,7 +21,9 @@ export function defaultState() {
     care: { lastAt: {} },  // おせわごとに、最後にした時間（続けてしても効かないように）
     room: { cleanedAt: null }, // 最後にそうじした時間。ここからの時間で ほこり が増える
     adventure: { count: 0, wins: 0 }, // モンスター退治に行った回数・ぜんぶたおした回数
-    gear: { owned: {}, weapon: null, outfit: null }, // 持っている ぶき・いしょう（id は dettyan_gear.js）と、そうびしているもの
+    // 持っている そうび（id は dettyan_gear.js）と、体のパーツごとに そうびしているもの
+    // head：あたま・outfit：からだ・weapon：て・back：せなか・feet：あし（outfit と weapon は前からある名前なので変えない）
+    gear: { owned: {}, head: null, outfit: null, weapon: null, back: null, feet: null },
     settings: { bgm: true, se: true, soundAsked: false }, // soundAsked：「音が出ます」を一度見せたか
     createdAt: null,       // はじめて遊んだ時間（サーバーの時計・ミリ秒）
     lastSeenAt: null       // 最後に遊んだ時間（サーバーの時計・ミリ秒）。放置の計算に使う
@@ -173,6 +175,18 @@ export class DettyanStore {
     } catch (e) {
       // 保存できない（プライベートモードなど）ときは、サーバーだけに保存する
     }
+  }
+}
+
+// 控え（localStorage）にあるセーブを読むだけ（メインメニューの Dettyan のアイコンで、そうびを見せるため）
+// サーバーには聞かない・書かない。ないときは null
+export function peekCachedState(userId) {
+  try {
+    const raw = localStorage.getItem(`dettyan:save:${userId}`)
+    const cache = raw ? JSON.parse(raw) : null
+    return cache?.state ? migrate(cache.state) : null
+  } catch (e) {
+    return null
   }
 }
 

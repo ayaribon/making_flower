@@ -17,17 +17,24 @@ export const MONSTERS = {
   king:   { name: "キングスライム", hp: 60, atk: 15, coins: 15, exp: 25, colors: { O: "#6b4a00", B: "#f0b52a", L: "#ffe38a" }, crown: true }
 }
 
+// 行き先ごとに落ちる そうび（あたま・からだ・て・せなか・あし が1つずつ）
+const PARK_GEAR = ["stick", "jersey", "cap", "backpack", "sneakers"]
+const FOREST_GEAR = ["harisen", "suit", "headphones", "cape", "loafers"]
+const CAVE_GEAR = ["mic", "stage", "helmet", "guitar", "boots"]
+const MOUNTAIN_GEAR = ["goldmic", "kira", "crown", "wings", "kirashoes"]
+
 // 行き先。level：行けるレベル、genki：使う げんき、count：出てくるスライムの数 [少ない, 多い]
 // monsters：出てくるスライム（後ろほど出にくい）、drop：ごはんを持って帰る確率
-// gear：落ちる ぶき・いしょう（dettyan_gear.js の id）、gearDrop：落ちる確率（持っていないものだけ落ちる）
+// gear：落ちる そうび（dettyan_gear.js の id。1つ前の行き先のものも落ちる）、gearDrop：落ちる確率（持っていないものだけ落ちる）
+// けしきの絵は dettyan_scenes.js（id ごと）。sky / ground は絵がないときの色
 export const PLACES = [
-  { id: "park",   name: "公園",   icon: "🌳", level: 1, genki: 15, count: [2, 3], monsters: ["green", "green", "blue"], drop: 0.1, gear: ["stick", "jersey"], gearDrop: 0.15,
+  { id: "park",   name: "公園",   icon: "🌳", level: 1, genki: 15, count: [2, 3], monsters: ["green", "green", "blue"], drop: 0.1, gear: PARK_GEAR, gearDrop: 0.2,
     sky: "#9fd6ff", ground: "#7cc46a", line: "#5aa24c" },
-  { id: "forest", name: "森",     icon: "🌲", level: 3, genki: 25, count: [3, 4], monsters: ["blue", "blue", "green", "purple"], drop: 0.2, gear: ["harisen", "suit", "stick", "jersey"], gearDrop: 0.15,
+  { id: "forest", name: "森",     icon: "🌲", level: 3, genki: 25, count: [3, 4], monsters: ["blue", "blue", "green", "purple"], drop: 0.2, gear: [...FOREST_GEAR, ...PARK_GEAR], gearDrop: 0.2,
     sky: "#5f8f6a", ground: "#3f6e3a", line: "#2f5a2c" },
-  { id: "cave",   name: "どうくつ", icon: "🪨", level: 6, genki: 40, count: [3, 5], monsters: ["purple", "purple", "blue", "red", "king"], drop: 0.3, gear: ["mic", "stage", "harisen", "suit"], gearDrop: 0.15,
+  { id: "cave",   name: "どうくつ", icon: "🪨", level: 6, genki: 40, count: [3, 5], monsters: ["purple", "purple", "blue", "red", "king"], drop: 0.3, gear: [...CAVE_GEAR, ...FOREST_GEAR], gearDrop: 0.2,
     sky: "#3a3440", ground: "#5a5260", line: "#46404c" },
-  { id: "mountain", name: "山", icon: "🏔️", level: 10, genki: 60, count: [4, 6], monsters: ["red", "red", "purple", "king"], drop: 0.4, gear: ["goldmic", "kira", "mic", "stage"], gearDrop: 0.15,
+  { id: "mountain", name: "山", icon: "🏔️", level: 10, genki: 60, count: [4, 6], monsters: ["red", "red", "purple", "king"], drop: 0.4, gear: [...MOUNTAIN_GEAR, ...CAVE_GEAR], gearDrop: 0.2,
     sky: "#c9d8ec", ground: "#8a8a7a", line: "#6e6e60" }
 ]
 
