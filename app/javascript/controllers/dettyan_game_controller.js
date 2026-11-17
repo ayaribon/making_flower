@@ -5,7 +5,7 @@ import { DettyanSound } from "dettyan_sound"
 import { FOODS, findFood, foodGokigen, drawFood } from "dettyan_foods"
 import { applyIdle, claimDailyReward, doCare, buyFood, feedFood, dirtCount, maxGenki } from "dettyan_care"
 import { PLACES, MONSTERS, canGo, startAdventure, grantKill, finishAdventure, drawSlime } from "dettyan_adventure"
-import { STATS, JOBS, SKILLS, POINTS_PER_LEVEL, JOB_CHANGE_LEVEL, findJob, findSkill, dettyanStats, expToNext, addPoint, removePoint, resetPoints, autoAllocate, setJob, canChangeJob, applyLevelUps, takeTurn, autoAction, runAuto } from "dettyan_battle"
+import { STATS, JOBS, SKILLS, POINTS_PER_LEVEL, JOB_CHANGE_LEVEL, HP_PER_VIT, findJob, findSkill, dettyanStats, expToNext, addPoint, removePoint, resetPoints, autoAllocate, setJob, canChangeJob, applyLevelUps, takeTurn, autoAction, runAuto } from "dettyan_battle"
 import { GEAR, SLOTS, slotName, findGear, equipped, gearBonus, toggleGear, drawGearIcon, drawDressed, drawHeldMic, shopGear, buyGear } from "dettyan_gear"
 import { ROOM_W, ROOM_H, createRoom, drawRoomLive, drawChair, drawSpeaker, drawNightLight, drawWindowLight, CHAIR, SPEAKER, SEAT, WORK_SPOT, SING_SPOT } from "dettyan_room"
 import { drawScene } from "dettyan_scenes"
@@ -899,7 +899,7 @@ export default class extends Controller {
     const job = findJob(s.dettyan.job)
     const stats = el("div", "dt-gear-top__stats")
     stats.append(el("div", "dt-gear-top__lv", `Lv${s.dettyan.level} ${job.icon}${job.name}`))
-    for (const k of STATS) stats.append(el("div", "", `${k.name} ${st[k.id]}${bonus[k.id] ? `（そうび +${bonus[k.id]}）` : ""}`))
+    for (const k of STATS) stats.append(el("div", "", `${k.name} ${st[k.id]}${bonus[k.id] ? `（そうび +${bonus[k.id]}）` : ""}${k.id === "hp" ? `　HP ${st.maxHp}` : ""}`))
     top.append(preview, stats)
     list.append(top)
 
@@ -1067,7 +1067,7 @@ export default class extends Controller {
     // ステータス
     const pts = s.dettyan.points || 0
     list.append(el("div", "dt-sheet__section", `📊 ステータス　のこり ${pts} ポイント`))
-    list.append(el("div", "dt-sheet__note", "1ポイントで たいりょく は +4（HP は 数が大きいので）、ほかは +1"))
+    list.append(el("div", "dt-sheet__note", `1ポイントで どれも +1。HP は たいりょく × ${HP_PER_VIT}`))
     for (const k of STATS) {
       const row = el("div", "dt-stat-row")
       const name = el("div", "dt-stat-row__name", k.name)
@@ -1082,7 +1082,7 @@ export default class extends Controller {
       minus.dataset.action = "dettyan-game#statMinus"
       minus.dataset.dettyanGameIdParam = k.id
       minus.setAttribute("aria-label", `${k.name} を へらす`)
-      const plus = el("button", "dt-stat-row__btn dt-stat-row__btn--plus", `+${k.per > 1 ? k.per : ""}`)
+      const plus = el("button", "dt-stat-row__btn dt-stat-row__btn--plus", "+")
       plus.type = "button"
       plus.disabled = pts <= 0
       plus.dataset.action = "dettyan-game#statPlus"
@@ -1093,7 +1093,7 @@ export default class extends Controller {
       row.append(body, value, minus, plus)
       list.append(row)
     }
-    list.append(el("div", "dt-sheet__note", `MP ${st.mp}（まほう が上がると ふえる。毎ターン ${job.id === "mage" ? 2 : 1} もどる）`))
+    list.append(el("div", "dt-sheet__note", `❤️ HP ${st.maxHp}（たいりょく ${st.hp} × ${HP_PER_VIT}）　💧 MP ${st.mp}（まほう が上がると ふえる。毎ターン ${job.mpRegen || 1} もどる）`))
     const tools = el("div", "dt-stat-tools")
     const auto = el("button", "dt-item__button", "🤖 おまかせ")
     auto.type = "button"
@@ -1183,7 +1183,7 @@ export default class extends Controller {
     this.sheetTitleTarget.textContent = "🗺️ ぼうけん"
     const st = dettyanStats(s)
     const job = findJob(s.dettyan.job)
-    list.append(el("div", "dt-sheet__note", `Lv${s.dettyan.level} ${job.icon}${job.name}・HP ${st.hp}・MP ${st.mp}・こうげき ${st.atk}・まもり ${st.def}・まほう ${st.mag}　げんき ${Math.floor(s.stats.genki)}/${maxGenki(s)}`))
+    list.append(el("div", "dt-sheet__note", `Lv${s.dettyan.level} ${job.icon}${job.name}・HP ${st.maxHp}・MP ${st.mp}・こうげき ${st.atk}・まもり ${st.def}・まほう ${st.mag}　げんき ${Math.floor(s.stats.genki)}/${maxGenki(s)}`))
     if (s.dettyan.points > 0) {
       const go = el("button", "dt-item__button dt-sheet__wide", `📊 ポイントが ${s.dettyan.points} あるよ（ふってから 行こう）`)
       go.type = "button"
@@ -1300,6 +1300,11 @@ export default class extends Controller {
 
   // できごと を1つ見せる（音・ゆれ・数字・知らせ）
   playEvent(e) {
+    this.showEvent(e)
+    this.renderCmdStatus()
+  }
+
+  showEvent(e) {
     const B = this.battle
     const v = B.view
     if (e.t === "arrive") {
@@ -1373,8 +1378,7 @@ export default class extends Controller {
     const B = this.battle
     if (!B || !this.hasCmdTarget) return
     const b = B.b
-    const job = findJob(b.job)
-    this.cmdStatusTarget.textContent = `${job.icon} HP ${Math.max(0, Math.round(B.view.myHp))}/${b.me.maxHp}　MP ${b.me.mp}/${b.me.maxMp}　${b.idx + 1}/${b.foes.length}ひきめ`
+    this.renderCmdStatus()
     const box = this.cmdButtonsTarget
     box.replaceChildren()
     const btn = (label, action, { params = {}, disabled = false, cls = "" } = {}) => {
@@ -1408,6 +1412,16 @@ export default class extends Controller {
     btn("🏃<span>にげる</span>", "cmdRun")
     btn("🤖<span>オート</span>", "toggleAuto", { cls: "dt-cmd__btn--sub" })
     btn("⏩<span>オートで さいごまで</span>", "skipBattle", { cls: "dt-cmd__btn--sub dt-cmd__btn--wide3" })
+  }
+
+  // コマンドの上の HP・MP（ダメージを うけた ときにも すぐ かえる）
+  renderCmdStatus() {
+    const B = this.battle
+    if (!B || !this.hasCmdStatusTarget) return
+    const b = B.b
+    const job = findJob(b.job)
+    const foeNo = Math.min(b.foes.length, b.beaten + 1)
+    this.cmdStatusTarget.textContent = `${job.icon} HP ${Math.max(0, Math.round(B.view.myHp))}/${b.me.maxHp}　MP ${B.view.myMp}/${b.me.maxMp}　${foeNo}/${b.foes.length}ひきめ`
   }
 
   cmdAttack() { this.sound.se("tap"); this.doTurn({ type: "attack" }) }

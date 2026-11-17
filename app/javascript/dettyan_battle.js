@@ -9,14 +9,18 @@ import { gearBonus } from "dettyan_gear"
 // ---- ステータス ----
 //   per：1ポイントで上がる量
 export const STATS = [
-  { id: "hp", name: "たいりょく", short: "HP", per: 4, desc: "0 になると まけ" },
+  { id: "hp", name: "たいりょく", short: "たいりょく", per: 1, desc: "1 で HP が 100 ふえる。HP が 0 になると まけ" },
   { id: "atk", name: "こうげき", short: "こうげき", per: 1, desc: "こうげき・せんし の わざ が強くなる" },
   { id: "def", name: "まもり", short: "まもり", per: 1, desc: "うける ダメージ が へる" },
   { id: "mag", name: "まほう", short: "まほう", per: 1, desc: "まほう・うた が強くなる・MP がふえる" },
   { id: "spd", name: "すばやさ", short: "すばやさ", per: 1, desc: "先に動ける・かいしん が出やすい" }
 ]
 export const POINTS_PER_LEVEL = 3 // レベルが1つ上がるごとに ふりわけられるポイント
-const BASE = { hp: 24, atk: 4, def: 2, mag: 2, spd: 3 } // レベル1・職業・ポイント・そうび なしの強さ
+// たいりょく は パラメータ（1ずつ ふえる）。じっさいの HP は たいりょく × HP_PER_VIT
+// バトルの ダメージ・回復・スライムの HP も同じ わりあいで 大きくする（DMG_SCALE。強さの つりあい は かわらない）
+export const HP_PER_VIT = 100
+const DMG_SCALE = HP_PER_VIT / 4
+const BASE = { hp: 6, atk: 4, def: 2, mag: 2, spd: 3 } // レベル1・職業・ポイント・そうび なしの強さ
 
 export function expToNext(level) {
   return 10 + (level - 1) * 8
@@ -30,13 +34,13 @@ export function expToNext(level) {
 export const JOB_CHANGE_LEVEL = 5
 export const JOBS = [
   { id: "novice", name: "みならい", icon: "🔰", tier: 0, desc: "なんでも すこしずつ のびる。Lv" + JOB_CHANGE_LEVEL + " で ジョブチェンジ できる",
-    grow: { hp: 4.6, atk: 1.3, def: 0.9, mag: 0.8, spd: 0.7 }, auto: { hp: 2, atk: 2, def: 1, mag: 1, spd: 1 }, mpRegen: 1 },
+    grow: { hp: 1.15, atk: 1.3, def: 0.9, mag: 0.8, spd: 0.7 }, auto: { hp: 2, atk: 2, def: 1, mag: 1, spd: 1 }, mpRegen: 1 },
   { id: "warrior", name: "せんし", icon: "⚔️", tier: 1, desc: "たいりょく と こうげき が のびる。わざ で ガツンと たたく",
-    grow: { hp: 5.5, atk: 1.7, def: 1.2, mag: 0.3, spd: 0.6 }, auto: { hp: 2, atk: 3, def: 1, mag: 0, spd: 1 }, mpRegen: 1 },
+    grow: { hp: 1.4, atk: 1.7, def: 1.2, mag: 0.3, spd: 0.6 }, auto: { hp: 2, atk: 3, def: 1, mag: 0, spd: 1 }, mpRegen: 1 },
   { id: "mage", name: "まほうつかい", icon: "🔮", tier: 1, desc: "まほう が のびる。ファイア・サンダー で 大ダメージ",
-    grow: { hp: 3.6, atk: 0.7, def: 0.7, mag: 1.8, spd: 0.8 }, auto: { hp: 3, atk: 0, def: 1, mag: 3, spd: 0 }, mpRegen: 1 },
+    grow: { hp: 0.9, atk: 0.7, def: 0.7, mag: 1.8, spd: 0.8 }, auto: { hp: 3, atk: 0, def: 1, mag: 3, spd: 0 }, mpRegen: 1 },
   { id: "singer", name: "うたうたい", icon: "🎤", tier: 1, desc: "うた で 回復・おうえん。バランスよく のびる",
-    grow: { hp: 4, atk: 1.2, def: 0.8, mag: 1.5, spd: 0.8 }, auto: { hp: 3, atk: 1, def: 1, mag: 2, spd: 1 }, mpRegen: 1 }
+    grow: { hp: 1, atk: 1.2, def: 0.8, mag: 1.5, spd: 0.8 }, auto: { hp: 3, atk: 1, def: 1, mag: 2, spd: 1 }, mpRegen: 1 }
 ]
 
 export function findJob(id) {
@@ -91,7 +95,7 @@ export const MONSTERS = {
 }
 
 // ---- 強さ（レベル・職業・ふりわけ・そうび） ----
-// 返すもの：{ hp, atk, def, mag, spd, mp, parts: { level, alloc, gear } }（parts は画面の内わけ用）
+// 返すもの：{ hp（たいりょく）, atk, def, mag, spd, maxHp（じっさいの HP）, mp, parts: { level, alloc, gear } }（parts は画面の内わけ用）
 export function dettyanStats(s) {
   const lv = Math.max(1, s.dettyan.level || 1)
   const job = findJob(s.dettyan.job)
@@ -107,6 +111,7 @@ export function dettyanStats(s) {
     out.parts.alloc[st.id] = pts
     out.parts.gear[st.id] = g
   }
+  out.maxHp = out.hp * HP_PER_VIT // じっさいの HP
   out.mp = 5 + lv + out.mag
   return out
 }
@@ -205,7 +210,7 @@ export function rnd(b) {
 // 行き先の power（強さの倍率）を かける。同じスライムでも、おくの行き先ほど強い
 function spawn(id, power = 1) {
   const m = MONSTERS[id]
-  const hp = Math.round(m.hp * power)
+  const hp = Math.round(m.hp * power * DMG_SCALE)
   return { id, name: m.name, hp, maxHp: hp, atk: m.atk * power, def: m.def * power, spd: m.spd, special: m.special || null, buffs: {}, stun: false, turn: 0 }
 }
 
@@ -220,7 +225,7 @@ export function createBattle(s, place, seed) {
     job: findJob(s.dettyan.job).id,
     skills: learnedSkills(s).map((k) => k.id),
     me: {
-      maxHp: st.hp, hp: st.hp, maxMp: st.mp, mp: st.mp,
+      maxHp: st.maxHp, hp: st.maxHp, maxMp: st.mp, mp: st.mp,
       atk: st.atk * mood, def: st.def, mag: st.mag * mood, spd: st.spd,
       crit: 0.05 + st.spd * 0.004 + (gokigen >= 70 ? 0.05 : 0),
       buffs: {}, guarding: false, mpRegen: findJob(s.dettyan.job).mpRegen || 1
@@ -252,13 +257,13 @@ export function guardRate(def) {
 
 function physical(b, power, random = true) {
   const atk = b.me.atk * buffMult(b.me, "atk")
-  const v = atk * power * (random ? 0.9 + rnd(b) * 0.2 : 1) * guardRate(b.foe.def * buffMult(b.foe, "def"))
+  const v = atk * power * (random ? 0.9 + rnd(b) * 0.2 : 1) * guardRate(b.foe.def * buffMult(b.foe, "def")) * DMG_SCALE
   return Math.max(1, v)
 }
 
 function magical(b, power, random = true) {
   const mag = b.me.mag * buffMult(b.me, "mag")
-  const v = mag * power * (random ? 0.9 + rnd(b) * 0.2 : 1) * guardRate(b.foe.def * buffMult(b.foe, "def") * 0.75)
+  const v = mag * power * (random ? 0.9 + rnd(b) * 0.2 : 1) * guardRate(b.foe.def * buffMult(b.foe, "def") * 0.75) * DMG_SCALE
   return Math.max(1, v)
 }
 
@@ -338,7 +343,7 @@ function myAct(b, action, ev) {
     }
     hitFoe(b, ev, { name: skill.name, skill: skill.id, dmg, magic: true, ...extra })
   } else if (skill.type === "heal") {
-    const heal = Math.min(me.maxHp - me.hp, Math.round(me.mag * buffMult(me, "mag") * skill.power + (skill.flat || 0)))
+    const heal = Math.min(me.maxHp - me.hp, Math.round((me.mag * buffMult(me, "mag") * skill.power + (skill.flat || 0)) * DMG_SCALE))
     me.hp += heal
     ev.push({ t: "act", who: "me", name: skill.name, skill: skill.id, heal, hp: me.hp })
   } else if (skill.type === "buff") {
@@ -379,7 +384,7 @@ function foeAct(b, ev) {
   foe.turn += 1
   const special = foe.special && foe.turn % foe.special.every === 0 ? foe.special : null
   const atk = foe.atk * buffMult(foe, "atk") * (special ? special.mult : 1)
-  let v = atk * (0.85 + rnd(b) * 0.3) * guardRate(me.def * buffMult(me, "def"))
+  let v = atk * (0.85 + rnd(b) * 0.3) * guardRate(me.def * buffMult(me, "def")) * DMG_SCALE
   if (me.guarding) v *= 0.5
   const dmg = Math.max(1, Math.round(v))
   me.hp = Math.max(0, me.hp - dmg)
