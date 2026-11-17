@@ -23,14 +23,19 @@ export function expToNext(level) {
 }
 
 // ---- 職業 ----
+// さいしょは みんな「みならい」。レベル JOB_CHANGE_LEVEL に なると ジョブチェンジ できる（そのあとは いつでも ただで かえられる）
+//   tier：0＝みならい、1＝ジョブチェンジで なれる職業
 //   grow：レベルが1つ上がるごとに上がる量（小数は たして切りすて）
 //   auto：「おまかせ」で ポイントを ふる わりあい、mpRegen：毎ターン もどる MP
+export const JOB_CHANGE_LEVEL = 5
 export const JOBS = [
-  { id: "warrior", name: "せんし", icon: "⚔️", desc: "たいりょく と こうげき が のびる。わざ で ガツンと たたく",
+  { id: "novice", name: "みならい", icon: "🔰", tier: 0, desc: "なんでも すこしずつ のびる。Lv" + JOB_CHANGE_LEVEL + " で ジョブチェンジ できる",
+    grow: { hp: 4.6, atk: 1.3, def: 0.9, mag: 0.8, spd: 0.7 }, auto: { hp: 2, atk: 2, def: 1, mag: 1, spd: 1 }, mpRegen: 1 },
+  { id: "warrior", name: "せんし", icon: "⚔️", tier: 1, desc: "たいりょく と こうげき が のびる。わざ で ガツンと たたく",
     grow: { hp: 5.5, atk: 1.7, def: 1.2, mag: 0.3, spd: 0.6 }, auto: { hp: 2, atk: 3, def: 1, mag: 0, spd: 1 }, mpRegen: 1 },
-  { id: "mage", name: "まほうつかい", icon: "🔮", desc: "まほう が のびる。ファイア・サンダー で 大ダメージ",
+  { id: "mage", name: "まほうつかい", icon: "🔮", tier: 1, desc: "まほう が のびる。ファイア・サンダー で 大ダメージ",
     grow: { hp: 3.6, atk: 0.7, def: 0.7, mag: 1.8, spd: 0.8 }, auto: { hp: 3, atk: 0, def: 1, mag: 3, spd: 0 }, mpRegen: 1 },
-  { id: "singer", name: "うたうたい", icon: "🎤", desc: "うた で 回復・おうえん。バランスよく のびる",
+  { id: "singer", name: "うたうたい", icon: "🎤", tier: 1, desc: "うた で 回復・おうえん。バランスよく のびる",
     grow: { hp: 4, atk: 1.2, def: 0.8, mag: 1.5, spd: 0.8 }, auto: { hp: 3, atk: 1, def: 1, mag: 2, spd: 1 }, mpRegen: 1 }
 ]
 
@@ -43,6 +48,9 @@ export function findJob(id) {
 //   type："phys"（こうげき × power × hits）| "magic"（まほう × power）| "heal"（まほう × power ＋ flat 回復）| "buff"（自分の stat を mult 倍・turns ターン）
 //   debuff：あいての stat を さげる、stun：あいてが1回 休む かくりつ、drain：あたえたダメージの わりあい 回復
 export const SKILLS = [
+  { id: "punch", job: "novice", level: 1, name: "がんばりパンチ", icon: "👊", mp: 3, type: "phys", power: 1.6, desc: "こうげき の 1.6ばい" },
+  { id: "rest", job: "novice", level: 3, name: "ひとやすみ", icon: "🍵", mp: 4, type: "heal", power: 1.5, flat: 8, desc: "HP を すこし 回復" },
+
   { id: "smash", job: "warrior", level: 1, name: "つよいいちげき", icon: "💥", mp: 3, type: "phys", power: 1.8, desc: "こうげき の 1.8ばい" },
   { id: "guardup", job: "warrior", level: 3, name: "てっぺきのかまえ", icon: "🛡️", mp: 4, type: "buff", stat: "def", mult: 1.8, turns: 3, desc: "3ターン まもり が 1.8ばい" },
   { id: "double", job: "warrior", level: 6, name: "れんぞくぎり", icon: "⚔️", mp: 6, type: "phys", power: 1.2, hits: 2, desc: "2回 きる" },
@@ -158,8 +166,15 @@ export function autoAllocate(s) {
   return n
 }
 
+// ジョブチェンジ できるか（レベル JOB_CHANGE_LEVEL から）
+export function canChangeJob(s) {
+  return (s.dettyan.level || 1) >= JOB_CHANGE_LEVEL
+}
+
+// ジョブチェンジ：レベルが たりないと できない。みならい には もどれない
 export function setJob(s, id) {
-  if (!JOBS.some((j) => j.id === id)) return false
+  const job = JOBS.find((j) => j.id === id)
+  if (!job || job.tier < 1 || !canChangeJob(s)) return false
   s.dettyan.job = id
   return true
 }

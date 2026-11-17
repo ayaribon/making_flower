@@ -10,7 +10,7 @@
 
 import { FURNITURE } from "dettyan_home"
 
-export const SAVE_VERSION = 3
+export const SAVE_VERSION = 5
 
 export function defaultState() {
   return {
@@ -18,7 +18,8 @@ export function defaultState() {
     money: 0,
     stats: { genki: 80, gokigen: 70 }, // げんき の上限はレベルで増える（dettyan_care.js の maxGenki）
     // job：職業（dettyan_battle.js の JOBS）、points：まだ ふっていない ポイント、alloc：ふった ポイント
-    dettyan: { level: 1, exp: 0, job: "warrior", points: 0, alloc: { hp: 0, atk: 0, def: 0, mag: 0, spd: 0 } },
+    // job は さいしょ "novice"（みならい）。Lv5 から ジョブチェンジ
+    dettyan: { level: 1, exp: 0, job: "novice", points: 0, alloc: { hp: 0, atk: 0, def: 0, mag: 0, spd: 0 } },
     items: {},             // { junsai: 2 } のように、持っているごはん・アイテムの数（id は dettyan_foods.js）
     daily: { day: null, careCoins: 0, rewardDay: null }, // その日（日本の日付）の数。おせわのコインの上限・毎日のごほうび
     care: { lastAt: {} },  // おせわごとに、最後にした時間（続けてしても効かないように）
@@ -47,13 +48,34 @@ const MIGRATIONS = {
     if (!Number.isFinite(s.dettyan.points)) s.dettyan.points = (level - 1) * 3
     return s
   },
-  // 3：おはなし と すまい。前から遊んでいる人は、もう マイホーム と ぜんぶの家具を 持っている（いままでの へや のまま）
-  //    第1章の目標も たっせい ずみ（はじまりの おはなし だけ 1回 見る）
+  // 3：おはなし と すまい。前から遊んでいる人も、みんな テントで 野宿から（レベル・お金・そうび は そのまま）
   3: (s) => {
-    if (!s.home) s.home = { type: "house", furniture: Object.fromEntries(FURNITURE.map((f) => [f.id, true])) }
-    if (!s.story) s.story = { prologue: false, seen: { adventure: true, house: true, pc: true } }
+    if (!s.home) s.home = { type: "tent", furniture: {} }
+    if (!s.story) s.story = { prologue: false, seen: {} }
+    return s
+  },
+  // 4：前の 3 では、前から遊んでいる人に マイホーム と ぜんぶの家具を わたしていた（要件とちがった）
+  //    その人も テントから やりなおす（はじまりの おはなし も もう一度）。自分で買った人は そのまま
+  4: (s) => {
+    if (wasGivenHouse(s)) {
+      s.home = { type: "tent", furniture: {} }
+      s.story = { prologue: false, seen: {} }
+    }
+    return s
+  },
+  // 5：さいしょは みんな「みならい」。Lv5 から ジョブチェンジ（それより下で 職業が ついていたら みならい に もどす）
+  5: (s) => {
+    const level = Math.max(1, Number(s.dettyan?.level) || 1)
+    if (s.dettyan && (level < 5 || !s.dettyan.job)) s.dettyan.job = "novice"
     return s
   }
+}
+
+// 前の 3 で わたした セーブか（マイホーム と ぜんぶの家具 を持っていて、第1章の目標が ぜんぶ たっせい ずみ）
+function wasGivenHouse(s) {
+  const f = s.home?.furniture || {}
+  const seen = s.story?.seen || {}
+  return s.home?.type === "house" && FURNITURE.every((x) => f[x.id]) && seen.adventure && seen.house && seen.pc
 }
 
 function isObject(v) {

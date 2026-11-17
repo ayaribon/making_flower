@@ -17,7 +17,7 @@ const bt = await import("dettyan_battle")
 const adv = await import("dettyan_adventure")
 const { defaultState, migrate, SAVE_VERSION } = await import("dettyan_save")
 
-function hero(level = 1, job = "warrior", kit = {}) {
+function hero(level = 1, job = level >= bt.JOB_CHANGE_LEVEL ? "warrior" : "novice", kit = {}) {
   const s = defaultState()
   s.stats = { genki: 999, gokigen: 60 }
   s.dettyan.level = level
@@ -51,7 +51,7 @@ test("前のセーブ（version 1）には、今のレベルまでの ポイン�
   const s = migrate({ version: 1, dettyan: { level: 6, exp: 4 } })
   assert.equal(s.version, SAVE_VERSION)
   assert.equal(s.dettyan.points, 15)
-  assert.equal(s.dettyan.job, "warrior")
+  assert.equal(s.dettyan.job, "novice") // さいしょは みならい（Lv5 から ジョブチェンジ できる）
   assert.deepEqual(s.dettyan.alloc, { hp: 0, atk: 0, def: 0, mag: 0, spd: 0 })
   assert.equal(s.settings.autoBattle, false)
   // 2回読んでも ふえない
@@ -90,9 +90,34 @@ test("おまかせ は のこりを ぜんぶ、職業の わりあいで ふる
   }
 })
 
+test("さいしょは みならい。Lv5 から ジョブチェンジ できる。みならい には もどれない", () => {
+  const s = defaultState()
+  assert.equal(s.dettyan.job, "novice")
+  assert.deepEqual(bt.learnedSkills(s).map((k) => k.id), ["punch"])
+  s.dettyan.level = bt.JOB_CHANGE_LEVEL - 1
+  assert.equal(bt.canChangeJob(s), false)
+  assert.equal(bt.setJob(s, "warrior"), false)
+  assert.equal(s.dettyan.job, "novice")
+  s.dettyan.level = bt.JOB_CHANGE_LEVEL
+  assert.ok(bt.canChangeJob(s))
+  assert.ok(bt.setJob(s, "warrior"))
+  assert.ok(bt.setJob(s, "singer")) // そのあとは いつでも かえられる
+  assert.equal(bt.setJob(s, "novice"), false)
+  assert.equal(s.dettyan.job, "singer")
+})
+
+test("前のセーブ：Lv5 より下で 職業が ついていたら みならい に もどす。Lv5 から上は そのまま", () => {
+  const low = migrate({ version: 4, dettyan: { level: 3, exp: 0, job: "mage", points: 6 } })
+  assert.equal(low.dettyan.job, "novice")
+  assert.equal(low.dettyan.points, 6)
+  const high = migrate({ version: 4, dettyan: { level: 8, exp: 0, job: "mage", points: 0 } })
+  assert.equal(high.dettyan.job, "mage")
+})
+
 test("職業で 育ち方と スキルが かわる。スキルは レベルで おぼえる", () => {
   const s = defaultState()
   s.dettyan.level = 5
+  assert.ok(bt.setJob(s, "warrior"))
   const war = bt.dettyanStats(s)
   assert.ok(bt.setJob(s, "mage"))
   const mage = bt.dettyanStats(s)
@@ -172,14 +197,16 @@ test("オート：HP が少ないと 回復する", () => {
 })
 
 // ---- 強さの つりあい（オート・おまかせ で ふった とき） ----
-test("公園は レベル1・そうびなし でも だいたい勝てる（せんし）", () => {
-  assert.ok(winRate(hero(1, "warrior"), "park") >= 0.8)
+test("公園は レベル1・そうびなし でも だいたい勝てる（みならい）", () => {
+  assert.ok(winRate(hero(1), "park") >= 0.8)
 })
 
 test("森・どうくつ・山：行けるようになったばかり・そうびなし は 半分くらい、その行き先の そうび が そろうと だいたい勝てる", () => {
   for (const place of adv.PLACES.filter((p) => p.id !== "park")) {
-    const none = bt.JOBS.map((j) => winRate(hero(place.level, j.id), place.id))
-    const kit = bt.JOBS.map((j) => winRate(hero(place.level, j.id, KITS[place.id]), place.id))
+    // Lv5 より前は みんな みならい。そこから先は ジョブチェンジ した 3つの職業
+    const jobs = place.level < bt.JOB_CHANGE_LEVEL ? ["novice"] : bt.JOBS.filter((j) => j.tier >= 1).map((j) => j.id)
+    const none = jobs.map((j) => winRate(hero(place.level, j), place.id))
+    const kit = jobs.map((j) => winRate(hero(place.level, j, KITS[place.id]), place.id))
     const avg = (a) => a.reduce((x, y) => x + y, 0) / a.length
     assert.ok(avg(none) >= 0.35 && avg(none) <= 0.75, `${place.id} そうびなし ${none.join("/")}`)
     for (const r of none) assert.ok(r >= 0.25, `${place.id} どの職業も 勝ち目がある ${none.join("/")}`)

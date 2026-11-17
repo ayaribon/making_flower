@@ -5,7 +5,7 @@ import { DettyanSound } from "dettyan_sound"
 import { FOODS, findFood, foodGokigen, drawFood } from "dettyan_foods"
 import { applyIdle, claimDailyReward, doCare, buyFood, feedFood, dirtCount, maxGenki } from "dettyan_care"
 import { PLACES, MONSTERS, canGo, startAdventure, grantKill, finishAdventure, drawSlime } from "dettyan_adventure"
-import { STATS, JOBS, SKILLS, POINTS_PER_LEVEL, findJob, findSkill, dettyanStats, expToNext, addPoint, removePoint, resetPoints, autoAllocate, setJob, applyLevelUps, takeTurn, autoAction, runAuto } from "dettyan_battle"
+import { STATS, JOBS, SKILLS, POINTS_PER_LEVEL, JOB_CHANGE_LEVEL, findJob, findSkill, dettyanStats, expToNext, addPoint, removePoint, resetPoints, autoAllocate, setJob, canChangeJob, applyLevelUps, takeTurn, autoAction, runAuto } from "dettyan_battle"
 import { GEAR, SLOTS, slotName, findGear, equipped, gearBonus, toggleGear, drawGearIcon, drawDressed, drawHeldMic, shopGear, buyGear } from "dettyan_gear"
 import { ROOM_W, ROOM_H, createRoom, drawRoomLive, drawChair, drawSpeaker, drawNightLight, drawWindowLight, CHAIR, SPEAKER, SEAT, WORK_SPOT, SING_SPOT } from "dettyan_room"
 import { drawScene } from "dettyan_scenes"
@@ -164,11 +164,11 @@ export default class extends Controller {
     })
     this.renderHud(this.store.state)
     this.idleTimer = setInterval(() => this.idleTick(), IDLE_TICK_MS)
-    // はじめて遊ぶ人（と、前から遊んでいる人も 1回だけ）は、はじまりの おはなし から
+    // はじめて遊ぶ人（前から遊んでいる人も）は、はじまりの おはなし から（1回だけ）
     const s = this.store.state
     if (!s.story.prologue) {
       this.store.update((st) => { st.story.prologue = true })
-      this.playStory([hasHouse(s) ? "prologueHome" : "prologue"], () => this.welcome(reward, idle))
+      this.playStory(["prologue"], () => this.welcome(reward, idle))
       return
     }
     this.welcome(reward, idle)
@@ -1045,24 +1045,29 @@ export default class extends Controller {
     const job = findJob(s.dettyan.job)
     list.append(el("div", "dt-sheet__note", `Lv${lv}　つぎのレベルまで けいけんち ${expToNext(lv) - s.dettyan.exp}（レベルが上がると ポイント +${POINTS_PER_LEVEL}）`))
 
-    // しょくぎょう
-    list.append(el("div", "dt-sheet__section", "🧑‍💼 しょくぎょう（いつでも ただで かえられるよ）"))
+    // しょくぎょう（さいしょは みならい。Lv5 から ジョブチェンジ）
+    const can = canChangeJob(s)
+    list.append(el("div", "dt-sheet__section", `🧑‍💼 しょくぎょう：${job.icon} ${job.name}`))
+    list.append(el("div", "dt-sheet__note", job.desc))
+    list.append(el("div", "dt-sheet__section", can ? "🔄 ジョブチェンジ（いつでも ただで かえられるよ）" : `🔒 ジョブチェンジ は Lv${JOB_CHANGE_LEVEL} から（あと ${JOB_CHANGE_LEVEL - lv} レベル）`))
     const jobs = el("div", "dt-jobs")
-    for (const j of JOBS) {
+    for (const j of JOBS.filter((x) => x.tier >= 1)) {
       const on = j.id === job.id
       const b = el("button", "dt-jobs__job" + (on ? " is-on" : ""))
       b.type = "button"
+      b.disabled = !can
       b.dataset.action = "dettyan-game#changeJob"
       b.dataset.dettyanGameIdParam = j.id
       b.setAttribute("aria-pressed", String(on))
-      b.append(el("span", "dt-jobs__icon", j.icon), el("span", "dt-jobs__name", j.name))
+      b.append(el("span", "dt-jobs__icon", can ? j.icon : "🔒"), el("span", "dt-jobs__name", j.name))
       jobs.append(b)
     }
-    list.append(jobs, el("div", "dt-sheet__note", job.desc))
+    list.append(jobs)
 
     // ステータス
     const pts = s.dettyan.points || 0
     list.append(el("div", "dt-sheet__section", `📊 ステータス　のこり ${pts} ポイント`))
+    list.append(el("div", "dt-sheet__note", "1ポイントで たいりょく は +4（HP は 数が大きいので）、ほかは +1"))
     for (const k of STATS) {
       const row = el("div", "dt-stat-row")
       const name = el("div", "dt-stat-row__name", k.name)
@@ -1151,10 +1156,16 @@ export default class extends Controller {
   changeJob(event) {
     const id = event.params.id
     if (this.store.state.dettyan.job === id) return
-    this.store.update((s) => setJob(s, id))
+    let ok = false
+    this.store.update((s) => { ok = setJob(s, id) })
+    if (!ok) {
+      this.sound.se("no")
+      this.toast(`ジョブチェンジ は Lv${JOB_CHANGE_LEVEL} から だよ`)
+      return
+    }
     const job = findJob(id)
     this.sound.se("happy")
-    this.toast(`${job.icon} ${job.name} に なった！`)
+    this.toast(`🔄 ${job.icon} ${job.name} に ジョブチェンジ した！`)
     this.renderHud(this.store.state)
   }
 
@@ -1502,6 +1513,7 @@ export default class extends Controller {
       list.append(el("div", "dt-result__levelup", `🎉 レベル ${lv} になった！　ポイント +${fin.levelUps * POINTS_PER_LEVEL}・げんき の上限 ${maxGenki(s)}`))
       const learned = SKILLS.filter((k) => k.job === findJob(s.dettyan.job).id && k.level > before.level && k.level <= lv)
       for (const k of learned) list.append(el("div", "dt-result__levelup", `${k.icon} ${k.name} を おぼえた！`))
+      if (before.level < JOB_CHANGE_LEVEL && lv >= JOB_CHANGE_LEVEL) list.append(el("div", "dt-result__levelup", "🔓 ジョブチェンジ が できるようになった！"))
       for (const p of PLACES) {
         if (p.level > before.level && p.level <= lv) list.append(el("div", "dt-result__levelup", `${p.icon} ${p.name} に 行けるようになった！`))
       }
