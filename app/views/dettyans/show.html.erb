@@ -19,6 +19,8 @@
       <span class="dt-stat">げんき <span class="dt-meter"><span class="dt-meter__fill dt-meter__fill--genki" data-dettyan-game-target="genki"></span></span> <span class="dt-stat__num" data-dettyan-game-target="genkiNum"></span></span>
       <span class="dt-stat">ごきげん <span class="dt-meter"><span class="dt-meter__fill dt-meter__fill--gokigen" data-dettyan-game-target="gokigen"></span></span></span>
     </div>
+    <%# 📖 いまの目標（dettyan_story.js の GOALS） %>
+    <p class="dt-goal" data-dettyan-game-target="goal"></p>
 
     <div class="dt-stage">
       <canvas class="dt-room" data-dettyan-game-target="canvas" data-action="pointerdown->dettyan-game#tap" role="img" aria-label="事務所の部屋を歩く Dettyan"></canvas>
@@ -41,6 +43,16 @@
           <button type="button" class="dt-sheet__close" data-action="dettyan-game#closeSheet" aria-label="とじる">✕</button>
         </div>
         <div class="dt-sheet__list" data-dettyan-game-target="sheetList"></div>
+      </div>
+
+      <%# 📖 おはなし（タップで つぎへ。中身は dettyan_story.js の SCENES） %>
+      <div class="dt-story" data-dettyan-game-target="story" data-action="click->dettyan-game#storyNext" hidden>
+        <button type="button" class="dt-story__skip" data-action="dettyan-game#storySkip:stop">スキップ ▶▶</button>
+        <div class="dt-story__box">
+          <div class="dt-story__who" data-dettyan-game-target="storyWho" hidden></div>
+          <p class="dt-story__text" data-dettyan-game-target="storyText"></p>
+          <span class="dt-story__next" aria-hidden="true">▼</span>
+        </div>
       </div>
 
       <%# はじめる画面（音が出ることを先に知らせる。タップで音が鳴り始める） %>

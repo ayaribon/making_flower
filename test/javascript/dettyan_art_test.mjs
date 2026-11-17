@@ -17,6 +17,7 @@ const { GEAR, SLOTS, drawDressed, drawHeldMic, drawGearIcon, findGear } = await 
 const room = await import("dettyan_room")
 const { SCENES } = await import("dettyan_scenes")
 const { PLACES, seededRandom } = await import("dettyan_adventure")
+const camp = await import("dettyan_camp")
 
 // 描いたものを記録する にせの canvas
 function fakeCanvas() {
@@ -100,4 +101,29 @@ test("部屋：Dettyan が すわる・歌う場所は 部屋の中", () => {
     assert.ok(spot.y > 24 && spot.y < room.ROOM_H, `y ${spot.y}`)
   }
   assert.equal(room.SEAT.top, room.SEAT.y - 24)
+})
+
+test("部屋：家具が すこしだけ・ない ときも 描ける", () => {
+  const now = Date.UTC(2026, 10, 17, 13, 0)
+  for (const f of [{}, { desk: true }, { desk: true, pc: true, mug: true, lamp: true }, { rec: true, clock: true }]) {
+    const g = fakeCanvas()
+    room.drawRoomLive(g, { now, t: 1, mode: "work", workT: 1, f })
+    room.drawNightLight(g, now, true, f)
+    room.drawWindowLight(g, Date.UTC(2026, 10, 17, 3, 0))
+    assertClean(g, JSON.stringify(f))
+  }
+})
+
+test("テント・おはなし の けしき：朝・昼・夕方・夜 で 描ける", () => {
+  for (const h of [6, 12, 17, 22]) {
+    const now = Date.UTC(2026, 10, 17, h - 9, 30)
+    const g = fakeCanvas()
+    camp.drawCampSky(g, now, 2.5)
+    camp.drawCampfire(g, now, 2.5)
+    camp.drawCampNight(g, now)
+    camp.drawLeaf(g, 20, 60)
+    camp.drawTownLive(g, 2.5)
+    camp.drawFlash(g, 2.5)
+    assertClean(g, `テント ${h}時`)
+  }
 })

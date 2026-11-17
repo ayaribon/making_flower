@@ -9,6 +9,9 @@ import { STATS, JOBS, SKILLS, POINTS_PER_LEVEL, findJob, findSkill, dettyanStats
 import { GEAR, SLOTS, slotName, findGear, equipped, gearBonus, toggleGear, drawGearIcon, drawDressed, drawHeldMic, shopGear, buyGear } from "dettyan_gear"
 import { ROOM_W, ROOM_H, createRoom, drawRoomLive, drawChair, drawSpeaker, drawNightLight, drawWindowLight, CHAIR, SPEAKER, SEAT, WORK_SPOT, SING_SPOT } from "dettyan_room"
 import { drawScene } from "dettyan_scenes"
+import { HOUSE, FURNITURE, findFurniture, hasHouse, hasFurniture, canWork, buyHouse, buyFurniture } from "dettyan_home"
+import { createCamp, drawCampSky, drawCampfire, drawCampNight, drawLeaf, createTown, drawTownLive, drawFlash, FIRE, CAMP_SING_SPOT, LEAF_SPOTS } from "dettyan_camp"
+import { CLEAR_TEXT, currentGoal, checkStory, SCENES } from "dettyan_story"
 
 // 🧑‍💼 Dettyan 育成ゲーム：事務所の部屋の中を Dettyan がちょこちょこ歩く。タップでおせわ、ショップでごはん
 // ときどき PC で編集作業をしたり、マイクを持って歌ったりする（見ているだけ。セーブは変えない）
@@ -17,6 +20,7 @@ import { drawScene } from "dettyan_scenes"
 // バトルは手動（こうげき・スキル・ぼうぎょ・にげる をえらぶ）か 🤖オート。たおすたびに コインと経験値を セーブする
 // ショップは「🍙 たべもの」（dettyan_foods.js）と「👗 いしょう」（dettyan_gear.js の price があるもの）の2つのタブ
 // 部屋の絵は dettyan_room.js、モンスター退治の けしきは dettyan_scenes.js
+// 📖 おはなし（dettyan_story.js）：さいしょは テントで 野宿（dettyan_camp.js）→ マイホーム と 家具 を買う（dettyan_home.js）
 // 仕様は docs/dettyan/requirements.md
 
 const W = ROOM_W // 部屋の大きさ（ドット）
@@ -65,7 +69,7 @@ const OWNER_IDLE_CHANCE = 0.08 // 止まったとき、ひとりで「俺やん�
 
 export default class extends Controller {
   static targets = ["canvas", "start", "startText", "startNote", "money", "genki", "gokigen", "soundButton", "soundPanel", "bgmToggle", "seToggle", "bubble",
-    "menu", "sheet", "sheetTitle", "sheetMoney", "sheetList", "toast", "level", "genkiNum", "cmd", "cmdStatus", "cmdButtons", "statusButton"]
+    "menu", "sheet", "sheetTitle", "sheetMoney", "sheetList", "toast", "level", "genkiNum", "cmd", "cmdStatus", "cmdButtons", "statusButton", "goal", "story", "storyWho", "storyText"]
   static values = { userId: Number, owner: Boolean } // owner：Dettyan 本人のアカウント
 
   connect() {
@@ -78,7 +82,8 @@ export default class extends Controller {
     c.width = W
     c.height = H
     this.g = c.getContext("2d")
-    this.room = createRoom()
+    this.room = createRoom({}) // セーブを読んだら 持っている家具で 描きなおす（rebuildHome）
+    this.camp = createCamp()
     // mode："idle" | "walk" | "look" | "work"（PC で作業）| "sing"（歌う）。plan：歩いた先で始めること
     this.chara = { x: W / 2, y: 74, tx: W / 2, ty: 74, mode: "idle", until: 1.5, stepT: 0, frame: 0, blink: 0, nextBlink: 3, hop: 0, plan: null, act: null, lastActAt: -ACT_GAP_SEC }
     this.t = 0 // 開いてからの秒（部屋の動くところに使う）
@@ -119,6 +124,8 @@ export default class extends Controller {
 
   afterLoad(state) {
     this.ready = true
+    this.rebuildHome()
+    Object.assign(this.chara, { x: this.homeSpot.x, y: this.homeSpot.y, tx: this.homeSpot.x, ty: this.homeSpot.y })
     this.renderHud(state)
     this.renderSoundButtons()
     this.sound.setBgm(state.settings.bgm)
@@ -155,8 +162,22 @@ export default class extends Controller {
       reward = claimDailyReward(s, now)
       applyLevelUps(s) // ぼうけん の とちゅうで 閉じていたとき
     })
-    if (this.store.state.dettyan.points > 0) setTimeout(() => this.toast(`📊 ポイントが ${this.store.state.dettyan.points} あるよ（つよさ で ふれるよ）`), reward ? 2800 : 1200)
     this.renderHud(this.store.state)
+    this.idleTimer = setInterval(() => this.idleTick(), IDLE_TICK_MS)
+    // はじめて遊ぶ人（と、前から遊んでいる人も 1回だけ）は、はじまりの おはなし から
+    const s = this.store.state
+    if (!s.story.prologue) {
+      this.store.update((st) => { st.story.prologue = true })
+      this.playStory([hasHouse(s) ? "prologueHome" : "prologue"], () => this.welcome(reward, idle))
+      return
+    }
+    this.welcome(reward, idle)
+  }
+
+  // おかえり・ごほうび・ポイント の知らせ
+  welcome(reward, idle) {
+    if (this.store.state.dettyan.points > 0) setTimeout(() => this.toast(`📊 ポイントが ${this.store.state.dettyan.points} あるよ（つよさ で ふれるよ）`), reward ? 2800 : 1200)
+    this.runStoryCheck()
     if (reward) {
       setTimeout(() => {
         this.sound.se("coin")
@@ -175,7 +196,6 @@ export default class extends Controller {
     } else if (!reward && idle.hours >= 1) {
       this.say("おかえり！")
     }
-    this.idleTimer = setInterval(() => this.idleTick(), IDLE_TICK_MS)
   }
 
   // 遊んでいる間も、少しずつ げんき が回復し、ほこり が増える
@@ -205,6 +225,10 @@ export default class extends Controller {
     if (this.eating) {
       this.eating.t += dt
       if (this.eating.t >= EAT_SEC) this.finishEating()
+    }
+    if (this.story) {
+      this.story.t += dt
+      return
     }
     if (this.battle) return this.tickBattle(dt)
     if (!this.started) return
@@ -248,13 +272,19 @@ export default class extends Controller {
   wander() {
     const ch = this.chara
     if (!this.eating && this.t - ch.lastActAt > ACT_GAP_SEC && Math.random() < ACT_CHANCE) {
-      const plan = Math.random() < 0.5 ? "work" : "sing"
-      const spot = plan === "work" ? WORK_SPOT : SING_SPOT
+      // PC で作業するのは、つくえ・いす・パソコン が そろってから。テントでは たき火の そばで 歌う
+      const s = this.store.state
+      const plan = s && canWork(s) && Math.random() < 0.5 ? "work" : "sing"
+      const spot = plan === "work" ? WORK_SPOT : this.inTent ? CAMP_SING_SPOT : SING_SPOT
       this.walkTo(spot.x, spot.y)
       ch.plan = plan
       return
     }
-    this.walkTo(12 + Math.random() * (W - 24), FLOOR_TOP + 2 + Math.random() * (FLOOR_BOTTOM - FLOOR_TOP - 4))
+    let x = 12 + Math.random() * (W - 24)
+    let y = FLOOR_TOP + 2 + Math.random() * (FLOOR_BOTTOM - FLOOR_TOP - 4)
+    // テントでは たき火の上で 止まらない
+    if (this.inTent && Math.abs(x - FIRE.x) < 14 && Math.abs(y - FIRE.y) < 8) y = FIRE.y + 14
+    this.walkTo(x, y)
   }
 
   walkTo(x, y) {
@@ -347,25 +377,59 @@ export default class extends Controller {
   draw() {
     const g = this.g
     const ch = this.chara
+    if (this.story) return this.drawStory(g)
     if (this.battle) return this.drawBattle(g)
     const now = this.store.now()
     const act = ch.act
+    const s = this.store.state
+    const dirt = s ? dirtCount(s, now) : 0
+    if (this.inTent) {
+      // ⛺ テント：空・遠くの まち・たき火（Dettyan と前後が入れかわる）
+      drawCampSky(g, now, this.t)
+      g.drawImage(this.camp, 0, 0)
+      for (let i = 0; i < dirt; i++) drawLeaf(g, ...LEAF_SPOTS[i])
+      const layers = [
+        { y: FIRE.y, draw: () => drawCampfire(g, now, this.t) },
+        { y: ch.y + 0.5, draw: () => this.drawChara(g) }
+      ]
+      layers.sort((a, b) => a.y - b.y).forEach((l) => l.draw())
+      drawCampNight(g, now)
+      this.drawParticles(g)
+      return
+    }
+    const f = s?.home.furniture || {}
     g.drawImage(this.room, 0, 0)
     drawWindowLight(g, now)
-    drawRoomLive(g, { now, t: this.t, mode: act?.kind, workT: act?.kind === "work" ? act.t : 0 })
-    if (this.store.state) {
-      const dirt = dirtCount(this.store.state, now)
-      for (let i = 0; i < dirt; i++) drawDust(g, ...DIRT_SPOTS[i])
-    }
-    // いす・スピーカー・Dettyan を、足もとが上（おく）のものから順に描く
-    const layers = [
-      { y: CHAIR.base, draw: () => drawChair(g) },
-      { y: SPEAKER.base, draw: () => drawSpeaker(g, act?.kind === "sing", this.t) },
-      { y: ch.y + 0.5, draw: () => this.drawChara(g) }
-    ]
+    drawRoomLive(g, { now, t: this.t, mode: act?.kind, workT: act?.kind === "work" ? act.t : 0, f })
+    for (let i = 0; i < dirt; i++) drawDust(g, ...DIRT_SPOTS[i])
+    // いす・スピーカー（持っていれば）・Dettyan を、足もとが上（おく）のものから順に描く
+    const layers = [{ y: ch.y + 0.5, draw: () => this.drawChara(g) }]
+    if (f.chair) layers.push({ y: CHAIR.base, draw: () => drawChair(g) })
+    if (f.speaker) layers.push({ y: SPEAKER.base, draw: () => drawSpeaker(g, act?.kind === "sing", this.t) })
     layers.sort((a, b) => a.y - b.y).forEach((l) => l.draw())
-    drawNightLight(g, now, act?.kind === "work")
+    drawNightLight(g, now, act?.kind === "work", f)
     this.drawParticles(g)
+  }
+
+  // テントに すんでいる（マイホーム を まだ買っていない）
+  get inTent() {
+    return !!this.store.state && !hasHouse(this.store.state)
+  }
+
+  // 帰ってきて立つ場所（テントでは たき火の よこ）
+  get homeSpot() {
+    return this.inTent ? { x: 40, y: 78 } : { x: W / 2, y: 74 }
+  }
+
+  // ほこり（テントでは 落ち葉）の場所
+  get dirtSpots() {
+    return this.inTent ? LEAF_SPOTS : DIRT_SPOTS
+  }
+
+  // 家具が かわったら、へや の絵を 描きなおす
+  rebuildHome() {
+    const s = this.store.state
+    this.room = createRoom(s?.home.furniture || {})
   }
 
   drawChara(g) {
@@ -483,7 +547,7 @@ export default class extends Controller {
 
   // ---- タップ ----
   tap(event) {
-    if (!this.started) return
+    if (!this.started || this.story) return
     if (this.battle) return // バトル中は 下の コマンド で えらぶ
     const rect = this.canvasTarget.getBoundingClientRect()
     const x = ((event.clientX - rect.left) / rect.width) * W
@@ -542,7 +606,7 @@ export default class extends Controller {
       }
     } else if (kind === "clean") {
       this.sound.se("sweep")
-      for (let i = 0; i < dirtBefore; i++) this.sparkle(...DIRT_SPOTS[i])
+      for (let i = 0; i < dirtBefore; i++) this.sparkle(...this.dirtSpots[i])
     } else {
       this.sound.se("talk")
     }
@@ -553,7 +617,7 @@ export default class extends Controller {
         this.sound.se("coin")
         if (kind === "clean") {
           for (let i = 0; i < result.coins; i++) {
-            const [dx, dy] = DIRT_SPOTS[i % DIRT_SPOTS.length]
+            const [dx, dy] = this.dirtSpots[i % this.dirtSpots.length]
             this.particles.push({ type: "coin", x: dx, y: dy - 10, vx: 0, vy: -30, floor: dy, life: 1.6, bounced: 0 })
           }
         } else {
@@ -580,7 +644,7 @@ export default class extends Controller {
   shopTabs() {
     const tabs = el("div", "dt-tabs")
     tabs.setAttribute("role", "tablist")
-    for (const [id, label] of [["food", "🍙 たべもの"], ["wear", "👗 いしょう"]]) {
+    for (const [id, label] of [["food", "🍙 たべもの"], ["wear", "👗 いしょう"], ["home", "🏠 いえ・かぐ"]]) {
       const on = (this.shopTabId || "food") === id
       const b = el("button", "dt-tabs__tab" + (on ? " is-on" : ""), label)
       b.type = "button"
@@ -627,6 +691,47 @@ export default class extends Controller {
         list.append(gearRow(gear, sub, button))
       }
     }
+  }
+
+  // 🏠 いえ・かぐ：さいしょは マイホーム だけ買える。家を買ったら 家具（買うと すぐ へや に おかれる）
+  renderHomeShop(list, s) {
+    const house = hasHouse(s)
+    list.append(el("div", "dt-sheet__section", "🏠 いえ"))
+    const hb = el("button", "dt-item__button" + (house ? " dt-item__button--on" : ""), house ? "もっている" : "かう")
+    hb.type = "button"
+    hb.disabled = house || s.money < HOUSE.price
+    hb.dataset.action = "dettyan-game#buyHome"
+    hb.dataset.dettyanGameIdParam = HOUSE.id
+    list.append(emojiRow(HOUSE.icon, HOUSE.name, HOUSE.desc, house ? "すんでいる" : `💰${HOUSE.price}　いまは テントで 野宿`, hb))
+    list.append(el("div", "dt-sheet__section", "🛋️ かぐ"))
+    if (!house) list.append(el("div", "dt-sheet__none", "マイホーム を 買ったら、家具を 買って おけるよ"))
+    for (const item of FURNITURE) {
+      const owned = hasFurniture(s, item.id)
+      const need = (item.needs || []).map(findFurniture).find((n) => !hasFurniture(s, n.id))
+      const b = el("button", "dt-item__button" + (owned ? " dt-item__button--on" : ""), owned ? "おいてある" : "かう")
+      b.type = "button"
+      b.disabled = owned || !house || !!need || s.money < item.price
+      b.dataset.action = "dettyan-game#buyHome"
+      b.dataset.dettyanGameIdParam = item.id
+      const sub = owned ? "へや に おいてある" : need ? `💰${item.price}　さきに ${need.name} が いるよ` : `💰${item.price}`
+      list.append(emojiRow(item.icon, item.name, item.desc, sub, b))
+    }
+  }
+
+  buyHome(event) {
+    const id = event.params.id
+    let r = null
+    this.store.update((s) => { r = id === HOUSE.id ? buyHouse(s) : buyFurniture(s, id) })
+    if (!r.ok) {
+      this.sound.se("no")
+      if (r.reason === "money") this.toast("コインが たりないよ")
+      return
+    }
+    this.sound.se("buy")
+    this.rebuildHome()
+    this.toast(id === HOUSE.id ? "🏠 マイホーム を 買った！" : `${r.item.icon} ${r.item.name} を おいたよ`)
+    this.renderHud(this.store.state)
+    this.runStoryCheck()
   }
 
   buyWear(event) {
@@ -724,6 +829,7 @@ export default class extends Controller {
       this.sheetTitleTarget.textContent = "🛒 ショップ"
       list.append(this.shopTabs())
       if (this.shopTabId === "wear") return this.renderWearShop(list, s)
+      if (this.shopTabId === "home") return this.renderHomeShop(list, s)
       for (const food of FOODS) {
         const have = s.items[food.id] || 0
         const button = el("button", "dt-item__button", "かう")
@@ -820,6 +926,105 @@ export default class extends Controller {
     this.sound.se(result.on ? "buy" : "tap")
     this.toast(result.on ? `${result.gear.name} を そうびした` : `${result.gear.name} を はずした`)
     this.renderSheet()
+  }
+
+  // ---- 📖 おはなし ----
+  // 目標を たっせい していたら、その おはなし を見せる（バトル中・おはなし中は あとで）
+  runStoryCheck() {
+    if (!this.store.state || this.story || this.battle) return
+    let scenes = []
+    this.store.update((s) => { scenes = checkStory(s) })
+    this.renderHud(this.store.state)
+    if (scenes.length) this.playStory(scenes)
+  }
+
+  playStory(ids, onDone = null) {
+    const pages = ids.flatMap((id) => SCENES[id] || [])
+    if (!pages.length) return onDone?.()
+    this.standUp()
+    this.hideMenu()
+    this.hideBubble()
+    this.sheetTarget.hidden = true
+    this.sheetMode = null
+    this.story = { pages, i: 0, t: 0, onDone }
+    clearTimeout(this.toastTimer)
+    this.toastTarget.hidden = true
+    this.element.classList.add("is-story")
+    this.storyTarget.hidden = false
+    this.showStoryPage()
+  }
+
+  showStoryPage() {
+    const p = this.story.pages[this.story.i]
+    this.story.t = 0
+    this.storyWhoTarget.textContent = p.who || ""
+    this.storyWhoTarget.hidden = !p.who
+    this.storyTextTarget.textContent = p.text
+    this.sound.se(p.bg === "flash" ? "levelup" : "talk")
+  }
+
+  storyNext() {
+    if (!this.story) return
+    this.story.i += 1
+    if (this.story.i >= this.story.pages.length) return this.endStory()
+    this.showStoryPage()
+  }
+
+  storySkip() {
+    if (!this.story) return
+    this.sound.se("tap")
+    this.endStory()
+  }
+
+  endStory() {
+    const done = this.story?.onDone
+    this.story = null
+    this.storyTarget.hidden = true
+    this.element.classList.remove("is-story")
+    this.renderHud(this.store.state)
+    if (done) done()
+  }
+
+  // おはなし の けしき と Dettyan
+  drawStory(g) {
+    const p = this.story.pages[this.story.i]
+    const t = this.story.t
+    const now = this.store.now()
+    const s = this.store.state
+    let at = { x: 64, y: 64 } // 足もと（下の ことば の箱に かくれない高さ）
+    if (p.bg === "flash") return drawFlash(g, t)
+    if (p.bg === "stream") {
+      // もとの世界の へや（ぜんぶ ある）。うしろすがたで 配信中
+      if (!this.streamRoom) this.streamRoom = createRoom(null)
+      g.drawImage(this.streamRoom, 0, 0)
+      drawRoomLive(g, { now, t, mode: "work", workT: t, f: null })
+      this.drawMe(g, SEAT.left, SEAT.top + (Math.floor(t * 4) % 2), { view: "back" })
+      drawChair(g)
+      return
+    }
+    if (p.bg === "town") {
+      if (!this.town) this.town = createTown()
+      g.drawImage(this.town, 0, 0)
+      drawTownLive(g, t)
+      at = { x: 40, y: 66 }
+    } else if (p.bg === "camp") {
+      drawCampSky(g, now, t)
+      g.drawImage(this.camp, 0, 0)
+      drawCampfire(g, now, t)
+      at = { x: 88, y: 64 }
+    } else {
+      const f = s?.home.furniture || {}
+      g.drawImage(this.room, 0, 0)
+      drawRoomLive(g, { now, t, mode: p.pose === "back" ? "work" : null, workT: t, f })
+      if (p.pose === "back" && f.chair) {
+        this.drawMe(g, SEAT.left, SEAT.top, { view: "back" })
+        drawChair(g)
+        return
+      }
+    }
+    if (p.pose === "none") return
+    const blink = t % 3 > 2.85
+    this.drawMe(g, at.x - SPRITE_W / 2, at.y - SPRITE_H, { eyes: blink ? "blink" : "open" })
   }
 
   // ---- 📊 つよさ（ステータスの ふりわけ・職業・スキル） ----
@@ -1259,11 +1464,13 @@ export default class extends Controller {
   backFromBattle() {
     this.sound.playSong("office")
     const ch = this.chara
-    ch.x = W / 2
-    ch.y = 74
+    const spot = this.homeSpot
+    ch.x = spot.x
+    ch.y = spot.y
     this.lookAtMe(3)
     const b = this.lastBattle?.b
     if (b) this.say(b.win ? this.ownerLine("win", "ただいま！") : b.ran ? "ふう… ただいま" : "いたた… ただいま")
+    setTimeout(() => this.runStoryCheck(), 300)
   }
 
   renderResult(list, s) {
@@ -1396,6 +1603,11 @@ export default class extends Controller {
     this.genkiTarget.style.width = `${clamp((s.stats.genki / max) * 100)}%`
     if (this.hasGenkiNumTarget) this.genkiNumTarget.textContent = `${Math.floor(s.stats.genki)}/${max}`
     if (this.hasLevelTarget) this.levelTarget.textContent = `Lv${s.dettyan.level}`
+    // 📖 いまの目標
+    if (this.hasGoalTarget && s.story) {
+      const goal = currentGoal(s)
+      this.goalTarget.textContent = goal ? `🎯 ${goal.text}${goal.progress ? `（${goal.progress(s)}）` : ""}` : CLEAR_TEXT
+    }
     // まだ ふっていない ポイントがあるときは、📊 つよさ に しるし
     if (this.hasStatusButtonTarget) {
       this.statusButtonTarget.classList.toggle("has-points", s.dettyan.points > 0)
@@ -1469,6 +1681,17 @@ function itemRow(food, sub, button) {
   body.append(el("div", "dt-item__effect", `げんき+${food.genki} ごきげん+${foodGokigen(food)}`))
   body.append(el("div", "dt-item__sub", sub))
   row.append(icon, body, button)
+  return row
+}
+
+// 絵文字の アイコンの1行（いえ・かぐ）
+function emojiRow(icon, name, desc, sub, button) {
+  const row = el("div", "dt-item")
+  const body = el("div", "dt-item__body")
+  body.append(el("div", "dt-item__name", name))
+  body.append(el("div", "dt-item__effect", desc))
+  body.append(el("div", "dt-item__sub", sub))
+  row.append(el("div", "dt-item__icon dt-item__icon--emoji", icon), body, button)
   return row
 }
 

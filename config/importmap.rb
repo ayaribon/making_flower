@@ -32,3 +32,6 @@ pin "dettyan_gear" # 🗡️ そうび（あたま・からだ・て・せなか
 pin "dettyan_room" # 🏢 Dettyan の事務所の部屋の絵
 pin "dettyan_scenes" # 🌳 モンスター退治の けしき
 pin "dettyan_battle" # ⚔️ バトル（手動・オート）・ステータス・職業・スキル
+pin "dettyan_home" # 🏠 テント → マイホーム・家具
+pin "dettyan_camp" # ⛺ テントと おはなしの けしき
+pin "dettyan_story" # 📖 おはなし（目標と ページ）

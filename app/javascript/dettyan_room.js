@@ -2,6 +2,7 @@
 // - 動かないところ（かべ・ゆか・家具）は createRoom() で1回だけ描いておく
 // - 動くところ（窓の外・時計・PC の画面・湯気・ON AIR・夜のあかり）は drawRoomLive() で毎コマ描く
 // - いす・スピーカーは Dettyan と前後が入れかわるので、drawChair() / drawSpeaker() を足もとの高さの順に描く
+// - 家具は 持っているものだけ描く（f：{ desk: true, pc: true, ... }。id は dettyan_home.js の FURNITURE。f を わたさないと ぜんぶ描く）
 // 窓の外と夜のあかりは、サーバーの時計の日本の時間で変わる（朝・昼・夕方・夜）
 
 import { seededRandom } from "dettyan_adventure"
@@ -93,22 +94,23 @@ function text(g, str, x, y, color) {
 }
 
 // ---- 動かないところ ----
-export function createRoom() {
+export function createRoom(f = null) {
   const c = document.createElement("canvas")
   c.width = ROOM_W
   c.height = ROOM_H
   const g = c.getContext("2d")
   const rand = seededRandom(20261117)
+  const has = (id) => !f || !!f[id]
 
   drawWall(g)
   drawFloor(g, rand)
-  drawWindowFrame(g)
-  drawPoster(g)
-  drawClockFace(g)
-  drawShelf(g)
-  drawDesk(g)
-  drawPlant(g)
-  drawRug(g)
+  drawWindowFrame(g, { curtain: has("curtain"), cactus: has("plant") })
+  if (has("poster")) drawPoster(g)
+  if (has("clock")) drawClockFace(g)
+  if (has("shelf")) drawShelf(g)
+  if (has("desk")) drawDesk(g, { pc: has("pc"), lamp: has("lamp"), mug: has("mug") })
+  if (has("plant")) drawPlant(g)
+  if (has("rug")) drawRug(g)
   return c
 }
 
@@ -161,13 +163,15 @@ function drawFloor(g, rand) {
   g.fillRect(0, WALL_BOTTOM, ROOM_W, 2)
 }
 
-function drawWindowFrame(g) {
+function drawWindowFrame(g, { curtain = true, cactus = true } = {}) {
   const { x, y, w, h } = WINDOW
   // カーテンレール
-  px(g, C.metal, x - 6, y - 3, w + 12, 1)
-  px(g, C.metalShine, x - 6, y - 3, w + 12, 1)
-  px(g, C.metalLight, x - 7, y - 3, 1, 2)
-  px(g, C.metalLight, x + w + 6, y - 3, 1, 2)
+  if (curtain) {
+    px(g, C.metal, x - 6, y - 3, w + 12, 1)
+    px(g, C.metalShine, x - 6, y - 3, w + 12, 1)
+    px(g, C.metalLight, x - 7, y - 3, 1, 2)
+    px(g, C.metalLight, x + w + 6, y - 3, 1, 2)
+  }
   // わく
   px(g, C.K, x - 2, y - 2, w + 4, h + 4)
   px(g, C.white, x - 1, y - 1, w + 2, h + 2)
@@ -176,6 +180,11 @@ function drawWindowFrame(g) {
   px(g, C.K, x - 4, y + h + 1, w + 8, 3)
   px(g, C.white, x - 3, y + h + 1, w + 6, 2)
   px(g, C.whiteShade, x - 3, y + h + 2, w + 6, 1)
+  if (cactus) drawCactus(g, x, y, h)
+  if (curtain) drawCurtains(g, x, y, w, h)
+}
+
+function drawCactus(g, x, y, h) {
   // まどだいの サボテン
   px(g, C.potDark, x + 3, y + h - 3, 5, 4)
   px(g, C.pot, x + 3, y + h - 3, 4, 3)
@@ -184,6 +193,9 @@ function drawWindowFrame(g) {
   px(g, C.leafDark, x + 2, y + h - 7, 2, 1)
   px(g, C.leafDark, x + 2, y + h - 8, 1, 2)
   px(g, "#ff8ac6", x + 5, y + h - 10, 1, 1)
+}
+
+function drawCurtains(g, x, y, w, h) {
   // カーテン（左右・たばねてある）
   for (const [cx, dir] of [[x - 6, 1], [x + w, -1]]) {
     for (let yy = y - 2; yy < y + h + 4; yy++) {
@@ -265,7 +277,7 @@ function drawShelf(g) {
   px(g, "#fff6c0", x + 12, y - 6, 1, 1)
 }
 
-function drawDesk(g) {
+function drawDesk(g, { pc = true, lamp = true, mug = true } = {}) {
   const { x, top, w } = DESK
   // 上の たな（かべ）
   px(g, C.woodDark, x + 2, 8, w - 4, 2)
@@ -296,6 +308,12 @@ function drawDesk(g) {
   g.fillStyle = "rgba(60, 30, 10, 0.2)"
   g.fillRect(x, WALL_BOTTOM + 5, w, 2)
 
+  if (pc) drawPc(g, x, top)
+  if (lamp) drawLamp(g, top)
+  if (mug) drawMug(g)
+}
+
+function drawPc(g, x, top) {
   // モニター
   const m = MONITOR
   px(g, C.K, m.x, m.y, m.w, m.h)
@@ -310,11 +328,17 @@ function drawDesk(g) {
   px(g, "#d8d8e0", x + 10, top - 1, 14, 1)
   px(g, C.K, x + 27, top - 2, 3, 2)
   px(g, "#d8d8e0", x + 28, top - 2, 1, 1)
+}
+
+function drawLamp(g, top) {
   // デスクライト
   px(g, C.K, LAMP.x, top - 1, 5, 1)
   px(g, C.metal, LAMP.x + 2, LAMP.y + 2, 1, top - LAMP.y - 3)
   px(g, C.K, LAMP.x, LAMP.y - 1, 5, 3)
   px(g, "#e0484d", LAMP.x + 1, LAMP.y - 1, 3, 2)
+}
+
+function drawMug(g) {
   // マグカップ
   px(g, C.K, MUG.x - 1, MUG.y - 1, 5, 5)
   px(g, C.white, MUG.x, MUG.y, 3, 3)
@@ -377,7 +401,7 @@ export function timeOfDay(ms) {
   return "night"
 }
 
-const SKY = {
+export const SKY = {
   morning: ["#ffd6b0", "#ffe6c8", "#d8ecff", "#b8dcff"],
   day: ["#6fbcff", "#86c8ff", "#9fd6ff", "#b8e2ff"],
   evening: ["#5a3a8a", "#c8608a", "#ff9a5a", "#ffc870"],
@@ -387,13 +411,14 @@ const SKY = {
 // ---- 毎コマ描くところ ----
 //   now：サーバーの時計（ミリ秒）、t：遊びはじめてからの秒
 //   mode：Dettyan がしていること（"work"：PC で作業・"sing"：歌う）
-export function drawRoomLive(g, { now, t, mode, workT = 0 }) {
+export function drawRoomLive(g, { now, t, mode, workT = 0, f = null }) {
+  const has = (id) => !f || !!f[id]
   const tod = timeOfDay(now)
   drawSky(g, tod, t)
-  drawClockHands(g, now)
-  drawScreen(g, mode === "work", workT, t)
-  drawSteam(g, t)
-  drawRec(g, mode === "sing", t)
+  if (has("clock")) drawClockHands(g, now)
+  if (has("desk") && has("pc")) drawScreen(g, mode === "work", workT, t)
+  if (has("desk") && has("mug")) drawSteam(g, t)
+  if (has("rec")) drawRec(g, mode === "sing", t)
 }
 
 function drawSky(g, tod, t) {
@@ -566,13 +591,16 @@ export function drawSpeaker(g, singing, t) {
 }
 
 // 夜は 部屋を少し暗くして、デスクライトと PC の あかり をつける
-export function drawNightLight(g, now, working) {
+export function drawNightLight(g, now, working, f = null) {
   if (timeOfDay(now) !== "night") return
+  const has = (id) => !f || !!f[id]
   g.fillStyle = "rgba(16, 20, 56, 0.28)"
   g.fillRect(0, 0, ROOM_W, ROOM_H)
   // デスクライトの光
-  glow(g, LAMP.x + 2, DESK.top - 2, 22, "255, 220, 140", 0.09)
-  px(g, "#fff2b0", LAMP.x + 1, LAMP.y + 1, 3, 1)
+  if (has("desk") && has("lamp")) {
+    glow(g, LAMP.x + 2, DESK.top - 2, 22, "255, 220, 140", 0.09)
+    px(g, "#fff2b0", LAMP.x + 1, LAMP.y + 1, 3, 1)
+  }
   // PC の光
   if (working) glow(g, SCREEN.x + SCREEN.w / 2, SCREEN.y + SCREEN.h, 20, "120, 180, 255", 0.08)
 }
