@@ -31,3 +31,4 @@ pin "dettyan_adventure" # ⚔️ モンスター退治（行き先・スライ�
 pin "dettyan_gear" # 🗡️ そうび（あたま・からだ・て・せなか・あし）
 pin "dettyan_room" # 🏢 Dettyan の事務所の部屋の絵
 pin "dettyan_scenes" # 🌳 モンスター退治の けしき
+pin "dettyan_battle" # ⚔️ バトル（手動・オート）・ステータス・職業・スキル
