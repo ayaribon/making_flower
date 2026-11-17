@@ -8,14 +8,15 @@
 // - 名前を変える・消す・意味を変えるときは SAVE_VERSION を上げて、MIGRATIONS に移しかえを書く
 // - 知らない項目は消さずに残す（新しいコードが書いたセーブを、古い画面が開いても壊さないため）
 
-export const SAVE_VERSION = 1
+export const SAVE_VERSION = 2
 
 export function defaultState() {
   return {
     version: SAVE_VERSION,
     money: 0,
     stats: { genki: 80, gokigen: 70 }, // げんき の上限はレベルで増える（dettyan_care.js の maxGenki）
-    dettyan: { level: 1, exp: 0 },
+    // job：職業（dettyan_battle.js の JOBS）、points：まだ ふっていない ポイント、alloc：ふった ポイント
+    dettyan: { level: 1, exp: 0, job: "warrior", points: 0, alloc: { hp: 0, atk: 0, def: 0, mag: 0, spd: 0 } },
     items: {},             // { junsai: 2 } のように、持っているごはん・アイテムの数（id は dettyan_foods.js）
     daily: { day: null, careCoins: 0, rewardDay: null }, // その日（日本の日付）の数。おせわのコインの上限・毎日のごほうび
     care: { lastAt: {} },  // おせわごとに、最後にした時間（続けてしても効かないように）
@@ -24,14 +25,23 @@ export function defaultState() {
     // 持っている そうび（id は dettyan_gear.js）と、体のパーツごとに そうびしているもの
     // head：あたま・outfit：からだ・weapon：て・back：せなか・feet：あし（outfit と weapon は前からある名前なので変えない）
     gear: { owned: {}, head: null, outfit: null, weapon: null, back: null, feet: null },
-    settings: { bgm: true, se: true, soundAsked: false }, // soundAsked：「音が出ます」を一度見せたか
+    // soundAsked：「音が出ます」を一度見せたか、autoBattle：ぼうけん を オートで たたかう
+    settings: { bgm: true, se: true, soundAsked: false, autoBattle: false },
     createdAt: null,       // はじめて遊んだ時間（サーバーの時計・ミリ秒）
     lastSeenAt: null       // 最後に遊んだ時間（サーバーの時計・ミリ秒）。放置の計算に使う
   }
 }
 
 // 古い version から1つずつ新しくする。例：2: (s) => { s.foo = s.bar; delete s.bar; return s }
-const MIGRATIONS = {}
+const MIGRATIONS = {
+  // 2：ステータスの ふりわけ（レベルが1つ上がるごとに 3ポイント）。前から遊んでいる人には、今のレベルまでの ポイントを まとめて わたす
+  2: (s) => {
+    const level = Math.max(1, Number(s.dettyan?.level) || 1)
+    s.dettyan = { ...(s.dettyan || {}), level }
+    if (!Number.isFinite(s.dettyan.points)) s.dettyan.points = (level - 1) * 3
+    return s
+  }
+}
 
 function isObject(v) {
   return v !== null && typeof v === "object" && !Array.isArray(v)

@@ -4,7 +4,8 @@ import { DettyanStore } from "dettyan_save"
 import { DettyanSound } from "dettyan_sound"
 import { FOODS, findFood, foodGokigen, drawFood } from "dettyan_foods"
 import { applyIdle, claimDailyReward, doCare, buyFood, feedFood, dirtCount, maxGenki } from "dettyan_care"
-import { PLACES, MONSTERS, canGo, goAdventure, expToNext, dettyanPower, drawSlime } from "dettyan_adventure"
+import { PLACES, MONSTERS, canGo, startAdventure, grantKill, finishAdventure, drawSlime } from "dettyan_adventure"
+import { STATS, JOBS, SKILLS, POINTS_PER_LEVEL, findJob, findSkill, dettyanStats, expToNext, addPoint, removePoint, resetPoints, autoAllocate, setJob, applyLevelUps, takeTurn, autoAction, runAuto } from "dettyan_battle"
 import { GEAR, SLOTS, slotName, findGear, equipped, gearBonus, toggleGear, drawGearIcon, drawDressed, drawHeldMic, shopGear, buyGear } from "dettyan_gear"
 import { ROOM_W, ROOM_H, createRoom, drawRoomLive, drawChair, drawSpeaker, drawNightLight, drawWindowLight, CHAIR, SPEAKER, SEAT, WORK_SPOT, SING_SPOT } from "dettyan_room"
 import { drawScene } from "dettyan_scenes"
@@ -12,7 +13,8 @@ import { drawScene } from "dettyan_scenes"
 // 🧑‍💼 Dettyan 育成ゲーム：事務所の部屋の中を Dettyan がちょこちょこ歩く。タップでおせわ、ショップでごはん
 // ときどき PC で編集作業をしたり、マイクを持って歌ったりする（見ているだけ。セーブは変えない）
 // セーブは dettyan_save.js、音は dettyan_sound.js、ごはんの表は dettyan_foods.js、おせわの計算は dettyan_care.js
-// ぼうけん（モンスター退治）は dettyan_adventure.js（その場で行って帰ってきて、結果を再生する）、そうびは dettyan_gear.js
+// ぼうけん（モンスター退治）は dettyan_adventure.js（行き先）と dettyan_battle.js（バトル・ステータス・職業・スキル）、そうびは dettyan_gear.js
+// バトルは手動（こうげき・スキル・ぼうぎょ・にげる をえらぶ）か 🤖オート。たおすたびに コインと経験値を セーブする
 // ショップは「🍙 たべもの」（dettyan_foods.js）と「👗 いしょう」（dettyan_gear.js の price があるもの）の2つのタブ
 // 部屋の絵は dettyan_room.js、モンスター退治の けしきは dettyan_scenes.js
 // 仕様は docs/dettyan/requirements.md
@@ -33,7 +35,10 @@ const DIRT_SPOTS = [[24, 60], [100, 84], [66, 90], [120, 66], [36, 82]]
 const BATTLE_ME_X = 34
 const BATTLE_FOE_X = 94
 const BATTLE_FEET = 82
-const BATTLE_MAX_SEC = 12 // 長いバトルも、だいたいこの秒数で見終わるように速くする
+const AUTO_WAIT_SEC = 0.25 // オートで 次の行動まで まつ時間
+// バトルの できごと を見せる時間（秒）。オートのときは少し速く
+const EVENT_SEC = { arrive: 1, appear: 0.8, act: 0.6, buff: 0.7, guard: 0.5, stun: 0.6, down: 0.55, win: 1.3, lose: 1.3, run: 0.9 }
+const STAT_NAMES = Object.fromEntries(STATS.map((st) => [st.id, st.name]))
 
 // 部屋でひとりで すること（PC で作業・歌う）
 const ACT_GAP_SEC = 14   // 前にしてから、これだけたつまで次はしない
@@ -60,7 +65,7 @@ const OWNER_IDLE_CHANCE = 0.08 // 止まったとき、ひとりで「俺やん�
 
 export default class extends Controller {
   static targets = ["canvas", "start", "startText", "startNote", "money", "genki", "gokigen", "soundButton", "soundPanel", "bgmToggle", "seToggle", "bubble",
-    "menu", "sheet", "sheetTitle", "sheetMoney", "sheetList", "toast", "level", "genkiNum", "skip"]
+    "menu", "sheet", "sheetTitle", "sheetMoney", "sheetList", "toast", "level", "genkiNum", "cmd", "cmdStatus", "cmdButtons", "statusButton"]
   static values = { userId: Number, owner: Boolean } // owner：Dettyan 本人のアカウント
 
   connect() {
@@ -148,7 +153,9 @@ export default class extends Controller {
       const now = this.store.now()
       idle = applyIdle(s, now) // 放置していた間に げんき が回復する（サーバーの時計で数える）
       reward = claimDailyReward(s, now)
+      applyLevelUps(s) // ぼうけん の とちゅうで 閉じていたとき
     })
+    if (this.store.state.dettyan.points > 0) setTimeout(() => this.toast(`📊 ポイントが ${this.store.state.dettyan.points} あるよ（つよさ で ふれるよ）`), reward ? 2800 : 1200)
     this.renderHud(this.store.state)
     if (reward) {
       setTimeout(() => {
@@ -477,7 +484,7 @@ export default class extends Controller {
   // ---- タップ ----
   tap(event) {
     if (!this.started) return
-    if (this.battle) return this.skipBattle()
+    if (this.battle) return // バトル中は 下の コマンド で えらぶ
     const rect = this.canvasTarget.getBoundingClientRect()
     const x = ((event.clientX - rect.left) / rect.width) * W
     const y = ((event.clientY - rect.top) / rect.height) * H
@@ -732,6 +739,8 @@ export default class extends Controller {
       this.renderResult(list, s)
     } else if (this.sheetMode === "gear") {
       this.renderGear(list, s)
+    } else if (this.sheetMode === "status") {
+      this.renderStatus(list, s)
     } else {
       this.sheetTitleTarget.textContent = "🎒 もちもの"
       const owned = FOODS.filter((f) => s.items[f.id] > 0)
@@ -779,12 +788,12 @@ export default class extends Controller {
     preview.width = 30
     preview.height = 31
     drawDressed(preview.getContext("2d"), 5, 5, equipped(s))
-    const power = dettyanPower(s)
+    const st = dettyanStats(s)
     const bonus = gearBonus(s)
+    const job = findJob(s.dettyan.job)
     const stats = el("div", "dt-gear-top__stats")
-    stats.append(el("div", "dt-gear-top__lv", `Lv${s.dettyan.level}`))
-    stats.append(el("div", "", `たいりょく ${power.hp}${bonus.hp ? `（そうび +${bonus.hp}）` : ""}`))
-    stats.append(el("div", "", `こうげき ${power.atk}${bonus.atk ? `（そうび +${bonus.atk}）` : ""}`))
+    stats.append(el("div", "dt-gear-top__lv", `Lv${s.dettyan.level} ${job.icon}${job.name}`))
+    for (const k of STATS) stats.append(el("div", "", `${k.name} ${st[k.id]}${bonus[k.id] ? `（そうび +${bonus[k.id]}）` : ""}`))
     top.append(preview, stats)
     list.append(top)
 
@@ -813,7 +822,138 @@ export default class extends Controller {
     this.renderSheet()
   }
 
-  // ---- モンスター退治 ----
+  // ---- 📊 つよさ（ステータスの ふりわけ・職業・スキル） ----
+  openStatus() {
+    if (!this.started || this.battle) return
+    if (this.sheetMode === "result") this.backFromBattle()
+    this.sound.se("tap")
+    this.hideMenu()
+    this.sheetMode = "status"
+    this.renderSheet()
+    this.sheetTarget.hidden = false
+  }
+
+  renderStatus(list, s) {
+    this.sheetTitleTarget.textContent = "📊 つよさ"
+    const lv = s.dettyan.level
+    const st = dettyanStats(s)
+    const job = findJob(s.dettyan.job)
+    list.append(el("div", "dt-sheet__note", `Lv${lv}　つぎのレベルまで けいけんち ${expToNext(lv) - s.dettyan.exp}（レベルが上がると ポイント +${POINTS_PER_LEVEL}）`))
+
+    // しょくぎょう
+    list.append(el("div", "dt-sheet__section", "🧑‍💼 しょくぎょう（いつでも ただで かえられるよ）"))
+    const jobs = el("div", "dt-jobs")
+    for (const j of JOBS) {
+      const on = j.id === job.id
+      const b = el("button", "dt-jobs__job" + (on ? " is-on" : ""))
+      b.type = "button"
+      b.dataset.action = "dettyan-game#changeJob"
+      b.dataset.dettyanGameIdParam = j.id
+      b.setAttribute("aria-pressed", String(on))
+      b.append(el("span", "dt-jobs__icon", j.icon), el("span", "dt-jobs__name", j.name))
+      jobs.append(b)
+    }
+    list.append(jobs, el("div", "dt-sheet__note", job.desc))
+
+    // ステータス
+    const pts = s.dettyan.points || 0
+    list.append(el("div", "dt-sheet__section", `📊 ステータス　のこり ${pts} ポイント`))
+    for (const k of STATS) {
+      const row = el("div", "dt-stat-row")
+      const name = el("div", "dt-stat-row__name", k.name)
+      const value = el("div", "dt-stat-row__value", String(st[k.id]))
+      const parts = [`レベル ${st.parts.level[k.id]}`]
+      if (st.parts.alloc[k.id]) parts.push(`ふりわけ +${st.parts.alloc[k.id]}`)
+      if (st.parts.gear[k.id]) parts.push(`そうび +${st.parts.gear[k.id]}`)
+      const sub = el("div", "dt-stat-row__sub", `${parts.join("・")}　${k.desc}`)
+      const minus = el("button", "dt-stat-row__btn", "−")
+      minus.type = "button"
+      minus.disabled = !(s.dettyan.alloc?.[k.id] > 0)
+      minus.dataset.action = "dettyan-game#statMinus"
+      minus.dataset.dettyanGameIdParam = k.id
+      minus.setAttribute("aria-label", `${k.name} を へらす`)
+      const plus = el("button", "dt-stat-row__btn dt-stat-row__btn--plus", `+${k.per > 1 ? k.per : ""}`)
+      plus.type = "button"
+      plus.disabled = pts <= 0
+      plus.dataset.action = "dettyan-game#statPlus"
+      plus.dataset.dettyanGameIdParam = k.id
+      plus.setAttribute("aria-label", `${k.name} に ふる`)
+      const body = el("div", "dt-stat-row__body")
+      body.append(name, sub)
+      row.append(body, value, minus, plus)
+      list.append(row)
+    }
+    list.append(el("div", "dt-sheet__note", `MP ${st.mp}（まほう が上がると ふえる。毎ターン ${job.id === "mage" ? 2 : 1} もどる）`))
+    const tools = el("div", "dt-stat-tools")
+    const auto = el("button", "dt-item__button", "🤖 おまかせ")
+    auto.type = "button"
+    auto.disabled = pts <= 0
+    auto.dataset.action = "dettyan-game#statAuto"
+    const reset = el("button", "dt-item__button dt-item__button--on", "↩ ふりなおし")
+    reset.type = "button"
+    reset.disabled = !Object.values(s.dettyan.alloc || {}).some((v) => v > 0)
+    reset.dataset.action = "dettyan-game#statReset"
+    tools.append(auto, reset)
+    list.append(tools)
+
+    // スキル
+    list.append(el("div", "dt-sheet__section", `✨ スキル（${job.name}）`))
+    for (const k of SKILLS.filter((x) => x.job === job.id).sort((a, b) => a.level - b.level)) {
+      const learned = k.level <= lv
+      const row = el("div", "dt-item" + (learned ? "" : " dt-item--locked"))
+      const icon = el("div", "dt-item__icon dt-item__icon--emoji", k.icon)
+      const body = el("div", "dt-item__body")
+      body.append(el("div", "dt-item__name", `${k.name}　MP ${k.mp}`))
+      body.append(el("div", "dt-item__effect", k.desc))
+      body.append(el("div", "dt-item__sub", learned ? "おぼえている" : `Lv${k.level} で おぼえる`))
+      row.append(icon, body)
+      list.append(row)
+    }
+  }
+
+  statPlus(event) {
+    let ok = false
+    this.store.update((s) => { ok = addPoint(s, event.params.id) })
+    this.sound.se(ok ? "tap" : "no")
+    this.renderHud(this.store.state)
+  }
+
+  statMinus(event) {
+    let ok = false
+    this.store.update((s) => { ok = removePoint(s, event.params.id) })
+    this.sound.se(ok ? "tap" : "no")
+    this.renderHud(this.store.state)
+  }
+
+  statAuto() {
+    let n = 0
+    this.store.update((s) => { n = autoAllocate(s) })
+    if (!n) return
+    this.sound.se("buy")
+    this.toast(`🤖 おまかせで ${n} ポイント ふったよ`)
+    this.renderHud(this.store.state)
+  }
+
+  statReset() {
+    let n = 0
+    this.store.update((s) => { n = resetPoints(s) })
+    if (!n) return
+    this.sound.se("tap")
+    this.toast(`↩ ${n} ポイント もどしたよ`)
+    this.renderHud(this.store.state)
+  }
+
+  changeJob(event) {
+    const id = event.params.id
+    if (this.store.state.dettyan.job === id) return
+    this.store.update((s) => setJob(s, id))
+    const job = findJob(id)
+    this.sound.se("happy")
+    this.toast(`${job.icon} ${job.name} に なった！`)
+    this.renderHud(this.store.state)
+  }
+
+  // ---- 🗺️ ぼうけん（行き先をえらぶ → バトル。手動 か 🤖オート） ----
   openQuest() {
     if (!this.started || this.battle || this.eating) return
     this.sound.se("tap")
@@ -825,8 +965,15 @@ export default class extends Controller {
 
   renderQuest(list, s) {
     this.sheetTitleTarget.textContent = "🗺️ ぼうけん"
-    const power = dettyanPower(s)
-    list.append(el("div", "dt-sheet__note", `Lv${s.dettyan.level}・たいりょく ${power.hp}・こうげき ${power.atk}　げんき ${Math.floor(s.stats.genki)}/${maxGenki(s)}`))
+    const st = dettyanStats(s)
+    const job = findJob(s.dettyan.job)
+    list.append(el("div", "dt-sheet__note", `Lv${s.dettyan.level} ${job.icon}${job.name}・HP ${st.hp}・MP ${st.mp}・こうげき ${st.atk}・まもり ${st.def}・まほう ${st.mag}　げんき ${Math.floor(s.stats.genki)}/${maxGenki(s)}`))
+    if (s.dettyan.points > 0) {
+      const go = el("button", "dt-item__button dt-sheet__wide", `📊 ポイントが ${s.dettyan.points} あるよ（ふってから 行こう）`)
+      go.type = "button"
+      go.dataset.action = "dettyan-game#openStatus"
+      list.append(go)
+    }
     for (const place of PLACES) {
       const check = canGo(s, place.id)
       const button = el("button", "dt-item__button", check.reason === "level" ? `Lv${place.level}から` : "いく")
@@ -850,12 +997,12 @@ export default class extends Controller {
     if (this.battle) return
     const id = event.params.id
     const before = { level: this.store.state.dettyan.level }
-    let result = null
-    // 結果は先に計算してセーブする（再生の途中で閉じても、もらったものはなくならない）
-    this.store.update((s) => { result = goAdventure(s, id, Math.floor(Math.random() * 2 ** 31)) })
-    if (!result.ok) {
+    let r = null
+    // げんき は ここで使う（とちゅうで 閉じても もどらない）。コインと経験値は たおすたびに セーブする
+    this.store.update((s) => { r = startAdventure(s, id, Math.floor(Math.random() * 2 ** 31)) })
+    if (!r.ok) {
       this.sound.se("no")
-      this.toast(result.reason === "genki" ? "げんき が たりないよ" : `Lv${result.place?.level} から 行けるよ`)
+      this.toast(r.reason === "genki" ? "げんき が たりないよ" : `Lv${r.place?.level} から 行けるよ`)
       return
     }
     this.store.flush()
@@ -866,112 +1013,243 @@ export default class extends Controller {
     this.standUp()
     this.chara.plan = null
     this.particles = []
-    this.startBattle(result, before)
+    this.startBattle(r, before)
   }
 
-  startBattle(result, before) {
-    const { battle, place } = result
-    const steps = [{ type: "intro", dur: 1.1 }]
-    let cur = -1
-    for (const r of battle.rounds) {
-      if (r.foe !== cur) {
-        cur = r.foe
-        steps.push({ type: "appear", foe: cur, dur: 0.9 })
-      }
-      steps.push({ type: "round", r, dur: 0.55 })
-      if (r.down && r.who === "me") steps.push({ type: "down", foe: r.foe, dur: 0.5 })
-    }
-    steps.push({ type: "end", dur: 1.6 })
-    const total = steps.reduce((sum, st) => sum + st.dur, 0)
-    const speed = Math.max(1, total / BATTLE_MAX_SEC)
-    for (const st of steps) st.dur /= speed
+  startBattle({ battle, place }, before) {
+    const foe = battle.foe
     this.battle = {
-      result, before, place, steps, i: -1, t: 0,
-      myHp: battle.maxHp, foe: null, foeHp: 0, foeMax: 1,
-      lunge: 0, foeLunge: 0, flashMe: 0, flashFoe: 0, dying: 0, hop: 0, bob: 0
+      b: battle, place, before,
+      auto: !!this.store.state.settings.autoBattle,
+      menu: "main", locked: true, queue: [{ t: "arrive" }, { t: "appear", foe: foe.id, hp: foe.hp, maxHp: foe.maxHp }], cur: null, t: 0, wait: 0,
+      view: { myHp: battle.me.hp, myMp: battle.me.mp, foe: null, foeHp: 0, foeMax: 1, lunge: 0, foeLunge: 0, flashMe: 0, flashFoe: 0, dying: 0, hop: 0, bob: 0 }
     }
-    if (this.hasSkipTarget) this.skipTarget.hidden = false
     // バトル中は、知らせ（あらわれた！など）を たいりょくのバー の下に出す（CSS の .is-battle）
     this.canvasTarget.parentElement.classList.add("is-battle")
+    this.element.classList.add("is-battling") // 下のボタンの代わりに コマンド を出す（CSS）
+    this.cmdTarget.hidden = false
     this.sound.playSong("battle")
-    this.nextStep()
+    this.renderCmd()
   }
 
-  nextStep() {
-    const b = this.battle
-    b.i += 1
-    b.t = 0
-    const step = b.steps[b.i]
-    if (!step) return this.finishBattle()
-    const foes = b.result.battle.foes
-    if (step.type === "intro") {
-      this.toast(`${b.place.icon} ${b.place.name} に ついた！`)
-    } else if (step.type === "appear") {
-      b.foe = MONSTERS[foes[step.foe]]
-      b.foeHp = b.foe.hp
-      b.foeMax = b.foe.hp
-      b.dying = 0
-      this.sound.se("talk")
-      this.toast(`${b.foe.name} が あらわれた！`)
-    } else if (step.type === "round") {
-      const r = step.r
-      this.sound.se("hit")
-      if (r.who === "me") {
-        b.lunge = 0.3
-        b.flashFoe = 0.25
-        b.foeHp = r.foeHp
-        this.popAt(r.crit ? `かいしん！${r.dmg}` : `${r.dmg}`, BATTLE_FOE_X, BATTLE_FEET - 26)
-      } else {
-        b.foeLunge = 0.3
-        b.flashMe = 0.25
-        b.myHp = r.myHp
-        this.popAt(`${r.dmg}`, BATTLE_ME_X, BATTLE_FEET - 30)
-      }
-    } else if (step.type === "down") {
-      b.dying = 0.001
-      this.sound.se("coin")
-    } else if (step.type === "end") {
-      if (b.result.battle.win) {
-        this.sound.se("happy")
-        b.hop = 1.4
-        this.toast("ぜんぶ たおした！")
-      } else {
-        this.sound.se("no")
-        this.toast("まけちゃった… にげて かえってきた")
-      }
-    }
+  // 1ターン すすめる（手動のボタン か オート）
+  doTurn(action) {
+    const B = this.battle
+    if (!B || B.b.over || B.cur || B.queue.length) return
+    const events = takeTurn(B.b, action)
+    // たおした分の コインと経験値は すぐ セーブ（とちゅうで 閉じても なくならない）
+    const downs = events.filter((e) => e.t === "down")
+    if (downs.length) this.store.update((s) => downs.forEach((e) => grantKill(s, e)))
+    B.view.myMp = B.b.me.mp
+    B.queue.push(...events)
+    B.locked = true
+    B.menu = "main"
+    this.renderCmd()
   }
 
   tickBattle(dt) {
-    const b = this.battle
-    b.t += dt
-    b.bob += dt
-    b.lunge = Math.max(0, b.lunge - dt)
-    b.foeLunge = Math.max(0, b.foeLunge - dt)
-    b.flashMe = Math.max(0, b.flashMe - dt)
-    b.flashFoe = Math.max(0, b.flashFoe - dt)
-    b.hop = Math.max(0, b.hop - dt)
-    if (b.dying > 0) b.dying = Math.min(1, b.dying + dt * 2.5)
+    const B = this.battle
+    const v = B.view
+    v.bob += dt
+    v.lunge = Math.max(0, v.lunge - dt)
+    v.foeLunge = Math.max(0, v.foeLunge - dt)
+    v.flashMe = Math.max(0, v.flashMe - dt)
+    v.flashFoe = Math.max(0, v.flashFoe - dt)
+    v.hop = Math.max(0, v.hop - dt)
+    if (v.dying > 0) v.dying = Math.min(1, v.dying + dt * 2.5)
     this.tickParticles(dt)
-    const step = b.steps[b.i]
-    if (step && b.t >= step.dur) this.nextStep()
+    if (B.cur) {
+      B.t += dt
+      if (B.t < B.cur.dur) return
+      B.cur = null
+    }
+    if (B.queue.length) {
+      B.cur = B.queue.shift()
+      B.t = 0
+      B.cur.dur = (EVENT_SEC[B.cur.t] || 0.5) * (B.auto ? 0.7 : 1)
+      this.playEvent(B.cur)
+      return
+    }
+    if (B.b.over) return this.endBattle()
+    if (B.locked) {
+      B.locked = false
+      B.wait = AUTO_WAIT_SEC
+      this.renderCmd()
+    }
+    if (B.auto) {
+      B.wait -= dt
+      if (B.wait <= 0) this.doTurn(autoAction(B.b))
+    }
   }
 
-  // 再生をとばして、結果を見る
-  skipBattle() {
+  // できごと を1つ見せる（音・ゆれ・数字・知らせ）
+  playEvent(e) {
+    const B = this.battle
+    const v = B.view
+    if (e.t === "arrive") {
+      this.toast(`${B.place.icon} ${B.place.name} に ついた！`)
+    } else if (e.t === "appear") {
+      v.foe = MONSTERS[e.foe]
+      v.foeHp = e.hp
+      v.foeMax = e.maxHp
+      v.dying = 0
+      this.sound.se("talk")
+      this.toast(`${v.foe.name} が あらわれた！`)
+    } else if (e.t === "act" && e.who === "me") {
+      const skill = e.skill ? findSkill(e.skill) : null
+      if (skill) this.toast(`${skill.icon} ${skill.name}！`)
+      if (e.heal !== undefined && !e.dmg) {
+        // 回復
+        v.myHp = e.hp
+        this.sound.se("pet")
+        this.popAt(`+${e.heal}`, BATTLE_ME_X, BATTLE_FEET - 30)
+        this.sparkle(BATTLE_ME_X, BATTLE_FEET - 14)
+        return
+      }
+      v.lunge = 0.3
+      v.flashFoe = 0.25
+      v.foeHp = e.foeHp
+      this.sound.se("hit")
+      const hits = e.hits > 1 ? `${e.hits}回 ` : ""
+      this.popAt(e.crit ? `かいしん！${hits}${e.dmg}` : `${hits}${e.dmg}`, BATTLE_FOE_X, BATTLE_FEET - 26)
+      if (e.heal) {
+        v.myHp = Math.min(B.b.me.maxHp, v.myHp + e.heal)
+        this.popAt(`+${e.heal}`, BATTLE_ME_X, BATTLE_FEET - 30)
+      }
+      if (e.stun) setTimeout(() => this.toast(`${v.foe?.name || "スライム"} は しびれた！`), 250)
+    } else if (e.t === "act" && e.who === "foe") {
+      v.foeLunge = 0.3
+      v.flashMe = 0.25
+      v.myHp = e.hp
+      this.sound.se("hit")
+      if (e.special) this.toast(`${v.foe?.name || "スライム"} の ${e.name}！`)
+      this.popAt(`${e.dmg}`, BATTLE_ME_X, BATTLE_FEET - 30)
+    } else if (e.t === "buff") {
+      const skill = findSkill(e.skill)
+      this.sound.se("happy")
+      this.toast(`${skill?.icon || "✨"} ${e.name}！ ${STAT_NAMES[e.stat] || ""} アップ`)
+      this.sparkle(BATTLE_ME_X, BATTLE_FEET - 14)
+    } else if (e.t === "guard") {
+      this.sound.se("tap")
+      this.toast("🛡️ みをまもっている（MP が すこし もどった）")
+    } else if (e.t === "stun") {
+      this.toast(`${v.foe?.name || "スライム"} は しびれて うごけない！`)
+    } else if (e.t === "down") {
+      v.dying = 0.001
+      v.foeHp = 0
+      this.sound.se("coin")
+      this.popAt(`💰+${e.coins}`, BATTLE_FOE_X, BATTLE_FEET - 26)
+    } else if (e.t === "win") {
+      this.sound.se("happy")
+      v.hop = 1.4
+      this.toast("ぜんぶ たおした！")
+    } else if (e.t === "lose") {
+      this.sound.se("no")
+      this.toast("まけちゃった… にげて かえってきた")
+    } else if (e.t === "run") {
+      this.sound.se("step")
+      this.toast("🏃 にげて かえってきた")
+    }
+  }
+
+  // ---- コマンド（バトル中だけ、下のボタンの代わりに出る） ----
+  renderCmd() {
+    const B = this.battle
+    if (!B || !this.hasCmdTarget) return
+    const b = B.b
+    const job = findJob(b.job)
+    this.cmdStatusTarget.textContent = `${job.icon} HP ${Math.max(0, Math.round(B.view.myHp))}/${b.me.maxHp}　MP ${b.me.mp}/${b.me.maxMp}　${b.idx + 1}/${b.foes.length}ひきめ`
+    const box = this.cmdButtonsTarget
+    box.replaceChildren()
+    const btn = (label, action, { params = {}, disabled = false, cls = "" } = {}) => {
+      const x = el("button", `dt-cmd__btn ${cls}`)
+      x.type = "button"
+      x.innerHTML = label
+      x.dataset.action = `dettyan-game#${action}`
+      for (const [k, val] of Object.entries(params)) x.dataset[`dettyanGame${k[0].toUpperCase()}${k.slice(1)}Param`] = val
+      x.disabled = disabled || B.locked
+      box.append(x)
+      return x
+    }
+    if (B.auto) {
+      box.append(el("div", "dt-cmd__note", "🤖 オートで たたかっています"))
+      btn("✋<span>じぶんで えらぶ</span>", "toggleAuto", { cls: "dt-cmd__btn--wide" })
+      btn("⏩<span>さいごまで</span>", "skipBattle", { cls: "dt-cmd__btn--wide" })
+      for (const x of box.querySelectorAll("button")) x.disabled = false
+      return
+    }
+    if (B.menu === "skills") {
+      for (const id of b.skills) {
+        const k = findSkill(id)
+        btn(`${k.icon}<span>${k.name}</span><small>MP ${k.mp}</small>`, "cmdSkill", { params: { id }, disabled: k.mp > b.me.mp })
+      }
+      btn("↩<span>もどる</span>", "cmdBack")
+      return
+    }
+    btn("⚔️<span>こうげき</span>", "cmdAttack")
+    btn("✨<span>スキル</span>", "cmdSkills", { disabled: b.skills.length === 0 })
+    btn("🛡️<span>ぼうぎょ</span>", "cmdGuard")
+    btn("🏃<span>にげる</span>", "cmdRun")
+    btn("🤖<span>オート</span>", "toggleAuto", { cls: "dt-cmd__btn--sub" })
+    btn("⏩<span>オートで さいごまで</span>", "skipBattle", { cls: "dt-cmd__btn--sub dt-cmd__btn--wide3" })
+  }
+
+  cmdAttack() { this.sound.se("tap"); this.doTurn({ type: "attack" }) }
+  cmdGuard() { this.sound.se("tap"); this.doTurn({ type: "guard" }) }
+  cmdRun() { this.sound.se("tap"); this.doTurn({ type: "run" }) }
+  cmdSkill(event) { this.sound.se("tap"); this.doTurn({ type: "skill", id: event.params.id }) }
+
+  cmdSkills() {
+    if (!this.battle || this.battle.locked) return
+    this.sound.se("tap")
+    this.battle.menu = "skills"
+    this.renderCmd()
+  }
+
+  cmdBack() {
     if (!this.battle) return
     this.sound.se("tap")
-    this.finishBattle()
+    this.battle.menu = "main"
+    this.renderCmd()
   }
 
-  finishBattle() {
-    const b = this.battle
-    if (!b) return
+  // 🤖 オート ⇄ ✋ 手動（つぎから も おぼえておく）
+  toggleAuto() {
+    const B = this.battle
+    if (!B) return
+    B.auto = !B.auto
+    B.menu = "main"
+    B.wait = AUTO_WAIT_SEC
+    this.store.update((s) => { s.settings.autoBattle = B.auto })
+    this.sound.se("tap")
+    this.renderCmd()
+  }
+
+  // ⏩ のこりを オートで いっきに おわらせて、けっか を見る
+  skipBattle() {
+    const B = this.battle
+    if (!B) return
+    this.sound.se("tap")
+    const events = runAuto(B.b)
+    const downs = events.filter((e) => e.t === "down")
+    if (downs.length) this.store.update((s) => downs.forEach((e) => grantKill(s, e)))
+    B.queue = []
+    B.cur = null
+    this.endBattle()
+  }
+
+  endBattle() {
+    const B = this.battle
+    if (!B) return
+    let fin = null
+    this.store.update((s) => { fin = finishAdventure(s, B.b) })
+    this.store.flush()
     this.battle = null
-    if (this.hasSkipTarget) this.skipTarget.hidden = true
     this.canvasTarget.parentElement.classList.remove("is-battle")
-    this.lastBattle = b
-    if (b.result.levelUps > 0) this.sound.se("levelup")
+    this.element.classList.remove("is-battling")
+    this.cmdTarget.hidden = true
+    this.lastBattle = { b: B.b, place: B.place, before: B.before, fin }
+    if (fin.levelUps > 0) this.sound.se("levelup")
     this.renderHud(this.store.state)
     this.sheetMode = "result"
     this.renderSheet()
@@ -984,27 +1262,26 @@ export default class extends Controller {
     ch.x = W / 2
     ch.y = 74
     this.lookAtMe(3)
-    const r = this.lastBattle?.result
-    if (r) this.say(r.battle.win ? this.ownerLine("win", "ただいま！") : "いたた… ただいま")
+    const b = this.lastBattle?.b
+    if (b) this.say(b.win ? this.ownerLine("win", "ただいま！") : b.ran ? "ふう… ただいま" : "いたた… ただいま")
   }
 
   renderResult(list, s) {
-    const { result, before } = this.lastBattle
-    const { battle, place } = result
-    this.sheetTitleTarget.textContent = battle.win ? `🏆 ${place.name}：かち！` : `💦 ${place.name}：まけちゃった`
+    const { b, place, before, fin } = this.lastBattle
+    this.sheetTitleTarget.textContent = b.win ? `🏆 ${place.name}：かち！` : b.ran ? `🏃 ${place.name}：にげてきた` : `💦 ${place.name}：まけちゃった`
     const counts = {}
-    battle.foes.slice(0, battle.beaten).forEach((id) => { counts[id] = (counts[id] || 0) + 1 })
+    b.foes.slice(0, b.beaten).forEach((id) => { counts[id] = (counts[id] || 0) + 1 })
     const beaten = Object.entries(counts).map(([id, n]) => `${MONSTERS[id].name}×${n}`).join("・")
     list.append(el("div", "dt-result__line", beaten ? `${beaten} を たおした` : "1ぴきも たおせなかった…"))
-    list.append(el("div", "dt-result__line", `💰 +${battle.coins}　けいけんち +${battle.exp}`))
+    list.append(el("div", "dt-result__line", `💰 +${b.coins}　けいけんち +${b.exp}`))
     const lv = s.dettyan.level
     list.append(el("div", "dt-result__line dt-result__line--sub", `Lv${lv}　つぎのレベルまで ${expToNext(lv) - s.dettyan.exp}`))
-    if (battle.drop) {
-      const food = findFood(battle.drop)
+    if (fin.drop) {
+      const food = findFood(fin.drop)
       if (food) list.append(itemRow(food, "ひろった！ もちもの に入れたよ", el("span", "")))
     }
-    if (battle.gear) {
-      const gear = findGear(battle.gear)
+    if (fin.gear) {
+      const gear = findGear(fin.gear)
       if (gear) {
         const on = s.gear[gear.slot] === gear.id
         const button = el("button", "dt-item__button" + (on ? " dt-item__button--on" : ""), on ? "はずす" : "そうびする")
@@ -1014,49 +1291,58 @@ export default class extends Controller {
         list.append(gearRow(gear, "✨ 手に入れた！", button))
       }
     }
-    if (result.levelUps > 0) {
-      list.append(el("div", "dt-result__levelup", `🎉 レベル ${lv} になった！　げんき の上限 ${maxGenki(s)}`))
+    if (fin.levelUps > 0) {
+      list.append(el("div", "dt-result__levelup", `🎉 レベル ${lv} になった！　ポイント +${fin.levelUps * POINTS_PER_LEVEL}・げんき の上限 ${maxGenki(s)}`))
+      const learned = SKILLS.filter((k) => k.job === findJob(s.dettyan.job).id && k.level > before.level && k.level <= lv)
+      for (const k of learned) list.append(el("div", "dt-result__levelup", `${k.icon} ${k.name} を おぼえた！`))
       for (const p of PLACES) {
         if (p.level > before.level && p.level <= lv) list.append(el("div", "dt-result__levelup", `${p.icon} ${p.name} に 行けるようになった！`))
       }
     }
-    const back = el("button", "dt-item__button dt-result__back", "🏠 じむしょに もどる")
+    if (s.dettyan.points > 0) {
+      const go = el("button", "dt-item__button dt-result__back", `📊 ポイントを ふる（のこり ${s.dettyan.points}）`)
+      go.type = "button"
+      go.dataset.action = "dettyan-game#openStatus"
+      list.append(go)
+    }
+    const back = el("button", "dt-item__button dt-result__back" + (s.dettyan.points > 0 ? " dt-item__button--on" : ""), "🏠 じむしょに もどる")
     back.type = "button"
     back.dataset.action = "dettyan-game#closeSheet"
     list.append(back)
   }
 
   drawBattle(g) {
-    const b = this.battle
-    const p = b.place
+    const B = this.battle
+    const v = B.view
     // けしき（dettyan_scenes.js。くも・ほたる・たいまつ・雪 などが動く）
-    drawScene(g, p, b.bob)
+    drawScene(g, B.place, v.bob)
     // Dettyan（左）
-    const lunge = b.lunge > 0 ? Math.round(Math.sin((b.lunge / 0.3) * Math.PI) * 10) : 0
-    const hop = b.hop > 0 ? Math.round(Math.abs(Math.sin(b.hop * Math.PI * 3)) * 5) : 0
+    const lunge = v.lunge > 0 ? Math.round(Math.sin((v.lunge / 0.3) * Math.PI) * 10) : 0
+    const hop = v.hop > 0 ? Math.round(Math.abs(Math.sin(v.hop * Math.PI * 3)) * 5) : 0
     const meLeft = BATTLE_ME_X - SPRITE_W / 2 + lunge
     const meTop = BATTLE_FEET - SPRITE_H - hop
     g.fillStyle = "rgba(0, 0, 0, 0.2)"
     g.fillRect(BATTLE_ME_X - 6 + lunge, BATTLE_FEET - 1, 12, 2)
-    if (!(b.flashMe > 0 && Math.floor(b.flashMe * 30) % 2)) this.drawMe(g, meLeft, meTop, { frame: lunge > 0 ? 1 : 0 })
+    if (!(v.flashMe > 0 && Math.floor(v.flashMe * 30) % 2)) this.drawMe(g, meLeft, meTop, { frame: lunge > 0 ? 1 : 0, eyes: v.myHp <= 0 ? "blink" : "open" })
     // スライム（右）。2倍の大きさ
-    if (b.foe && b.dying < 1) {
-      const fl = b.foeLunge > 0 ? Math.round(Math.sin((b.foeLunge / 0.3) * Math.PI) * 10) : 0
-      const squash = (Math.sin(b.bob * 6) + 1) / 2
+    if (v.foe && v.dying < 1) {
+      const fl = v.foeLunge > 0 ? Math.round(Math.sin((v.foeLunge / 0.3) * Math.PI) * 10) : 0
+      const squash = (Math.sin(v.bob * 6) + 1) / 2
       g.fillStyle = "rgba(0, 0, 0, 0.2)"
       g.fillRect(BATTLE_FOE_X - 10 - fl, BATTLE_FEET - 1, 20, 2)
-      if (!(b.flashFoe > 0 && Math.floor(b.flashFoe * 30) % 2)) {
+      if (!(v.flashFoe > 0 && Math.floor(v.flashFoe * 30) % 2)) {
         g.save()
-        g.globalAlpha = 1 - b.dying
+        g.globalAlpha = 1 - v.dying
         g.translate(BATTLE_FOE_X - 12 - fl, BATTLE_FEET - 20)
         g.scale(2, 2)
-        drawSlime(g, b.foe, 0, 0, squash * 0.5 + b.dying)
+        drawSlime(g, v.foe, 0, 0, squash * 0.5 + v.dying)
         g.restore()
       }
     }
-    // たいりょくのバー
-    hpBar(g, 6, 6, 40, b.myHp / b.result.battle.maxHp, "#7ed957")
-    if (b.foe) hpBar(g, W - 46, 6, 40, b.foeHp / b.foeMax, "#ff6b6b")
+    // たいりょく（みどり）と MP（あお）のバー
+    hpBar(g, 6, 6, 40, v.myHp / B.b.me.maxHp, "#7ed957")
+    hpBar(g, 6, 11, 40, v.myMp / Math.max(1, B.b.me.maxMp), "#5ec8ff")
+    if (v.foe) hpBar(g, W - 46, 6, 40, v.foeHp / v.foeMax, "#ff6b6b")
     this.drawParticles(g)
   }
 
@@ -1110,6 +1396,11 @@ export default class extends Controller {
     this.genkiTarget.style.width = `${clamp((s.stats.genki / max) * 100)}%`
     if (this.hasGenkiNumTarget) this.genkiNumTarget.textContent = `${Math.floor(s.stats.genki)}/${max}`
     if (this.hasLevelTarget) this.levelTarget.textContent = `Lv${s.dettyan.level}`
+    // まだ ふっていない ポイントがあるときは、📊 つよさ に しるし
+    if (this.hasStatusButtonTarget) {
+      this.statusButtonTarget.classList.toggle("has-points", s.dettyan.points > 0)
+      this.statusButtonTarget.dataset.points = s.dettyan.points > 0 ? String(s.dettyan.points) : ""
+    }
     this.gokigenTarget.style.width = `${clamp(s.stats.gokigen)}%`
     this.genkiTarget.parentElement.title = `げんき ${Math.round(s.stats.genki)}`
     this.gokigenTarget.parentElement.title = `ごきげん ${Math.round(s.stats.gokigen)}`
@@ -1191,7 +1482,7 @@ function gearRow(gear, sub, button) {
   drawGearIcon(icon.getContext("2d"), gear, 0, 0)
   const body = el("div", "dt-item__body")
   body.append(el("div", "dt-item__name", `${gear.name}（${slotName(gear.slot)}）`))
-  const fx = [gear.atk ? `こうげき+${gear.atk}` : "", gear.hp ? `たいりょく+${gear.hp}` : ""].filter(Boolean).join(" ")
+  const fx = STATS.filter((st) => gear[st.id]).map((st) => `${st.name}+${gear[st.id]}`).join(" ")
   body.append(el("div", "dt-item__effect", fx))
   if (sub) body.append(el("div", "dt-item__sub", sub))
   row.append(icon, body, button)

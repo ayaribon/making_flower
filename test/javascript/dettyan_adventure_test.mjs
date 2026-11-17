@@ -1,4 +1,4 @@
-// ⚔️ モンスター退治・レベル・ぶき いしょう の計算のテスト
+// 🗺️ ぼうけん（行き先・行って帰る）・そうび の計算のテスト。バトルの中身は dettyan_battle_test.mjs
 // 動かし方：node --test test/javascript/*.mjs
 import { test } from "node:test"
 import assert from "node:assert/strict"
@@ -14,6 +14,7 @@ registerHooks({
   }
 })
 const adv = await import("dettyan_adventure")
+const bt = await import("dettyan_battle")
 const { GEAR, SLOTS, findGear, toggleGear, gearBonus, equipped, shopGear, buyGear } = await import("dettyan_gear")
 const { maxGenki, applyIdle, feedFood, MAX_STAT, GENKI_PER_LEVEL } = await import("dettyan_care")
 const { defaultState, migrate } = await import("dettyan_save")
@@ -32,26 +33,36 @@ test("古いセーブにも モンスター退治・そうび の項目が入る
   assert.equal(s.dettyan.level, 2)
 })
 
-test("行くと げんき が減り、コインと経験値がもらえる（その場で帰ってくる）", () => {
+// オートで おわりまで たたかって、もらうものを セーブに入れる（画面と同じ流れ）
+function goAuto(s, id, seed) {
+  const r = adv.startAdventure(s, id, seed)
+  if (!r.ok) return r
+  for (const ev of bt.runAuto(r.battle)) if (ev.t === "down") adv.grantKill(s, ev)
+  return { ...r, ...adv.finishAdventure(s, r.battle) }
+}
+
+test("行くと げんき が減り、たおした分の コインと経験値がもらえる", () => {
   const s = fresh()
-  const r = adv.goAdventure(s, "park", 1)
+  const r = goAuto(s, "park", 1)
   assert.ok(r.ok)
   assert.equal(s.stats.genki, 100 - adv.findPlace("park").genki)
   assert.equal(s.money, r.battle.coins)
-  assert.ok(r.battle.exp > 0)
+  assert.ok(r.battle.beaten > 0)
+  if (r.levelUps === 0) assert.equal(s.dettyan.exp, r.battle.exp)
   assert.equal(s.adventure.count, 1)
 })
 
-test("同じ種なら同じバトル（再生が毎回同じになる）", () => {
-  const a = adv.simulate(fresh(), adv.findPlace("forest"), 42)
-  const b = adv.simulate(fresh(), adv.findPlace("forest"), 42)
+test("同じ種で 同じ行動なら 同じバトル", () => {
+  const a = bt.createBattle(fresh(), adv.findPlace("forest"), 42)
+  const b = bt.createBattle(fresh(), adv.findPlace("forest"), 42)
+  assert.deepEqual(bt.runAuto(a), bt.runAuto(b))
   assert.deepEqual(a, b)
 })
 
 test("げんき が足りないと行けない", () => {
   const s = fresh()
   s.stats.genki = 10
-  assert.equal(adv.goAdventure(s, "park", 1).reason, "genki")
+  assert.equal(adv.startAdventure(s, "park", 1).reason, "genki")
   assert.equal(s.stats.genki, 10)
 })
 
@@ -63,19 +74,15 @@ test("レベルが足りない行き先には行けない", () => {
   assert.equal(adv.canGo(s, "mountain").reason, "level")
 })
 
-test("公園の みどりスライム には、レベル1でもだいたい勝てる", () => {
-  let wins = 0
-  for (let seed = 1; seed <= 200; seed++) if (adv.simulate(fresh(), adv.findPlace("park"), seed).win) wins++
-  assert.ok(wins >= 180, `勝ったのは ${wins}/200`)
-})
-
-test("レベルが上がると、強さと げんき の上限が増える", () => {
+test("レベルが上がると、ポイントが もらえて、げんき の上限が増える", () => {
   const s = fresh()
-  const p1 = adv.dettyanPower(s)
+  const p1 = adv.dettyanStats(s)
   s.dettyan.exp = adv.expToNext(1) - 1
-  adv.goAdventure(s, "park", 3)
+  const r = goAuto(s, "park", 3)
+  assert.ok(r.levelUps >= 1)
   assert.ok(s.dettyan.level >= 2)
-  const p2 = adv.dettyanPower(s)
+  assert.equal(s.dettyan.points, (s.dettyan.level - 1) * bt.POINTS_PER_LEVEL)
+  const p2 = adv.dettyanStats(s)
   assert.ok(p2.hp > p1.hp && p2.atk > p1.atk)
   assert.equal(maxGenki(s), MAX_STAT + (s.dettyan.level - 1) * GENKI_PER_LEVEL)
 })
@@ -99,8 +106,8 @@ test("たたかうと、ときどき ぶき・いしょう が落ちる。持っ
   let got = 0
   for (let seed = 1; seed <= 400; seed++) {
     s.stats.genki = 100
-    const r = adv.goAdventure(s, "park", seed)
-    if (r.battle.gear) got++
+    const r = goAuto(s, "park", seed)
+    if (r.gear) got++
   }
   // 公園で落ちるのは5つ（あたま・からだ・て・せなか・あし）。どれも1回ずつしか落ちない
   const park = adv.findPlace("park").gear
@@ -112,10 +119,10 @@ test("そうびすると強くなり、もう一度えらぶと はずせる", (
   const s = fresh()
   assert.equal(toggleGear(s, "harisen").ok, false) // 持っていない
   s.gear.owned.harisen = true
-  const base = adv.dettyanPower(s).atk
+  const base = adv.dettyanStats(s).atk
   assert.ok(toggleGear(s, "harisen").on)
   assert.equal(s.gear.weapon, "harisen")
-  assert.ok(adv.dettyanPower(s).atk > base)
+  assert.ok(adv.dettyanStats(s).atk > base)
   assert.equal(toggleGear(s, "harisen").on, false)
   assert.equal(s.gear.weapon, null)
 })
@@ -156,7 +163,8 @@ test("そうびは 体のパーツごと（あたま・からだ・て・せな�
   assert.equal(s.gear.head, "crown")
   assert.equal(s.gear.outfit, "jersey")
   // 強さは5つの合計
-  const sum = ["crown", "jersey", "stick", "backpack", "sneakers"].map(findGear).reduce((a, g) => ({ atk: a.atk + g.atk, hp: a.hp + g.hp }), { atk: 0, hp: 0 })
+  const sum = { hp: 0, atk: 0, def: 0, mag: 0, spd: 0 }
+  for (const g of ["crown", "jersey", "stick", "backpack", "sneakers"].map(findGear)) for (const k of Object.keys(sum)) sum[k] += g[k] || 0
   assert.deepEqual(gearBonus(s), sum)
 })
 

@@ -142,11 +142,6 @@
 .dt-result__line--sub { font-weight: 400; font-size: 0.8rem; opacity: 0.75; padding-top: 0; }
 .dt-result__levelup { margin: 6px 0; padding: 8px 10px; border-radius: 10px; background: rgba(255, 216, 77, 0.2); color: #ffe38a; font-weight: 800; }
 .dt-result__back { display: block; width: 100%; margin: 12px 0 4px; }
-.dt-skip {
-  position: absolute; right: 8px; bottom: 8px; z-index: 7; pointer-events: none;
-  padding: 4px 10px; border-radius: 999px; background: rgba(0, 0, 0, 0.45); color: #fff; font-size: 0.75rem;
-}
-.dt-skip[hidden] { display: none; }
 .dt-item__button:disabled { background: rgba(255, 255, 255, 0.18); color: rgba(255, 255, 255, 0.5); cursor: default; }
 
 .dt-toast {
@@ -157,7 +152,7 @@
 }
 .dt-toast[hidden] { display: none; }
 /* バトル中：上のすみの たいりょくのバー（絵の上から 6〜10%）と重ならないように、少し下に出す */
-.dt-stage.is-battle .dt-toast { top: 15%; }
+.dt-stage.is-battle .dt-toast { top: 19%; } /* たいりょく・MP のバー（上から 5〜16%）の下 */
 
 .dt-pop {
   position: absolute; transform: translate(-50%, -100%); z-index: 5; pointer-events: none; white-space: nowrap;
@@ -166,7 +161,8 @@
 }
 @keyframes dt-pop { from { opacity: 1; margin-top: 0; } to { opacity: 0; margin-top: -28px; } }
 
-.dt-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+.dt-actions { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 12px; }
+.dt.is-battling .dt-actions { display: none; } /* バトル中は コマンド を出す */
 .dt-actions button {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   min-height: 56px; padding: 6px 2px; border: 0; border-radius: 12px; cursor: pointer;
@@ -174,6 +170,58 @@
   touch-action: manipulation;
 }
 .dt-actions button span { font-size: 0.85rem; font-weight: 700; white-space: nowrap; }
+.dt-actions button { position: relative; }
+/* まだ ふっていない ポイントの しるし */
+.dt-actions button.has-points::after {
+  content: attr(data-points); position: absolute; top: -6px; right: -4px;
+  min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px;
+  background: #ff5f8f; color: #fff; font-size: 0.72rem; font-weight: 800; line-height: 20px; text-align: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* ⚔️ バトルの コマンド */
+.dt-cmd { margin-top: 12px; }
+.dt-cmd[hidden] { display: none; }
+.dt-cmd__status { margin: 0 0 8px; font-size: 0.9rem; font-weight: 700; font-variant-numeric: tabular-nums; text-align: center; }
+.dt-cmd__buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.dt-cmd__btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-height: 56px; padding: 6px 2px; border: 0; border-radius: 12px; cursor: pointer;
+  background: #ffb347; color: #2a1c12; font: inherit; font-size: 1.2rem; touch-action: manipulation;
+  box-shadow: 0 3px 0 #c97e1e;
+}
+.dt-cmd__btn span { font-size: 0.82rem; font-weight: 800; line-height: 1.2; }
+.dt-cmd__btn small { font-size: 0.7rem; font-weight: 700; opacity: 0.75; }
+.dt-cmd__btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #c97e1e; }
+.dt-cmd__btn:disabled { background: rgba(255, 255, 255, 0.16); color: rgba(255, 255, 255, 0.5); box-shadow: none; cursor: default; }
+.dt-cmd__btn--sub { min-height: 44px; background: rgba(255, 255, 255, 0.16); color: #fff; box-shadow: none; font-size: 1rem; }
+.dt-cmd__btn--sub span { font-weight: 700; }
+.dt-cmd__btn--wide3 { grid-column: span 3; }
+.dt-cmd__btn--wide { grid-column: span 2; }
+.dt-cmd__note { grid-column: 1 / -1; padding: 6px 0; text-align: center; font-weight: 700; opacity: 0.9; }
+
+/* 📊 つよさ：職業・ステータス */
+.dt-jobs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 4px 0; }
+.dt-jobs__job {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 56px; padding: 6px 2px;
+  border: 2px solid transparent; border-radius: 12px; cursor: pointer;
+  background: rgba(255, 255, 255, 0.12); color: #fff; font: inherit; touch-action: manipulation;
+}
+.dt-jobs__job.is-on { border-color: #ffb347; background: rgba(255, 179, 71, 0.2); }
+.dt-jobs__icon { font-size: 1.3rem; }
+.dt-jobs__name { font-size: 0.82rem; font-weight: 700; }
+.dt-stat-row { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.dt-stat-row__body { flex: 1; min-width: 0; line-height: 1.35; }
+.dt-stat-row__name { font-weight: 700; }
+.dt-stat-row__sub { font-size: 0.72rem; opacity: 0.7; }
+.dt-stat-row__value { min-width: 2.6em; text-align: right; font-size: 1.15rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.dt-stat-row__btn {
+  flex: none; width: 40px; height: 40px; border: 0; border-radius: 50%; cursor: pointer;
+  background: rgba(255, 255, 255, 0.16); color: #fff; font: inherit; font-size: 1.05rem; font-weight: 800; touch-action: manipulation;
+}
+.dt-stat-row__btn--plus { background: #ffb347; color: #2a1c12; font-size: 0.9rem; }
+.dt-stat-row__btn:disabled { opacity: 0.35; cursor: default; }
+.dt-stat-tools { display: flex; gap: 8px; justify-content: center; padding: 8px 0 4px; }
 .dt-actions button:active { background: rgba(255, 255, 255, 0.26); }
 
 .dt-help { margin: 12px 0 0; font-size: 0.85rem; opacity: 0.75; text-align: center; line-height: 1.6; }
