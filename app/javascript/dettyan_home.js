@@ -4,23 +4,23 @@
 // - ここは「セーブの state をどう変えるか」だけを書く。保存は呼んだ側が store.update(...) の中で行う
 // 家具を増やすときは FURNITURE に1つ足して、dettyan_room.js に その絵を足す（id はセーブに入るので、あとから変えない）
 
-export const HOUSE = { id: "house", name: "マイホーム", icon: "🏠", price: 300, desc: "はじまりのまち の ちいさな いえ。家具を おけるようになる" }
+export const HOUSE = { id: "house", name: "マイホーム", icon: "🏠", price: 3000, desc: "はじまりのまち の ちいさな いえ。家具を おけるようになる" }
 
 //   needs：さきに 持っていないと 買えない家具
 export const FURNITURE = [
-  { id: "poster", name: "SiVA の ポスター", icon: "🖼️", price: 30, desc: "かべに はる" },
-  { id: "curtain", name: "カーテン", icon: "🪟", price: 40, desc: "まどに カーテン" },
-  { id: "clock", name: "かべかけ どけい", icon: "🕰️", price: 50, desc: "いまの 時間を さす" },
-  { id: "plant", name: "かんようしょくぶつ", icon: "🪴", price: 60, desc: "大きな はち と まどべの サボテン" },
-  { id: "rug", name: "ステージの ラグ", icon: "⭐", price: 80, desc: "この上で 歌う" },
-  { id: "shelf", name: "本だな", icon: "📚", price: 100, desc: "本 と トロフィー と 金のレコード" },
-  { id: "desk", name: "つくえ", icon: "🪵", price: 120, desc: "上に パソコン・ライト・マグ を おける" },
-  { id: "chair", name: "いす", icon: "🪑", price: 60, desc: "つくえ で すわれる" },
-  { id: "mug", name: "マグカップ", icon: "☕", price: 15, needs: ["desk"], desc: "ゆげ が でる" },
-  { id: "lamp", name: "デスクライト", icon: "💡", price: 40, needs: ["desk"], desc: "夜に つく" },
-  { id: "speaker", name: "スピーカー", icon: "🔊", price: 120, desc: "歌うと ふるえる" },
-  { id: "rec", name: "REC ランプ", icon: "🔴", price: 70, desc: "歌うと つく" },
-  { id: "pc", name: "パソコン", icon: "💻", price: 400, needs: ["desk"], desc: "つくえ と いす で、へんしゅう や 配信が できる" }
+  { id: "poster", name: "SiVA の ポスター", icon: "🖼️", price: 300, desc: "かべに はる" },
+  { id: "curtain", name: "カーテン", icon: "🪟", price: 400, desc: "まどに カーテン" },
+  { id: "clock", name: "かべかけ どけい", icon: "🕰️", price: 500, desc: "いまの 時間を さす" },
+  { id: "plant", name: "かんようしょくぶつ", icon: "🪴", price: 600, desc: "大きな はち と まどべの サボテン" },
+  { id: "rug", name: "ステージの ラグ", icon: "⭐", price: 800, desc: "この上で 歌う" },
+  { id: "shelf", name: "本だな", icon: "📚", price: 1000, desc: "本 と トロフィー と 金のレコード" },
+  { id: "desk", name: "つくえ", icon: "🪵", price: 1200, desc: "上に パソコン・ライト・マグ を おける" },
+  { id: "chair", name: "いす", icon: "🪑", price: 600, desc: "つくえ で すわれる" },
+  { id: "mug", name: "マグカップ", icon: "☕", price: 150, needs: ["desk"], desc: "ゆげ が でる" },
+  { id: "lamp", name: "デスクライト", icon: "💡", price: 400, needs: ["desk"], desc: "夜に つく" },
+  { id: "speaker", name: "スピーカー", icon: "🔊", price: 1200, desc: "歌うと ふるえる" },
+  { id: "rec", name: "REC ランプ", icon: "🔴", price: 700, desc: "歌うと つく" },
+  { id: "pc", name: "パソコン", icon: "💻", price: 4000, needs: ["desk"], desc: "つくえ と いす で、へんしゅう や 配信が できる" }
 ]
 
 export function findFurniture(id) {

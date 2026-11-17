@@ -37,7 +37,7 @@ test("古いセーブにも モンスター退治・そうび の項目が入る
 function goAuto(s, id, seed) {
   const r = adv.startAdventure(s, id, seed)
   if (!r.ok) return r
-  for (const ev of bt.runAuto(r.battle)) if (ev.t === "down") adv.grantKill(s, ev)
+  adv.grantEvents(s, bt.runAuto(r.battle))
   return { ...r, ...adv.finishAdventure(s, r.battle) }
 }
 

@@ -6,29 +6,30 @@ import { findFood, foodGokigen } from "dettyan_foods"
 
 export const MAX_STAT = 100               // ごきげん の上限・レベル1の げんき の上限
 export const GENKI_PER_LEVEL = 5          // レベルが1上がるごとに、げんき の上限が増える
-export const DAILY_REWARD = 20            // 毎日のごほうび（その日はじめて開いたとき）
-export const DAILY_CARE_COIN_LIMIT = 30   // おせわで落ちるコインの1日の上限
+export const DAILY_REWARD = 200           // 毎日のごほうび（その日はじめて開いたとき）
+export const DAILY_CARE_COIN_LIMIT = 300  // おせわで落ちるコインの1日の上限
 export const CARE_COOLDOWN_MS = 20 * 1000 // 同じおせわを続けてしても、この間はほとんど効かない
 export const GENKI_PER_HOUR = 4           // 放置で げんき が回復する（レベル1のとき。上限に合わせて増える）
 export const GOKIGEN_DOWN_PER_HOUR = 1.5  // 放置で ごきげん が少し下がる（GOKIGEN_FLOOR より下がらない）
 export const GOKIGEN_FLOOR = 30
 export const DIRT_EVERY_MS = 3 * 60 * 60 * 1000 // 3時間ごとに ほこり が1つ
 export const MAX_DIRT = 5
+export const COINS_PER_DIRT = 10          // そうじ：ほこり1つにつき もらえる コイン
 const MAX_IDLE_MS = 3 * 24 * 60 * 60 * 1000 // 放置で数えるのは3日まで
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000
 
 // おせわの種類。gokigen：上がる量、coinChance：コインが落ちる確率、coins：落ちる枚数 [少ない, 多い]
 export const CARE = {
   pet: {
-    gokigen: 6, coinChance: 0.35, coins: [1, 2],
+    gokigen: 6, coinChance: 0.35, coins: [10, 20],
     lines: ["えへへ", "うれしいな", "もっと なでて", "きもちいい〜"]
   },
   talk: {
-    gokigen: 3, coinChance: 0.25, coins: [1, 1],
+    gokigen: 3, coinChance: 0.25, coins: [10, 10],
     lines: ["きょうも がんばろ", "事務所、もっと大きくしたいね", "SiVA は げんきかな", "じゅんさい たべたいな", "歌ってみた、きいたよ！"]
   },
   clean: {
-    gokigen: 2, coinChance: 0, coins: [0, 0], // ほこり1つにつき ごきげん+3・コイン1枚（必ず）
+    gokigen: 2, coinChance: 0, coins: [0, 0], // ほこり1つにつき ごきげん+3・コイン COINS_PER_DIRT 枚（必ず）
     lines: ["ぴかぴか！", "すっきりした！"]
   }
 }
@@ -109,7 +110,7 @@ export function doCare(s, kind, now, rand = Math.random) {
       line = "もう きれいだよ"
     } else {
       gokigen = care.gokigen + dirt * 3
-      coins = dirt
+      coins = dirt * COINS_PER_DIRT
       s.room.cleanedAt = now
     }
   } else if (tooSoon) {

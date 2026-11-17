@@ -34,7 +34,7 @@ test("前から遊んでいる人（version 2）も テントで 野宿から。
   assert.deepEqual(s.home.furniture, {})
   assert.equal(s.story.prologue, false)
   assert.deepEqual(s.story.seen, {})
-  assert.equal(s.money, 50)
+  assert.equal(s.money, 500) // version 6 で お金は 10倍（ねうち は そのまま）
   assert.equal(s.dettyan.level, 4)
   assert.equal(s.gear.head, "cap")
   assert.equal(story.currentGoal(s).id, "adventure")
@@ -50,7 +50,7 @@ test("前の version 3 で マイホーム と ぜんぶの家具を わたし�
   assert.equal(s.home.type, "tent")
   assert.deepEqual(s.home.furniture, {})
   assert.equal(s.story.prologue, false) // はじまりの おはなし（テント）を もう一度
-  assert.equal(s.money, 60)
+  assert.equal(s.money, 600)
   assert.equal(s.dettyan.level, 8)
   assert.equal(s.dettyan.points, 21)
 })
@@ -141,4 +141,13 @@ test("おはなし の ページ：ことば と けしき が ある", () => {
       assert.ok(BGS.includes(p.bg), `${id} の ${p.bg}`)
     }
   }
+})
+
+test("マイホームは 💰3000。前の セーブ（version 5）の お金は 10倍（ねうち は そのまま）", () => {
+  assert.equal(home.HOUSE.price, 3000)
+  const s = migrate({ version: 5, money: 92, daily: { day: "2026-11-18", careCoins: 7, rewardDay: null } })
+  assert.equal(s.money, 920)
+  assert.equal(s.daily.careCoins, 70)
+  assert.equal(migrate(s).money, 920) // 2回読んでも ふえない
+  assert.equal(s.settings.battleSpeed, 1)
 })
