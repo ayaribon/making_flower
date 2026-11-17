@@ -14,7 +14,7 @@ registerHooks({
   }
 })
 const adv = await import("dettyan_adventure")
-const { GEAR, findGear, toggleGear, gearBonus } = await import("dettyan_gear")
+const { GEAR, SLOTS, findGear, toggleGear, gearBonus, equipped } = await import("dettyan_gear")
 const { maxGenki, applyIdle, feedFood, MAX_STAT, GENKI_PER_LEVEL } = await import("dettyan_care")
 const { defaultState, migrate } = await import("dettyan_save")
 const { findFood } = await import("dettyan_foods")
@@ -28,7 +28,7 @@ function fresh() {
 test("古いセーブにも モンスター退治・そうび の項目が入る", () => {
   const s = migrate({ version: 1, money: 5, dettyan: { level: 2, exp: 3 } })
   assert.deepEqual(s.adventure, { count: 0, wins: 0 })
-  assert.deepEqual(s.gear, { owned: {}, weapon: null, outfit: null })
+  assert.deepEqual(s.gear, { owned: {}, head: null, outfit: null, weapon: null, back: null, feet: null })
   assert.equal(s.dettyan.level, 2)
 })
 
@@ -102,9 +102,10 @@ test("たたかうと、ときどき ぶき・いしょう が落ちる。持っ
     const r = adv.goAdventure(s, "park", seed)
     if (r.battle.gear) got++
   }
-  // 公園で落ちるのは2つ。どちらも1回ずつしか落ちない
-  assert.equal(got, 2)
-  assert.ok(s.gear.owned.stick && s.gear.owned.jersey)
+  // 公園で落ちるのは5つ（あたま・からだ・て・せなか・あし）。どれも1回ずつしか落ちない
+  const park = adv.findPlace("park").gear
+  assert.equal(got, park.length)
+  for (const id of park) assert.ok(s.gear.owned[id], id)
 })
 
 test("そうびすると強くなり、もう一度えらぶと はずせる", () => {
@@ -124,10 +125,52 @@ test("表：行き先・スライム・そうび の id がそろっている", 
     for (const m of p.monsters) assert.ok(adv.MONSTERS[m], `${p.id} の ${m}`)
     for (const g of p.gear) assert.ok(findGear(g), `${p.id} の ${g}`)
   }
+  const ids = new Set()
   for (const g of GEAR) {
-    assert.ok(["weapon", "outfit"].includes(g.slot))
+    assert.ok(!ids.has(g.id), `${g.id} が2つある`)
+    ids.add(g.id)
+    assert.ok(SLOTS.some((slot) => slot.id === g.slot), `${g.id} の slot`)
     if (g.slot === "weapon") for (const row of g.hand) for (const c of row) if (c !== ".") assert.ok(g.colors[c], `${g.id} の ${c}`)
     if (g.slot === "outfit") for (const k of ["J", "j", "W", "P"]) assert.ok(g.colors[k], `${g.id} の ${k}`)
+    if (g.slot === "feet") for (const k of ["F", "f"]) assert.ok(g.colors[k], `${g.id} の ${k}`)
+    if (g.slot === "head") assert.ok(g.art && g.icon, `${g.id} の絵`)
+    if (g.slot === "back") assert.ok(g.behind && g.backView && g.icon, `${g.id} の絵`)
+    // 絵の文字に色がある（K は書かなくても ふちの色）
+    for (const art of [g.art, g.backArt, g.behind, g.front, g.backView, g.icon && { rows: g.icon }].filter(Boolean)) {
+      for (const row of art.rows) for (const c of row) if (c !== "." && c !== "K") assert.ok(g.colors[c], `${g.id} の ${c}`)
+    }
   }
   assert.ok(findFood("junsai"))
+})
+
+test("そうびは 体のパーツごと（あたま・からだ・て・せなか・あし）に1つずつ", () => {
+  assert.deepEqual(SLOTS.map((slot) => slot.id), ["head", "outfit", "weapon", "back", "feet"])
+  const s = fresh()
+  for (const id of ["cap", "jersey", "stick", "backpack", "sneakers", "crown"]) s.gear.owned[id] = true
+  for (const id of ["cap", "jersey", "stick", "backpack", "sneakers"]) assert.ok(toggleGear(s, id).on)
+  const set = equipped(s)
+  assert.deepEqual(Object.keys(set).sort(), ["back", "feet", "head", "outfit", "weapon"])
+  assert.equal(set.head.id, "cap")
+  // 同じパーツのものを えらぶと 入れかわる
+  assert.ok(toggleGear(s, "crown").on)
+  assert.equal(s.gear.head, "crown")
+  assert.equal(s.gear.outfit, "jersey")
+  // 強さは5つの合計
+  const sum = ["crown", "jersey", "stick", "backpack", "sneakers"].map(findGear).reduce((a, g) => ({ atk: a.atk + g.atk, hp: a.hp + g.hp }), { atk: 0, hp: 0 })
+  assert.deepEqual(gearBonus(s), sum)
+})
+
+test("どの行き先でも、その行き先の そうび が パーツごとに1つずつ落ちる", () => {
+  for (const p of adv.PLACES) {
+    const own = p.gear.slice(0, SLOTS.length).map(findGear)
+    assert.deepEqual(own.map((g) => g.slot).sort(), SLOTS.map((slot) => slot.id).sort(), p.id)
+  }
+})
+
+test("前のセーブ（ぶき・いしょう だけ）も そのまま読める", () => {
+  const s = migrate({ version: 1, gear: { owned: { harisen: true, suit: true }, weapon: "harisen", outfit: "suit" } })
+  assert.equal(s.gear.weapon, "harisen")
+  assert.equal(s.gear.outfit, "suit")
+  assert.equal(s.gear.head, null)
+  assert.equal(equipped(s).weapon.id, "harisen")
 })

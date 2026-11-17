@@ -28,4 +28,6 @@ pin "dettyan_sound" # 🎵 Dettyan の BGM・SE
 pin "dettyan_foods" # 🍽️ Dettyan のごはん（ショップの商品の表）
 pin "dettyan_care" # 🤚 おせわ・ショップ・放置の計算
 pin "dettyan_adventure" # ⚔️ モンスター退治（行き先・スライム・バトルの計算）
-pin "dettyan_gear" # 🗡️ ぶき・いしょう
+pin "dettyan_gear" # 🗡️ そうび（あたま・からだ・て・せなか・あし）
+pin "dettyan_room" # 🏢 Dettyan の事務所の部屋の絵
+pin "dettyan_scenes" # 🌳 モンスター退治の けしき

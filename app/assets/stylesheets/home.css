@@ -34,6 +34,11 @@
 .hm-card:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 .hm-card:active { transform: scale(0.98); }
 .hm-card__icon { font-size: 3.2rem; line-height: 1; }
+/* ドット絵の Dettyan（32×28 を 3倍。スマホは 2倍）。にじまないように */
+.hm-card__icon--dettyan {
+  display: block; width: 96px; height: 84px; margin: -8px 0 -6px;
+  image-rendering: crisp-edges; image-rendering: pixelated;
+}
 .hm-card__title { font-size: 1.35rem; font-weight: 700; }
 .hm-card__desc { font-size: 0.9rem; opacity: 0.9; }
 .hm-card__note { font-size: 0.72rem; opacity: 0.6; }
@@ -63,6 +68,7 @@
   .hm-menu { grid-template-columns: 1fr; gap: 14px; }
   .hm-card { min-height: 140px; border-radius: 20px; }
   .hm-card__icon { font-size: 2.6rem; }
+  .hm-card__icon--dettyan { width: 64px; height: 56px; margin: -4px 0 -2px; }
   .hm-splash__banner { display: none; }
   .hm-splash__icon {
     display: block; width: min(56vw, 260px); height: auto; border-radius: 28%;
