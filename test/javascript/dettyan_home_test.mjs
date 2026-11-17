@@ -121,6 +121,16 @@ test("おはなし：目標を たっせい すると 1回だけ おはなし �
   assert.equal(story.currentGoal(s), null) // 第1章 クリア
 })
 
+test("おはなし：Lv5 に なると ジョブチェンジ の おはなし が 1回 出る（目標としては 出さない）", () => {
+  const s = defaultState()
+  s.dettyan.level = 4
+  assert.deepEqual(story.checkStory(s), [])
+  s.dettyan.level = 5
+  assert.deepEqual(story.checkStory(s), ["job"])
+  assert.deepEqual(story.checkStory(s), [])
+  assert.equal(story.currentGoal(s).id, "adventure")
+})
+
 test("おはなし の ページ：ことば と けしき が ある", () => {
   const BGS = ["stream", "flash", "town", "camp", "room"]
   for (const g of story.GOALS) if (g.scene) assert.ok(story.SCENES[g.scene], g.scene)

@@ -208,6 +208,7 @@
   background: rgba(255, 255, 255, 0.12); color: #fff; font: inherit; touch-action: manipulation;
 }
 .dt-jobs__job.is-on { border-color: #ffb347; background: rgba(255, 179, 71, 0.2); }
+.dt-jobs__job:disabled { opacity: 0.45; cursor: default; }
 .dt-jobs__icon { font-size: 1.3rem; }
 .dt-jobs__name { font-size: 0.82rem; font-weight: 700; }
 .dt-stat-row { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }

@@ -10,7 +10,7 @@
 
 import { FURNITURE } from "dettyan_home"
 
-export const SAVE_VERSION = 4
+export const SAVE_VERSION = 5
 
 export function defaultState() {
   return {
@@ -18,7 +18,8 @@ export function defaultState() {
     money: 0,
     stats: { genki: 80, gokigen: 70 }, // げんき の上限はレベルで増える（dettyan_care.js の maxGenki）
     // job：職業（dettyan_battle.js の JOBS）、points：まだ ふっていない ポイント、alloc：ふった ポイント
-    dettyan: { level: 1, exp: 0, job: "warrior", points: 0, alloc: { hp: 0, atk: 0, def: 0, mag: 0, spd: 0 } },
+    // job は さいしょ "novice"（みならい）。Lv5 から ジョブチェンジ
+    dettyan: { level: 1, exp: 0, job: "novice", points: 0, alloc: { hp: 0, atk: 0, def: 0, mag: 0, spd: 0 } },
     items: {},             // { junsai: 2 } のように、持っているごはん・アイテムの数（id は dettyan_foods.js）
     daily: { day: null, careCoins: 0, rewardDay: null }, // その日（日本の日付）の数。おせわのコインの上限・毎日のごほうび
     care: { lastAt: {} },  // おせわごとに、最後にした時間（続けてしても効かないように）
@@ -60,6 +61,12 @@ const MIGRATIONS = {
       s.home = { type: "tent", furniture: {} }
       s.story = { prologue: false, seen: {} }
     }
+    return s
+  },
+  // 5：さいしょは みんな「みならい」。Lv5 から ジョブチェンジ（それより下で 職業が ついていたら みならい に もどす）
+  5: (s) => {
+    const level = Math.max(1, Number(s.dettyan?.level) || 1)
+    if (s.dettyan && (level < 5 || !s.dettyan.job)) s.dettyan.job = "novice"
     return s
   }
 }

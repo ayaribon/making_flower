@@ -22,7 +22,7 @@ const MOUNTAIN_GEAR = ["goldmic", "kira", "crown", "wings", "kirashoes"]
 export const PLACES = [
   { id: "park",   name: "公園",   icon: "🌳", level: 1, genki: 15, power: 0.97, count: [2, 3], monsters: ["green", "green", "blue"], drop: 0.1, gear: PARK_GEAR, gearDrop: 0.2,
     sky: "#9fd6ff", ground: "#7cc46a", line: "#5aa24c" },
-  { id: "forest", name: "森",     icon: "🌲", level: 3, genki: 25, power: 1.37, count: [3, 4], monsters: ["blue", "blue", "green", "purple"], drop: 0.2, gear: [...FOREST_GEAR, ...PARK_GEAR], gearDrop: 0.2,
+  { id: "forest", name: "森",     icon: "🌲", level: 3, genki: 25, power: 1.25, count: [3, 4], monsters: ["blue", "blue", "green", "purple"], drop: 0.2, gear: [...FOREST_GEAR, ...PARK_GEAR], gearDrop: 0.2,
     sky: "#5f8f6a", ground: "#3f6e3a", line: "#2f5a2c" },
   { id: "cave",   name: "どうくつ", icon: "🪨", level: 6, genki: 40, power: 1.47, count: [3, 5], monsters: ["purple", "purple", "blue", "red", "king"], drop: 0.3, gear: [...CAVE_GEAR, ...FOREST_GEAR], gearDrop: 0.2,
     sky: "#3a3440", ground: "#5a5260", line: "#46404c" },
