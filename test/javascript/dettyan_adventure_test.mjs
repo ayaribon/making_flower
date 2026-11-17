@@ -14,7 +14,7 @@ registerHooks({
   }
 })
 const adv = await import("dettyan_adventure")
-const { GEAR, SLOTS, findGear, toggleGear, gearBonus, equipped } = await import("dettyan_gear")
+const { GEAR, SLOTS, findGear, toggleGear, gearBonus, equipped, shopGear, buyGear } = await import("dettyan_gear")
 const { maxGenki, applyIdle, feedFood, MAX_STAT, GENKI_PER_LEVEL } = await import("dettyan_care")
 const { defaultState, migrate } = await import("dettyan_save")
 const { findFood } = await import("dettyan_foods")
@@ -173,4 +173,25 @@ test("前のセーブ（ぶき・いしょう だけ）も そのまま読める
   assert.equal(s.gear.outfit, "suit")
   assert.equal(s.gear.head, null)
   assert.equal(equipped(s).weapon.id, "harisen")
+})
+
+test("ショップの いしょう：買うと持ちものになり、2回は買えない。ぼうけん では落ちない", () => {
+  const shop = shopGear()
+  for (const slot of SLOTS) assert.ok(shop.some((g) => g.slot === slot.id), `${slot.id} の いしょう`)
+  for (const p of adv.PLACES) for (const id of p.gear) assert.ok(!findGear(id).price, `${id} は ぼうけん で落ちるので売らない`)
+  const s = fresh()
+  const g = shop[0]
+  assert.equal(buyGear(s, g.id).reason, "money")
+  assert.equal(s.gear.owned[g.id], undefined)
+  s.money = g.price + 5
+  assert.ok(buyGear(s, g.id).ok)
+  assert.equal(s.money, 5)
+  assert.ok(s.gear.owned[g.id])
+  s.money = 9999
+  assert.equal(buyGear(s, g.id).reason, "owned")
+  assert.equal(s.money, 9999)
+  assert.equal(buyGear(s, "stick").reason, "unknown") // ぼうけん のものは売っていない
+  // 買ったら そうびできる
+  assert.ok(toggleGear(s, g.id).on)
+  assert.equal(s.gear[g.slot], g.id)
 })

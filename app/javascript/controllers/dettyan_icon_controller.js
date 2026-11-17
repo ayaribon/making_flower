@@ -6,9 +6,9 @@ import { peekCachedState } from "dettyan_save"
 // カードにカーソルをのせると、うれしそうに足ぶみする
 // ゲームで そうびしているものを着て出てくる（この端末にある セーブの控えを読むだけ。サーバーには聞かない）
 const W = 32 // はね・ヘルメットが はみ出しても入る大きさ
-const H = 28
+const H = 30
 const LEFT = 6
-const TOP = 3
+const TOP = 4
 const TICK_MS = 120
 
 export default class extends Controller {

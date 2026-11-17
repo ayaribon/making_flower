@@ -119,13 +119,20 @@
 .dt-item__icon--emoji { display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
 .dt-sheet__section { margin: 12px 4px 2px; font-size: 0.85rem; font-weight: 700; opacity: 0.85; }
 .dt-sheet__note { padding: 4px 4px 6px; font-size: 0.78rem; opacity: 0.8; }
+/* ショップのタブ（たべもの・いしょう） */
+.dt-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px 0 6px; position: sticky; top: -6px; z-index: 1; background: #22160d; }
+.dt-tabs__tab {
+  min-height: 40px; border: 0; border-radius: 999px; cursor: pointer;
+  background: rgba(255, 255, 255, 0.12); color: #fff; font: inherit; font-weight: 700; touch-action: manipulation;
+}
+.dt-tabs__tab.is-on { background: #ffb347; color: #2a1c12; }
 .dt-sheet__none { padding: 4px 8px 8px; font-size: 0.78rem; opacity: 0.55; }
 .dt-sheet__wide { display: block; width: 100%; margin: 6px 0 4px; }
 
 /* そうび：いまの すがた と つよさ */
 .dt-gear-top { display: flex; align-items: center; gap: 14px; padding: 8px 4px 4px; }
 .dt-gear-top__me {
-  width: 90px; height: 84px; flex: none; border-radius: 12px;
+  width: 90px; height: 93px; flex: none; border-radius: 12px;
   background: radial-gradient(circle at 50% 70%, #f6ecd8 0%, #d9c3a0 100%);
   image-rendering: crisp-edges; image-rendering: pixelated;
 }
@@ -168,6 +175,16 @@
 .dt-actions button:active { background: rgba(255, 255, 255, 0.26); }
 
 .dt-help { margin: 12px 0 0; font-size: 0.85rem; opacity: 0.75; text-align: center; line-height: 1.6; }
+
+/* スマホ：ショップ・もちもの などは 画面の下から大きく出す（商品が多くても見やすいように） */
+@media (max-width: 640px) {
+  .dt-sheet {
+    position: fixed; inset: auto 0 0 0; z-index: 40;
+    height: min(76vh, 620px); height: min(76dvh, 620px);
+    border-radius: 16px 16px 0 0; padding-bottom: env(safe-area-inset-bottom);
+    background: #22160d; box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.45);
+  }
+}
 
 @keyframes dt-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
 @media (prefers-reduced-motion: reduce) { .dt-start__text, .dt-pop { animation: none; } }
