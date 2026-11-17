@@ -372,7 +372,7 @@ export const GEAR = [
   // ==== ここから ショップで買う かわいい いしょう（price あり） ====
 
   // ---- あたま ----
-  { id: "nekomimi", name: "ねこみみ", slot: "head", spd: 1, price: 90,
+  { id: "nekomimi", name: "ねこみみ", slot: "head", spd: 1, price: 900,
     colors: { p: "#ff9ec4", H: "#4a4a5a", h: "#6a6a7e" },
     art: { x: 3, y: 0, rows: [
       ".K..........K.",
@@ -402,7 +402,7 @@ export const GEAR = [
       "............",
       "............"
     ] },
-  { id: "ribbon", name: "おおきなリボン", slot: "head", hp: 1, mag: 1, price: 120,
+  { id: "ribbon", name: "おおきなリボン", slot: "head", hp: 1, mag: 1, price: 1200,
     colors: { R: "#ff5fa2", r: "#ffc0dc" },
     art: { x: 4, y: 1, rows: [
       ".KK......KK.",
@@ -425,7 +425,7 @@ export const GEAR = [
       ".....KK.....",
       "............"
     ] },
-  { id: "usamimi", name: "うさみみ", slot: "head", hp: 1, spd: 1, price: 150,
+  { id: "usamimi", name: "うさみみ", slot: "head", hp: 1, spd: 1, price: 1500,
     colors: { W: "#ffffff", p: "#ffb0d0", b: "#ff8ac6" },
     art: { x: 5, y: -3, rows: [
       ".K......K.",
@@ -461,7 +461,7 @@ export const GEAR = [
       "............",
       "............"
     ] },
-  { id: "hanakanmuri", name: "はなかんむり", slot: "head", hp: 1, mag: 1, price: 100,
+  { id: "hanakanmuri", name: "はなかんむり", slot: "head", hp: 1, mag: 1, price: 1000,
     colors: { P: "#ff8ac6", Y: "#ffe066", B: "#8ad0ff", g: "#5cc46a" },
     art: { x: 4, y: 3, rows: [
       ".PP..YY..BB.",
@@ -484,7 +484,7 @@ export const GEAR = [
     ] },
 
   // ---- からだ ----
-  { id: "parka", name: "ゆめかわパーカー", slot: "outfit", hp: 1, def: 1, price: 150,
+  { id: "parka", name: "ゆめかわパーカー", slot: "outfit", hp: 1, def: 1, price: 1500,
     colors: { J: "#ffb0d0", j: "#ff8ac6", W: "#ffc8e0", P: "#b8b0d0", w: "#ffffff" },
     art: { x: 5, y: 15, rows: [
       "JJ......JJ",
@@ -499,7 +499,7 @@ export const GEAR = [
       ".JjjjjjjJ.",
       "..JJJJJJ.."
     ] } },
-  { id: "sailor", name: "セーラーふく", slot: "outfit", hp: 1, def: 1, spd: 1, price: 180,
+  { id: "sailor", name: "セーラーふく", slot: "outfit", hp: 1, def: 1, spd: 1, price: 1800,
     colors: { J: "#f4f4f8", j: "#2a3a7a", W: "#e0484d", P: "#2a3a7a", n: "#2a3a7a", w: "#ffffff" },
     art: { x: 5, y: 16, rows: ["nnn....nnn"] },
     backArt: { x: 5, y: 16, rows: [
@@ -507,7 +507,7 @@ export const GEAR = [
       "nwwwwwwwwn",
       "nnnnnnnnnn"
     ] } },
-  { id: "kuma", name: "くまの きぐるみ", slot: "outfit", hp: 2, def: 1, price: 220,
+  { id: "kuma", name: "くまの きぐるみ", slot: "outfit", hp: 2, def: 1, price: 2200,
     colors: { J: "#a8743f", j: "#7a4a24", W: "#e8c89a", P: "#a8743f", b: "#a8743f", c: "#e8c89a" },
     art: { x: 3, y: 3, rows: [
       ".KK........KK.",
@@ -521,7 +521,7 @@ export const GEAR = [
       "KbbK......KbbK",
       ".KK........KK."
     ] } },
-  { id: "yukata", name: "ゆかた", slot: "outfit", hp: 1, mag: 1, price: 200,
+  { id: "yukata", name: "ゆかた", slot: "outfit", hp: 1, mag: 1, price: 2000,
     colors: { J: "#3a4a8a", j: "#f4f1ea", W: "#3a4a8a", P: "#3a4a8a", w: "#c8d8ff", o: "#e0484d", y: "#ffd84d" },
     art: { x: 4, y: 17, rows: [
       "..w.....w...",
@@ -535,7 +535,7 @@ export const GEAR = [
       "oooooyyooooo",
       "....yyyy...."
     ] } },
-  { id: "ouji", name: "おうじさまの ふく", slot: "outfit", hp: 1, atk: 1, def: 1, price: 250,
+  { id: "ouji", name: "おうじさまの ふく", slot: "outfit", hp: 1, atk: 1, def: 1, price: 2500,
     colors: { J: "#f4f4ff", j: "#d8b040", W: "#f4f4ff", P: "#3a4aa0", g: "#ffd84d", r: "#e0484d" },
     art: { x: 4, y: 16, rows: [
       "gg........gg",
@@ -547,15 +547,15 @@ export const GEAR = [
     backArt: { x: 4, y: 16, rows: ["gg........gg"] } },
 
   // ---- て ----
-  { id: "penlight", name: "ペンライト", slot: "weapon", mag: 1, spd: 1, price: 60,
+  { id: "penlight", name: "ペンライト", slot: "weapon", mag: 1, spd: 1, price: 600,
     hand: [".L.", ".L.", ".l.", ".s.", ".s."], colors: { L: "#ff7ab6", l: "#ffb0d8", s: "#f4f4f8" } },
-  { id: "uchiwa", name: "ハートのうちわ", slot: "weapon", atk: 1, mag: 1, price: 80,
+  { id: "uchiwa", name: "ハートのうちわ", slot: "weapon", atk: 1, mag: 1, price: 800,
     hand: ["ppp", "pHp", "ppp", ".s.", ".s."], colors: { p: "#ffd0e4", H: "#ff3a7a", s: "#c8965a" } },
-  { id: "magicwand", name: "まほうのステッキ", slot: "weapon", mag: 2, price: 110,
+  { id: "magicwand", name: "まほうのステッキ", slot: "weapon", mag: 2, price: 1100,
     hand: [".y.", "yYy", ".y.", ".w.", ".w."], colors: { y: "#ffd84d", Y: "#fff6c0", w: "#ff9ec4" } },
 
   // ---- せなか ----
-  { id: "kumapack", name: "くまリュック", slot: "back", hp: 1, price: 160,
+  { id: "kumapack", name: "くまリュック", slot: "back", hp: 1, price: 1600,
     colors: { B: "#a8743f", b: "#7a4a24", c: "#e8c89a", s: "#7a4a24" },
     behind: { x: 1, y: 13, rows: [
       "..KK..........KK..",
@@ -595,7 +595,7 @@ export const GEAR = [
       "..KKKKKKKK..",
       "............"
     ] },
-  { id: "chouchou", name: "ちょうちょのはね", slot: "back", mag: 1, spd: 1, price: 200,
+  { id: "chouchou", name: "ちょうちょのはね", slot: "back", mag: 1, spd: 1, price: 2000,
     colors: { P: "#ffb0d0", p: "#ffffff", y: "#ffe066", L: "#c8a0ff", l: "#ffffff", K: "#8a5a9a" },
     behind: BUTTERFLY,
     backView: BUTTERFLY,
@@ -613,7 +613,7 @@ export const GEAR = [
       "...K....K...",
       "............"
     ] },
-  { id: "shippo", name: "ねこのしっぽ", slot: "back", spd: 1, price: 90,
+  { id: "shippo", name: "ねこのしっぽ", slot: "back", spd: 1, price: 900,
     colors: { H: "#2a2a32", w: "#ffffff" },
     behind: { x: 13, y: 13, rows: [
       ".....KK.",
@@ -652,11 +652,11 @@ export const GEAR = [
     ] },
 
   // ---- あし ----
-  { id: "geta", name: "げた", slot: "feet", def: 1, spd: 1, price: 60,
+  { id: "geta", name: "げた", slot: "feet", def: 1, spd: 1, price: 600,
     colors: { F: "#c8965a", f: "#e0484d" } },
-  { id: "usaslipper", name: "うさぎスリッパ", slot: "feet", hp: 1, price: 70,
+  { id: "usaslipper", name: "うさぎスリッパ", slot: "feet", hp: 1, price: 700,
     colors: { F: "#ffffff", f: "#ffb0d0" } },
-  { id: "yumeboots", name: "ゆめかわブーツ", slot: "feet", hp: 1, spd: 1, price: 130,
+  { id: "yumeboots", name: "ゆめかわブーツ", slot: "feet", hp: 1, spd: 1, price: 1300,
     colors: { F: "#c8a0ff", f: "#ffffff", Q: "#ffb0d0" } }
 ]
 

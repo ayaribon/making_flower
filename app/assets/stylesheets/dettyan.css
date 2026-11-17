@@ -146,7 +146,7 @@
 
 .dt-toast {
   position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 9;
-  padding: 6px 14px; border-radius: 999px; white-space: nowrap;
+  padding: 6px 14px; border-radius: 16px; width: max-content; max-width: 94%; text-align: center; /* 長いときは 2行に */
   background: rgba(42, 28, 18, 0.92); color: #fff; font-size: 0.85rem; font-weight: 700;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); pointer-events: none;
 }
@@ -196,6 +196,7 @@
 .dt-cmd__btn:disabled { background: rgba(255, 255, 255, 0.16); color: rgba(255, 255, 255, 0.5); box-shadow: none; cursor: default; }
 .dt-cmd__btn--sub { min-height: 44px; background: rgba(255, 255, 255, 0.16); color: #fff; box-shadow: none; font-size: 1rem; }
 .dt-cmd__btn--sub span { font-weight: 700; }
+.dt-cmd__btn--sub.is-on { background: rgba(255, 179, 71, 0.35); box-shadow: inset 0 0 0 2px #ffb347; }
 .dt-cmd__btn--wide3 { grid-column: span 3; }
 .dt-cmd__btn--wide { grid-column: span 2; }
 .dt-cmd__note { grid-column: 1 / -1; padding: 6px 0; text-align: center; font-weight: 700; opacity: 0.9; }

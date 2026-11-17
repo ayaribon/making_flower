@@ -361,9 +361,22 @@ export function sceneBase(place) {
   return c
 }
 
-// けしきを描く（t：秒）
-export function drawScene(g, place, t) {
-  g.drawImage(sceneBase(place), 0, 0)
+// けしきを描く（t：秒、scroll：歩いた きょり。けしきが 左へ ながれる）
+// 右どなりに 左右反転した けしき を ならべて、つなぎめが 見えないようにする
+export function drawScene(g, place, t, scroll = 0) {
+  const base = sceneBase(place)
+  const x0 = -Math.round(scroll % (W * 2))
+  if (x0 === 0) {
+    g.drawImage(base, 0, 0)
+  } else {
+    g.drawImage(base, x0, 0)
+    g.save()
+    g.translate(x0 + W * 2, 0)
+    g.scale(-1, 1)
+    g.drawImage(base, 0, 0)
+    g.restore()
+    g.drawImage(base, x0 + W * 2, 0)
+  }
   const scene = SCENES[place.id]
   if (scene) scene.live(g, t, seededRandom(place.id.length * 131 + 7))
 }

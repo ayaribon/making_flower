@@ -186,7 +186,9 @@ test("ぜんぶ たおすと かち。たおすたびに コインと経験値�
   assert.ok(b.win)
   const downs = ev.filter((e) => e.t === "down")
   assert.equal(downs.length, b.foes.length)
-  assert.equal(downs.reduce((a, e) => a + e.coins, 0), b.coins)
+  const all = [...b.intro, ...ev]
+  const coins = all.filter((e) => e.t === "down" || e.t === "chest").reduce((a, e) => a + (e.coins || 0), 0)
+  assert.equal(coins, b.coins) // たおした分 ＋ 宝箱の お金
   assert.equal(ev.at(-1).t, "win")
 })
 
@@ -219,4 +221,64 @@ test("レベルを上げると 勝ちやすくなる", () => {
   for (const place of adv.PLACES.filter((p) => p.id !== "park")) {
     assert.ok(winRate(hero(place.level + 2), place.id) > winRate(hero(place.level), place.id), place.id)
   }
+})
+
+// ---- たんけん（歩く → みつけた！ → 宝箱・スライム・友達） ----
+test("たんけん：出会う前に かならず 歩いて みつける。スライムは さいしょの数だけ、宝箱・友達も まざる", () => {
+  let chests = 0
+  let friends = 0
+  for (let seed = 1; seed <= 100; seed++) {
+    const b = bt.createBattle(hero(10, "warrior", KITS.mountain), adv.findPlace("cave"), seed)
+    const ev = [...b.intro, ...bt.runAuto(b)]
+    assert.equal(b.steps.filter((x) => x.kind === "foe").length, b.foes.length)
+    // 出会い（appear・chest・friend）の まえは かならず walk → find
+    ev.forEach((e, i) => {
+      if (e.t === "appear" || e.t === "chest" || e.t === "friend") {
+        assert.equal(ev[i - 1].t, "find", `seed ${seed}`)
+        assert.equal(ev[i - 2].t, "walk", `seed ${seed}`)
+      }
+    })
+    if (b.win) {
+      assert.equal(ev.filter((e) => e.t === "find").length, b.steps.length) // さいごまで 歩いた
+      assert.equal(ev.at(-1).t, "win")
+    }
+    chests += ev.filter((e) => e.t === "chest").length
+    friends += ev.filter((e) => e.t === "friend").length
+    for (const e of ev.filter((x) => x.t === "chest")) assert.ok(e.coins > 0 || e.food || e.gear, "宝箱は からっぽ じゃない")
+  }
+  assert.ok(chests > 50, `宝箱 ${chests}`)
+  assert.ok(friends > 10 && friends < 60, `友達 ${friends}`)
+})
+
+test("たんけん：宝箱の そうび は まだ持っていないもの だけ。友達の ドット絵は 12×12", () => {
+  for (let seed = 1; seed <= 200; seed++) {
+    const s = hero(6)
+    s.gear.owned.mic = true
+    const b = bt.createBattle(s, adv.findPlace("cave"), seed)
+    const ev = [...b.intro, ...bt.runAuto(b)]
+    for (const e of ev.filter((x) => x.t === "chest" && x.gear)) assert.notEqual(e.gear, "mic")
+    const gears = ev.filter((x) => x.gear).map((x) => x.gear)
+    assert.equal(new Set(gears).size, gears.length, "同じ そうびは 2回 出ない")
+  }
+  for (const f of bt.FRIENDS) {
+    assert.equal(f.art.length, 12, f.id)
+    for (const row of f.art) {
+      assert.equal(row.length, 12, `${f.id} ${row}`)
+      for (const ch of row) assert.ok(ch === "." || f.colors[ch], `${f.id} の色 ${ch}`)
+    }
+  }
+})
+
+test("たんけん：もらったもの（宝箱・友達）は セーブに入る。同じ種なら 同じ たんけん", () => {
+  const s = hero(6)
+  s.money = 0
+  const r = adv.startAdventure(s, "cave", 77)
+  adv.grantEvents(s, bt.runAuto(r.battle))
+  assert.equal(s.money, r.battle.coins)
+  for (const id of r.battle.found.foods) assert.ok(s.items[id] > 0)
+  for (const id of r.battle.found.gear) assert.ok(s.gear.owned[id])
+  const a = bt.createBattle(hero(6), adv.findPlace("cave"), 77)
+  const b = bt.createBattle(hero(6), adv.findPlace("cave"), 77)
+  assert.deepEqual(a.steps, b.steps)
+  assert.deepEqual(a.intro, b.intro)
 })

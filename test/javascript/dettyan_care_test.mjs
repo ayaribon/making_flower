@@ -32,7 +32,7 @@ test("古いセーブにも新しい項目が入る", () => {
   const s = migrate({ version: 1, money: 5, stats: { genki: 10, gokigen: 50 }, items: { junsai: 1 } })
   assert.deepEqual(s.daily, { day: null, careCoins: 0, rewardDay: null })
   assert.deepEqual(s.care, { lastAt: {} })
-  assert.equal(s.money, 5)
+  assert.equal(s.money, 50) // version 6 で お金は 10倍
   assert.equal(s.items.junsai, 1)
 })
 
@@ -110,7 +110,7 @@ test("そうじ：ほこりの数だけコイン。きれいなら何もない",
   const now = T0 + 7 * HOUR
   assert.equal(care.dirtCount(s, now), 2)
   const r = care.doCare(s, "clean", now, never)
-  assert.equal(r.coins, 2)
+  assert.equal(r.coins, 2 * care.COINS_PER_DIRT)
   assert.equal(care.dirtCount(s, now), 0)
   assert.equal(care.dirtCount(s, now + 100 * HOUR), care.MAX_DIRT)
 })

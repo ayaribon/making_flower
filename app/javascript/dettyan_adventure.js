@@ -5,9 +5,9 @@
 
 import { FOODS } from "dettyan_foods"
 import { GEAR } from "dettyan_gear"
-import { MONSTERS, createBattle, rnd, applyLevelUps, expToNext, dettyanStats } from "dettyan_battle"
+import { MONSTERS, FRIENDS, findFriend, createBattle, rnd, applyLevelUps, expToNext, dettyanStats } from "dettyan_battle"
 
-export { MONSTERS, expToNext, dettyanStats }
+export { MONSTERS, FRIENDS, findFriend, expToNext, dettyanStats }
 
 // 行き先ごとに落ちる そうび（あたま・からだ・て・せなか・あし が1つずつ）
 const PARK_GEAR = ["stick", "jersey", "cap", "backpack", "sneakers"]
@@ -18,15 +18,20 @@ const MOUNTAIN_GEAR = ["goldmic", "kira", "crown", "wings", "kirashoes"]
 // 行き先。level：行けるレベル、genki：使う げんき、count：出てくるスライムの数 [少ない, 多い]
 // monsters：出てくるスライム（後ろほど出にくい）、power：スライムの強さの倍率（おくほど強い）、drop：ごはんを持って帰る確率
 // gear：落ちる そうび（dettyan_gear.js の id。1つ前の行き先のものも落ちる）、gearDrop：落ちる確率（持っていないものだけ落ちる）
+// chests：宝箱の数 [少ない, 多い]、chest.coins：宝箱の お金 [少ない, 多い]、friend：友達に 会う確率
 // けしきの絵は dettyan_scenes.js（id ごと）。sky / ground は絵がないときの色
 export const PLACES = [
   { id: "park",   name: "公園",   icon: "🌳", level: 1, genki: 15, power: 0.97, count: [2, 3], monsters: ["green", "green", "blue"], drop: 0.1, gear: PARK_GEAR, gearDrop: 0.2,
+    chests: [0, 1], chest: { coins: [30, 60] }, friend: 0.3,
     sky: "#9fd6ff", ground: "#7cc46a", line: "#5aa24c" },
   { id: "forest", name: "森",     icon: "🌲", level: 3, genki: 25, power: 1.25, count: [3, 4], monsters: ["blue", "blue", "green", "purple"], drop: 0.2, gear: [...FOREST_GEAR, ...PARK_GEAR], gearDrop: 0.2,
+    chests: [0, 2], chest: { coins: [60, 110] }, friend: 0.3,
     sky: "#5f8f6a", ground: "#3f6e3a", line: "#2f5a2c" },
   { id: "cave",   name: "どうくつ", icon: "🪨", level: 6, genki: 40, power: 1.47, count: [3, 5], monsters: ["purple", "purple", "blue", "red", "king"], drop: 0.3, gear: [...CAVE_GEAR, ...FOREST_GEAR], gearDrop: 0.2,
+    chests: [1, 2], chest: { coins: [100, 180] }, friend: 0.3,
     sky: "#3a3440", ground: "#5a5260", line: "#46404c" },
   { id: "mountain", name: "山", icon: "🏔️", level: 10, genki: 60, power: 1.85, count: [3, 5], monsters: ["red", "red", "purple", "king"], drop: 0.4, gear: [...MOUNTAIN_GEAR, ...CAVE_GEAR], gearDrop: 0.2,
+    chests: [1, 2], chest: { coins: [160, 260] }, friend: 0.3,
     sky: "#c9d8ec", ground: "#8a8a7a", line: "#6e6e60" }
 ]
 
@@ -64,19 +69,34 @@ export function seededRandom(seed) {
 }
 
 // 出かける：げんき を使って、バトルを はじめる。{ ok, reason, place, battle }
+// さいしょの スライムに 会うまでに みつけたもの（battle.intro）は、ここで もらう
 export function startAdventure(s, id, seed) {
   const check = canGo(s, id)
   if (!check.ok) return check
   const place = check.place
   s.stats.genki = Math.max(0, Math.round((s.stats.genki - place.genki) * 10) / 10)
   s.adventure.count += 1
-  return { ok: true, place, battle: createBattle(s, place, seed) }
+  const battle = createBattle(s, place, seed)
+  grantEvents(s, battle.intro)
+  return { ok: true, place, battle }
 }
 
 // スライムを たおした（takeTurn の { t: "down" }）：コインと経験値を もらう
 export function grantKill(s, ev) {
   s.money += ev.coins
   s.dettyan.exp += ev.exp
+}
+
+// たんけん・バトルで 起きたことのうち、もらえるもの を セーブに入れる（たおした・宝箱・友達の ごはん）
+// とちゅうで 閉じても なくならないように、起きたら すぐ 呼ぶ
+export function grantEvents(s, events) {
+  for (const ev of events) {
+    if (ev.t === "down") grantKill(s, ev)
+    if (ev.t !== "chest" && ev.t !== "friend") continue
+    if (ev.coins) s.money += ev.coins
+    if (ev.food) s.items[ev.food] = (s.items[ev.food] || 0) + 1
+    if (ev.gear) s.gear.owned[ev.gear] = true
+  }
 }
 
 // バトルが おわった：ごはん・そうび が落ちる・レベルが上がる

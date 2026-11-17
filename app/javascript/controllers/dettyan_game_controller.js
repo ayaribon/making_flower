@@ -4,7 +4,7 @@ import { DettyanStore } from "dettyan_save"
 import { DettyanSound } from "dettyan_sound"
 import { FOODS, findFood, foodGokigen, drawFood } from "dettyan_foods"
 import { applyIdle, claimDailyReward, doCare, buyFood, feedFood, dirtCount, maxGenki } from "dettyan_care"
-import { PLACES, MONSTERS, canGo, startAdventure, grantKill, finishAdventure, drawSlime } from "dettyan_adventure"
+import { PLACES, MONSTERS, canGo, startAdventure, grantEvents, finishAdventure, drawSlime, findFriend } from "dettyan_adventure"
 import { STATS, JOBS, SKILLS, POINTS_PER_LEVEL, JOB_CHANGE_LEVEL, HP_PER_VIT, findJob, findSkill, dettyanStats, expToNext, addPoint, removePoint, resetPoints, autoAllocate, setJob, canChangeJob, applyLevelUps, takeTurn, autoAction, runAuto } from "dettyan_battle"
 import { GEAR, SLOTS, slotName, findGear, equipped, gearBonus, toggleGear, drawGearIcon, drawDressed, drawHeldMic, shopGear, buyGear } from "dettyan_gear"
 import { ROOM_W, ROOM_H, createRoom, drawRoomLive, drawChair, drawSpeaker, drawNightLight, drawWindowLight, CHAIR, SPEAKER, SEAT, WORK_SPOT, SING_SPOT } from "dettyan_room"
@@ -40,8 +40,24 @@ const BATTLE_ME_X = 34
 const BATTLE_FOE_X = 94
 const BATTLE_FEET = 82
 const AUTO_WAIT_SEC = 0.25 // オートで 次の行動まで まつ時間
+const BATTLE_SPEEDS = [1, 2, 3] // ⏩ はやおくり（ボタンで 1倍 → 2倍 → 3倍）
+const WALK_PX_PER_SEC = 34 // たんけん で 歩くとき、けしきが ながれる はやさ
+// 宝箱のドット絵（12×10）。O：ふち、W：木、D：木のかげ、G：金具
+const CHEST_SPRITE = [
+  "............",
+  "..OOOOOOOO..",
+  ".OWWWWWWWWO.",
+  ".OWDDDDDDWO.",
+  "OOOOOGGOOOOO",
+  "OWWWWGGWWWWO",
+  "OWWWWWWWWWWO",
+  "OWDDDDDDDDWO",
+  "OWWWWWWWWWWO",
+  "OOOOOOOOOOOO"
+]
+const CHEST_COLORS = { O: "#4a2a10", W: "#c0803a", D: "#94602a", G: "#ffd84d" }
 // バトルの できごと を見せる時間（秒）。オートのときは少し速く
-const EVENT_SEC = { arrive: 1, appear: 0.8, act: 0.6, buff: 0.7, guard: 0.5, stun: 0.6, down: 0.55, win: 1.3, lose: 1.3, run: 0.9 }
+const EVENT_SEC = { arrive: 1, walk: 1.1, find: 0.7, chest: 1.3, friend: 1.7, appear: 0.8, act: 0.6, buff: 0.7, guard: 0.5, stun: 0.6, down: 0.55, win: 1.3, lose: 1.3, run: 0.9 }
 const STAT_NAMES = Object.fromEntries(STATS.map((st) => [st.id, st.name]))
 
 // 部屋でひとりで すること（PC で作業・歌う）
@@ -1232,13 +1248,16 @@ export default class extends Controller {
     this.startBattle(r, before)
   }
 
+  // たんけん の はじまり：ついた → 歩く → みつけた！ →（宝箱・友達）→ スライム（battle.intro。もらうものは startAdventure で もう もらっている）
   startBattle({ battle, place }, before) {
-    const foe = battle.foe
+    const speed = this.store.state.settings.battleSpeed
     this.battle = {
       b: battle, place, before,
       auto: !!this.store.state.settings.autoBattle,
-      menu: "main", locked: true, queue: [{ t: "arrive" }, { t: "appear", foe: foe.id, hp: foe.hp, maxHp: foe.maxHp }], cur: null, t: 0, wait: 0,
-      view: { myHp: battle.me.hp, myMp: battle.me.mp, foe: null, foeHp: 0, foeMax: 1, lunge: 0, foeLunge: 0, flashMe: 0, flashFoe: 0, dying: 0, hop: 0, bob: 0 }
+      speed: BATTLE_SPEEDS.includes(speed) ? speed : 1,
+      menu: "main", locked: true, queue: [{ t: "arrive" }, ...battle.intro], cur: null, t: 0, wait: 0,
+      view: { myHp: battle.me.hp, myMp: battle.me.mp, foe: null, foeHp: 0, foeMax: 1, lunge: 0, foeLunge: 0, flashMe: 0, flashFoe: 0, dying: 0, hop: 0, bob: 0,
+        walk: 0, scroll: 0, find: 0, thing: null }
     }
     // バトル中は、知らせ（あらわれた！など）を たいりょくのバー の下に出す（CSS の .is-battle）
     this.canvasTarget.parentElement.classList.add("is-battle")
@@ -1253,9 +1272,8 @@ export default class extends Controller {
     const B = this.battle
     if (!B || B.b.over || B.cur || B.queue.length) return
     const events = takeTurn(B.b, action)
-    // たおした分の コインと経験値は すぐ セーブ（とちゅうで 閉じても なくならない）
-    const downs = events.filter((e) => e.t === "down")
-    if (downs.length) this.store.update((s) => downs.forEach((e) => grantKill(s, e)))
+    // たおした分の コインと経験値・宝箱・友達に もらったもの は すぐ セーブ（とちゅうで 閉じても なくならない）
+    if (events.some((e) => e.t === "down" || e.t === "chest" || e.t === "friend")) this.store.update((s) => grantEvents(s, events))
     B.view.myMp = B.b.me.mp
     B.queue.push(...events)
     B.locked = true
@@ -1272,6 +1290,14 @@ export default class extends Controller {
     v.flashMe = Math.max(0, v.flashMe - dt)
     v.flashFoe = Math.max(0, v.flashFoe - dt)
     v.hop = Math.max(0, v.hop - dt)
+    v.find = Math.max(0, v.find - dt)
+    if (v.walk > 0) {
+      // 歩いている：けしきが ながれて、ぺたぺた
+      const before = Math.floor(v.walk * 6 * B.speed)
+      v.walk = Math.max(0, v.walk - dt)
+      v.scroll += dt * WALK_PX_PER_SEC * B.speed
+      if (Math.floor(v.walk * 6 * B.speed) !== before) this.sound.se("step")
+    }
     if (v.dying > 0) v.dying = Math.min(1, v.dying + dt * 2.5)
     this.tickParticles(dt)
     if (B.cur) {
@@ -1282,14 +1308,14 @@ export default class extends Controller {
     if (B.queue.length) {
       B.cur = B.queue.shift()
       B.t = 0
-      B.cur.dur = (EVENT_SEC[B.cur.t] || 0.5) * (B.auto ? 0.7 : 1)
+      B.cur.dur = ((EVENT_SEC[B.cur.t] || 0.5) * (B.auto ? 0.7 : 1)) / B.speed
       this.playEvent(B.cur)
       return
     }
     if (B.b.over) return this.endBattle()
     if (B.locked) {
       B.locked = false
-      B.wait = AUTO_WAIT_SEC
+      B.wait = AUTO_WAIT_SEC / B.speed
       this.renderCmd()
     }
     if (B.auto) {
@@ -1309,7 +1335,47 @@ export default class extends Controller {
     const v = B.view
     if (e.t === "arrive") {
       this.toast(`${B.place.icon} ${B.place.name} に ついた！`)
+    } else if (e.t === "walk") {
+      v.walk = B.cur.dur
+      v.foe = null
+      v.thing = null
+    } else if (e.t === "find") {
+      v.find = B.cur.dur
+      v.thing = e.kind === "chest" ? { kind: "chest", open: 0 } : null
+      this.sound.se("talk")
+      this.toast("❗ なにかを みつけた！")
+    } else if (e.t === "chest") {
+      v.thing = { kind: "chest", open: 1 }
+      this.sparkle(BATTLE_FOE_X, BATTLE_FEET - 14)
+      if (e.coins) {
+        this.sound.se("coin")
+        this.popAt(`💰+${e.coins}`, BATTLE_FOE_X, BATTLE_FEET - 26)
+        this.toast(`📦 たからばこ！ 💰${e.coins} はいってた！`)
+      } else if (e.food) {
+        this.sound.se("happy")
+        this.toast(`📦 たからばこ！ ${findFood(e.food)?.name || "ごはん"} を みつけた！`)
+      } else if (e.gear) {
+        this.sound.se("levelup")
+        this.toast(`📦 たからばこ！ ✨${findGear(e.gear)?.name || "そうび"} を みつけた！`)
+      }
+    } else if (e.t === "friend") {
+      const f = findFriend(e.friend)
+      v.thing = { kind: "friend", friend: f }
+      this.sound.se("happy")
+      // ことば は 知らせ に、もらったもの は 小さな 文字で（長いと はみだすので 分ける）
+      this.toast(`🤝 ${f.name}「${e.line}」`)
+      if (e.heal > 0) {
+        v.myHp = e.hp
+        this.popAt(`+${e.heal}`, BATTLE_ME_X, BATTLE_FEET - 30)
+        this.sparkle(BATTLE_ME_X, BATTLE_FEET - 14)
+      } else if (e.mp !== undefined) {
+        v.myMp = B.b.me.maxMp
+        this.popAt("MP まんたん！", BATTLE_ME_X, BATTLE_FEET - 30)
+      } else if (e.food) {
+        this.popAt(`${findFood(e.food)?.name || "ごはん"} を もらった！`, BATTLE_ME_X + 10, BATTLE_FEET - 30)
+      }
     } else if (e.t === "appear") {
+      v.thing = null
       v.foe = MONSTERS[e.foe]
       v.foeHp = e.hp
       v.foeMax = e.maxHp
@@ -1391,11 +1457,18 @@ export default class extends Controller {
       box.append(x)
       return x
     }
+    // 下の だん：🤖 オート・⏭ スキップ・⏩ はやおくり（どの ばめん でも おせる）
+    const subRow = () => {
+      const tools = [
+        btn(B.auto ? "✋<span>じぶんで</span>" : "🤖<span>オート</span>", "toggleAuto", { cls: "dt-cmd__btn--sub" + (B.auto ? " is-on" : "") }),
+        btn("⏭<span>スキップ</span>", "skipBattle", { cls: "dt-cmd__btn--sub dt-cmd__btn--wide" }),
+        btn(`⏩<span>×${B.speed}</span>`, "cycleSpeed", { cls: "dt-cmd__btn--sub" + (B.speed > 1 ? " is-on" : "") })
+      ]
+      for (const x of tools) x.disabled = false
+    }
     if (B.auto) {
-      box.append(el("div", "dt-cmd__note", "🤖 オートで たたかっています"))
-      btn("✋<span>じぶんで えらぶ</span>", "toggleAuto", { cls: "dt-cmd__btn--wide" })
-      btn("⏩<span>さいごまで</span>", "skipBattle", { cls: "dt-cmd__btn--wide" })
-      for (const x of box.querySelectorAll("button")) x.disabled = false
+      box.append(el("div", "dt-cmd__note", "🤖 オートで たんけん・たたかい しています"))
+      subRow()
       return
     }
     if (B.menu === "skills") {
@@ -1410,8 +1483,7 @@ export default class extends Controller {
     btn("✨<span>スキル</span>", "cmdSkills", { disabled: b.skills.length === 0 })
     btn("🛡️<span>ぼうぎょ</span>", "cmdGuard")
     btn("🏃<span>にげる</span>", "cmdRun")
-    btn("🤖<span>オート</span>", "toggleAuto", { cls: "dt-cmd__btn--sub" })
-    btn("⏩<span>オートで さいごまで</span>", "skipBattle", { cls: "dt-cmd__btn--sub dt-cmd__btn--wide3" })
+    subRow()
   }
 
   // コマンドの上の HP・MP（ダメージを うけた ときにも すぐ かえる）
@@ -1420,8 +1492,8 @@ export default class extends Controller {
     if (!B || !this.hasCmdStatusTarget) return
     const b = B.b
     const job = findJob(b.job)
-    const foeNo = Math.min(b.foes.length, b.beaten + 1)
-    this.cmdStatusTarget.textContent = `${job.icon} HP ${Math.max(0, Math.round(B.view.myHp))}/${b.me.maxHp}　MP ${B.view.myMp}/${b.me.maxMp}　${foeNo}/${b.foes.length}ひきめ`
+    const step = Math.min(b.steps.length, Math.max(1, b.step + 1))
+    this.cmdStatusTarget.textContent = `${job.icon} HP ${Math.max(0, Math.round(B.view.myHp))}/${b.me.maxHp}　MP ${B.view.myMp}/${b.me.maxMp}　🚶${step}/${b.steps.length}`
   }
 
   cmdAttack() { this.sound.se("tap"); this.doTurn({ type: "attack" }) }
@@ -1455,14 +1527,23 @@ export default class extends Controller {
     this.renderCmd()
   }
 
-  // ⏩ のこりを オートで いっきに おわらせて、けっか を見る
+  // ⏩ はやおくり：1倍 → 2倍 → 3倍 → 1倍（つぎから も おぼえておく）
+  cycleSpeed() {
+    const B = this.battle
+    if (!B) return
+    B.speed = BATTLE_SPEEDS[(BATTLE_SPEEDS.indexOf(B.speed) + 1) % BATTLE_SPEEDS.length]
+    this.store.update((s) => { s.settings.battleSpeed = B.speed })
+    this.sound.se("tap")
+    this.renderCmd()
+  }
+
+  // ⏭ スキップ：のこりの たんけん と たたかい を オートで いっきに おわらせて、けっか を見る
   skipBattle() {
     const B = this.battle
     if (!B) return
     this.sound.se("tap")
     const events = runAuto(B.b)
-    const downs = events.filter((e) => e.t === "down")
-    if (downs.length) this.store.update((s) => downs.forEach((e) => grantKill(s, e)))
+    if (events.length) this.store.update((s) => grantEvents(s, events))
     B.queue = []
     B.cur = null
     this.endBattle()
@@ -1506,6 +1587,22 @@ export default class extends Controller {
     const beaten = Object.entries(counts).map(([id, n]) => `${MONSTERS[id].name}×${n}`).join("・")
     list.append(el("div", "dt-result__line", beaten ? `${beaten} を たおした` : "1ぴきも たおせなかった…"))
     list.append(el("div", "dt-result__line", `💰 +${b.coins}　けいけんち +${b.exp}`))
+    const found = [b.found.chests ? `📦 たからばこ ${b.found.chests}こ` : "", b.found.friends ? `🤝 ともだち ${b.found.friends}人` : ""].filter(Boolean)
+    if (found.length) list.append(el("div", "dt-result__line dt-result__line--sub", found.join("・")))
+    for (const id of b.found.foods) {
+      const food = findFood(id)
+      if (food) list.append(itemRow(food, "みつけた！ もちもの に入れたよ", el("span", "")))
+    }
+    for (const id of b.found.gear) {
+      const gear = findGear(id)
+      if (!gear) continue
+      const on = s.gear[gear.slot] === gear.id
+      const button = el("button", "dt-item__button" + (on ? " dt-item__button--on" : ""), on ? "はずす" : "そうびする")
+      button.type = "button"
+      button.dataset.action = "dettyan-game#equip"
+      button.dataset.dettyanGameIdParam = gear.id
+      list.append(gearRow(gear, "📦 たからばこ で みつけた！", button))
+    }
     const lv = s.dettyan.level
     list.append(el("div", "dt-result__line dt-result__line--sub", `Lv${lv}　つぎのレベルまで ${expToNext(lv) - s.dettyan.exp}`))
     if (fin.drop) {
@@ -1548,7 +1645,7 @@ export default class extends Controller {
     const B = this.battle
     const v = B.view
     // けしき（dettyan_scenes.js。くも・ほたる・たいまつ・雪 などが動く）
-    drawScene(g, B.place, v.bob)
+    drawScene(g, B.place, v.bob, v.scroll)
     // Dettyan（左）
     const lunge = v.lunge > 0 ? Math.round(Math.sin((v.lunge / 0.3) * Math.PI) * 10) : 0
     const hop = v.hop > 0 ? Math.round(Math.abs(Math.sin(v.hop * Math.PI * 3)) * 5) : 0
@@ -1556,7 +1653,40 @@ export default class extends Controller {
     const meTop = BATTLE_FEET - SPRITE_H - hop
     g.fillStyle = "rgba(0, 0, 0, 0.2)"
     g.fillRect(BATTLE_ME_X - 6 + lunge, BATTLE_FEET - 1, 12, 2)
-    if (!(v.flashMe > 0 && Math.floor(v.flashMe * 30) % 2)) this.drawMe(g, meLeft, meTop, { frame: lunge > 0 ? 1 : 0, eyes: v.myHp <= 0 ? "blink" : "open" })
+    const walkFrame = v.walk > 0 ? Math.floor(v.bob * 8) % 2 : lunge > 0 ? 1 : 0
+    if (!(v.flashMe > 0 && Math.floor(v.flashMe * 30) % 2)) this.drawMe(g, meLeft, meTop, { frame: walkFrame, eyes: v.myHp <= 0 ? "blink" : "open" })
+    // ❗ みつけた！
+    if (v.find > 0) {
+      g.fillStyle = "#ffffff"
+      g.fillRect(BATTLE_ME_X - 2, meTop - 11, 5, 9)
+      g.fillStyle = "#e0484d"
+      g.fillRect(BATTLE_ME_X - 1, meTop - 10, 3, 4)
+      g.fillRect(BATTLE_ME_X - 1, meTop - 5, 3, 2)
+    }
+    // 宝箱・友達（右。2倍の大きさ）
+    if (v.thing) {
+      const bounce = Math.round(Math.abs(Math.sin(v.bob * 4)) * 1)
+      g.fillStyle = "rgba(0, 0, 0, 0.2)"
+      g.fillRect(BATTLE_FOE_X - 10, BATTLE_FEET - 1, 20, 2)
+      g.save()
+      if (v.thing.kind === "chest") {
+        g.translate(BATTLE_FOE_X - 12, BATTLE_FEET - 20)
+        g.scale(2, 2)
+        drawPixels(g, v.thing.open ? CHEST_SPRITE.map((row, y) => (y < 4 ? "............" : row)) : CHEST_SPRITE, CHEST_COLORS, 0, 0)
+        if (v.thing.open) {
+          // ふた が あいて、ひかる
+          g.fillStyle = CHEST_COLORS.O
+          g.fillRect(1, 0, 10, 2)
+          g.fillStyle = "#fff4b0"
+          g.fillRect(3, 2, 6, 2)
+        }
+      } else if (v.thing.kind === "friend") {
+        g.translate(BATTLE_FOE_X - 12, BATTLE_FEET - 24 - bounce)
+        g.scale(2, 2)
+        drawPixels(g, v.thing.friend.art, v.thing.friend.colors, 0, 0)
+      }
+      g.restore()
+    }
     // スライム（右）。2倍の大きさ
     if (v.foe && v.dying < 1) {
       const fl = v.foeLunge > 0 ? Math.round(Math.sin((v.foeLunge / 0.3) * Math.PI) * 10) : 0
@@ -1681,6 +1811,18 @@ export default class extends Controller {
 
 function pick(list) {
   return list[Math.floor(Math.random() * list.length)]
+}
+
+// 文字の ならび（"." は とうめい）を ドット絵 として描く
+function drawPixels(g, rows, colors, ox, oy) {
+  rows.forEach((row, y) => {
+    for (let x = 0; x < row.length; x++) {
+      const c = colors[row[x]]
+      if (!c) continue
+      g.fillStyle = c
+      g.fillRect(ox + x, oy + y, 1, 1)
+    }
+  })
 }
 
 function clamp(v) {

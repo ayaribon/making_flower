@@ -16,7 +16,7 @@ export const FOODS = [
   {
     id: "junsai",
     name: "じゅんさい",
-    price: 15,
+    price: 150,
     genki: 20,
     gokigen: 25,
     favorite: true,
@@ -40,7 +40,7 @@ export const FOODS = [
   {
     id: "onigiri",
     name: "おにぎり",
-    price: 8,
+    price: 80,
     genki: 15,
     gokigen: 5,
     favorite: false,
@@ -64,7 +64,7 @@ export const FOODS = [
   {
     id: "purin",
     name: "プリン",
-    price: 20,
+    price: 200,
     genki: 10,
     gokigen: 20,
     favorite: false,
@@ -88,7 +88,7 @@ export const FOODS = [
   {
     id: "shortcake",
     name: "ショートケーキ",
-    price: 35,
+    price: 350,
     genki: 15,
     gokigen: 30,
     favorite: false,
@@ -112,7 +112,7 @@ export const FOODS = [
   {
     id: "taiyaki",
     name: "たいやき",
-    price: 15,
+    price: 150,
     genki: 15,
     gokigen: 10,
     favorite: false,
@@ -136,7 +136,7 @@ export const FOODS = [
   {
     id: "donut",
     name: "ドーナツ",
-    price: 18,
+    price: 180,
     genki: 12,
     gokigen: 15,
     favorite: false,
@@ -160,7 +160,7 @@ export const FOODS = [
   {
     id: "ichigomilk",
     name: "いちごミルク",
-    price: 12,
+    price: 120,
     genki: 8,
     gokigen: 12,
     favorite: false,
@@ -184,7 +184,7 @@ export const FOODS = [
   {
     id: "karaage",
     name: "からあげ",
-    price: 25,
+    price: 250,
     genki: 30,
     gokigen: 10,
     favorite: false,
@@ -208,7 +208,7 @@ export const FOODS = [
   {
     id: "ramen",
     name: "ラーメン",
-    price: 40,
+    price: 400,
     genki: 50,
     gokigen: 15,
     favorite: false,
@@ -232,7 +232,7 @@ export const FOODS = [
   {
     id: "dango",
     name: "さんしょくだんご",
-    price: 22,
+    price: 220,
     genki: 15,
     gokigen: 18,
     favorite: false,

@@ -10,7 +10,7 @@
 
 import { FURNITURE } from "dettyan_home"
 
-export const SAVE_VERSION = 5
+export const SAVE_VERSION = 6
 
 export function defaultState() {
   return {
@@ -32,8 +32,8 @@ export function defaultState() {
     // 持っている そうび（id は dettyan_gear.js）と、体のパーツごとに そうびしているもの
     // head：あたま・outfit：からだ・weapon：て・back：せなか・feet：あし（outfit と weapon は前からある名前なので変えない）
     gear: { owned: {}, head: null, outfit: null, weapon: null, back: null, feet: null },
-    // soundAsked：「音が出ます」を一度見せたか、autoBattle：ぼうけん を オートで たたかう
-    settings: { bgm: true, se: true, soundAsked: false, autoBattle: false },
+    // soundAsked：「音が出ます」を一度見せたか、autoBattle：ぼうけん を オートで たたかう、battleSpeed：ぼうけん の はやおくり（1・2・3）
+    settings: { bgm: true, se: true, soundAsked: false, autoBattle: false, battleSpeed: 1 },
     createdAt: null,       // はじめて遊んだ時間（サーバーの時計・ミリ秒）
     lastSeenAt: null       // 最後に遊んだ時間（サーバーの時計・ミリ秒）。放置の計算に使う
   }
@@ -67,6 +67,12 @@ const MIGRATIONS = {
   5: (s) => {
     const level = Math.max(1, Number(s.dettyan?.level) || 1)
     if (s.dettyan && (level < 5 || !s.dettyan.job)) s.dettyan.job = "novice"
+    return s
+  },
+  // 6：お金の ねだんを ぜんぶ 10倍に した（マイホーム 💰300 → 💰3000）。持っている お金も 10倍に して、いままでと 同じ ねうち に する
+  6: (s) => {
+    if (Number.isFinite(s.money)) s.money = Math.round(s.money * 10)
+    if (s.daily && Number.isFinite(s.daily.careCoins)) s.daily.careCoins = Math.round(s.daily.careCoins * 10)
     return s
   }
 }

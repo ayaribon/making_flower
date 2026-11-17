@@ -4,7 +4,8 @@
 // - セーブ（s）を変える関数は「s を どう変えるか」だけ。保存は呼んだ側が store.update(...) の中で行う
 // 数字を変えるときは、test/javascript/dettyan_battle_test.mjs の勝率のテストも見る
 
-import { gearBonus } from "dettyan_gear"
+import { gearBonus, GEAR } from "dettyan_gear"
+import { FOODS } from "dettyan_foods"
 
 // ---- ステータス ----
 //   per：1ポイントで上がる量
@@ -85,12 +86,12 @@ export function learnedSkills(s) {
 //   hp・atk・def・spd：強さ、coins / exp：1ぴき たおすと もらえる量
 //   special：every ターンごとに 大わざ（mult 倍）。絵は dettyan_adventure.js の SLIME_SPRITE（色だけちがう）
 export const MONSTERS = {
-  green:  { name: "みどりスライム", hp: 10, atk: 4, def: 0, spd: 2, coins: 2, exp: 3, colors: { O: "#1f5a2a", B: "#5cc46a", L: "#a6eaa0" } },
-  blue:   { name: "あおスライム", hp: 18, atk: 7, def: 1, spd: 3, coins: 4, exp: 6, colors: { O: "#1d3d7a", B: "#4f8fe8", L: "#a9cdff" } },
-  purple: { name: "むらさきスライム", hp: 30, atk: 10, def: 3, spd: 5, coins: 6, exp: 10, colors: { O: "#4a2369", B: "#9b5fd0", L: "#d6b3f2" } },
-  red:    { name: "あかスライム", hp: 44, atk: 14, def: 5, spd: 6, coins: 9, exp: 16, colors: { O: "#6a1a1a", B: "#e0484d", L: "#ffb0a8" },
+  green:  { name: "みどりスライム", hp: 10, atk: 4, def: 0, spd: 2, coins: 20, exp: 3, colors: { O: "#1f5a2a", B: "#5cc46a", L: "#a6eaa0" } },
+  blue:   { name: "あおスライム", hp: 18, atk: 7, def: 1, spd: 3, coins: 40, exp: 6, colors: { O: "#1d3d7a", B: "#4f8fe8", L: "#a9cdff" } },
+  purple: { name: "むらさきスライム", hp: 30, atk: 10, def: 3, spd: 5, coins: 60, exp: 10, colors: { O: "#4a2369", B: "#9b5fd0", L: "#d6b3f2" } },
+  red:    { name: "あかスライム", hp: 44, atk: 14, def: 5, spd: 6, coins: 90, exp: 16, colors: { O: "#6a1a1a", B: "#e0484d", L: "#ffb0a8" },
     special: { name: "ほのおの たいあたり", every: 3, mult: 1.5 } },
-  king:   { name: "キングスライム", hp: 70, atk: 16, def: 6, spd: 3, coins: 18, exp: 30, colors: { O: "#6b4a00", B: "#f0b52a", L: "#ffe38a" }, crown: true,
+  king:   { name: "キングスライム", hp: 70, atk: 16, def: 6, spd: 3, coins: 180, exp: 30, colors: { O: "#6b4a00", B: "#f0b52a", L: "#ffe38a" }, crown: true,
     special: { name: "のしかかり", every: 3, mult: 1.7 } }
 }
 
@@ -214,7 +215,71 @@ function spawn(id, power = 1) {
   return { id, name: m.name, hp, maxHp: hp, atk: m.atk * power, def: m.def * power, spd: m.spd, special: m.special || null, buffs: {}, stun: false, turn: 0 }
 }
 
+// ---- たんけん（歩く → なにかを みつけた！ → 宝箱／スライム／友達） ----
+// 友達：effect は hp（HP を わりあいで 回復）・mp（MP まんたん）・food（ごはんを くれる）
+//   art：ドット絵（12×12。O：ふち、ほかの文字は colors）。画面は dettyan_game_controller.js の drawFriend
+export const FRIENDS = [
+  { id: "cat", name: "のらねこ", effect: "hp", amount: 0.3, line: "すりすり… げんき が でた！",
+    colors: { O: "#3a2a20", B: "#f2f2f2", C: "#e8a24a", K: "#2a2a2a", E: "#1a1414", P: "#ff9fb0" },
+    art: [
+      "............",
+      ".O.......O..",
+      "OCO.....OBO.",
+      "OCBOOOOOBBO.",
+      "OBBBBBBBBBO.",
+      "OBEBBBBEBBO.",
+      "OBBBPPBBBBO.",
+      ".OBBBBBBBO..",
+      ".OBCCBBKKBOO",
+      ".OBCCBBKKBOB",
+      ".OBBBBBBBBO.",
+      "..OO.OO.OO.."
+    ] },
+  { id: "kid", name: "まちの こども", effect: "mp", line: "がんばって〜！ おうえん してるよ！",
+    colors: { O: "#2a1a14", H: "#7a4a2a", S: "#ffd9b8", E: "#1a1414", R: "#e0484d", W: "#ffffff", L: "#3a5aa8" },
+    art: [
+      "...OOOOOO...",
+      "..OHHHHHHO..",
+      ".OHHHHHHHHO.",
+      ".OHSSSSSSHO.",
+      ".OSESSSSESO.",
+      ".OSSSRRSSSO.",
+      "..OSSSSSSO..",
+      "..ORRWWRRO..",
+      ".ORRRWWRRRO.",
+      ".OSRRRRRRSO.",
+      "..OLLOOLLO..",
+      "..OOO..OOO.."
+    ] },
+  { id: "merchant", name: "たびの しょうにん", effect: "food", line: "これ、もっていきな！",
+    colors: { O: "#2a1a14", H: "#6a4a8a", S: "#ffd9b8", E: "#1a1414", M: "#8a5a3a", G: "#ffd84d", B: "#c08a4a" },
+    art: [
+      "....OOOO....",
+      "...OHHHHO...",
+      "..OHHHHHHO..",
+      ".OOOOOOOOOO.",
+      "..OSSSSSSO..",
+      "..OSESSESO..",
+      "..OSSMMSSO..",
+      ".OMMMMMMMMO.",
+      "OMMMGMMMMBBO",
+      "OMMMMMMMOBBO",
+      ".OMMMMMMO.O.",
+      "..OO..OO...."
+    ] }
+]
+
+export function findFriend(id) {
+  return FRIENDS.find((f) => f.id === id) || null
+}
+
+// 宝箱から出るもの：お金（行き先の chest.coins）・ごはん・そうび（まだ持っていないもの）
+const CHEST_FOOD = 0.25
+const CHEST_GEAR = 0.15
+
 // バトルを はじめる（s は読むだけ）。place は dettyan_adventure.js の PLACES の1つ
+// b.steps：たんけんで 出会う じゅんばん（{ kind: "foe", id } | { kind: "chest" } | { kind: "friend", id }）
+// b.intro：さいしょの スライムに 会うまでに 起きたこと（walk・find・chest・friend・appear）
 export function createBattle(s, place, seed) {
   const st = dettyanStats(s)
   const gokigen = s.stats?.gokigen ?? 70
@@ -222,6 +287,9 @@ export function createBattle(s, place, seed) {
   const b = {
     place: place.id, power: place.power || 1, rng: seed >>> 0, turn: 0, over: false, win: false, ran: false,
     foes: [], idx: 0, beaten: 0, coins: 0, exp: 0,
+    steps: [], step: -1, found: { chests: 0, friends: 0, foods: [], gear: [] },
+    chest: place.chest || { coins: [30, 60] },
+    gearPool: (place.gear || []).filter((id) => !s.gear?.owned?.[id] && GEAR.some((g) => g.id === id)),
     job: findJob(s.dettyan.job).id,
     skills: learnedSkills(s).map((k) => k.id),
     me: {
@@ -230,15 +298,87 @@ export function createBattle(s, place, seed) {
       crit: 0.05 + st.spd * 0.004 + (gokigen >= 70 ? 0.05 : 0),
       buffs: {}, guarding: false, mpRegen: findJob(s.dettyan.job).mpRegen || 1
     },
-    foe: null
+    foe: null,
+    intro: []
   }
   const n = place.count[0] + Math.floor(rnd(b) * (place.count[1] - place.count[0] + 1))
   for (let i = 0; i < n; i++) {
     const r = rnd(b) // 後ろのスライムほど出にくい
     b.foes.push(place.monsters[Math.min(place.monsters.length - 1, Math.floor(r * r * place.monsters.length))])
   }
-  b.foe = spawn(b.foes[0], b.power)
+  // 宝箱（0〜chests こ）と 友達（ときどき 1人）を、スライムの あいだに まぜる
+  const extra = []
+  const [c0, c1] = place.chests || [0, 1]
+  const chests = c0 + Math.floor(rnd(b) * (c1 - c0 + 1))
+  for (let i = 0; i < chests; i++) extra.push({ kind: "chest" })
+  if (rnd(b) < (place.friend ?? 0.3)) extra.push({ kind: "friend", id: FRIENDS[Math.floor(rnd(b) * FRIENDS.length)].id })
+  b.steps = b.foes.map((id) => ({ kind: "foe", id }))
+  for (const x of extra) b.steps.splice(Math.floor(rnd(b) * (b.steps.length + 1)), 0, x)
+  nextStep(b, b.intro)
   return b
+}
+
+// つぎの 出会い まで すすむ（歩く → みつけた！ → 宝箱・友達 なら そのまま 次へ。スライム か さいご で とまる）
+function nextStep(b, ev) {
+  while (!b.over) {
+    b.step += 1
+    if (b.step >= b.steps.length) {
+      b.over = true
+      b.win = true
+      ev.push({ t: "win" })
+      return
+    }
+    const st = b.steps[b.step]
+    ev.push({ t: "walk" })
+    ev.push({ t: "find", kind: st.kind })
+    if (st.kind === "foe") {
+      b.foe = spawn(st.id, b.power)
+      ev.push({ t: "appear", foe: b.foe.id, hp: b.foe.hp, maxHp: b.foe.maxHp })
+      return
+    }
+    if (st.kind === "chest") openChest(b, ev)
+    else meetFriend(b, st.id, ev)
+  }
+}
+
+function openChest(b, ev) {
+  b.found.chests += 1
+  const r = rnd(b)
+  if (r < CHEST_GEAR && b.gearPool.length) {
+    const gear = b.gearPool.splice(Math.floor(rnd(b) * b.gearPool.length), 1)[0]
+    b.found.gear.push(gear)
+    ev.push({ t: "chest", gear })
+    return
+  }
+  if (r < CHEST_GEAR + CHEST_FOOD) {
+    const food = FOODS[Math.floor(rnd(b) * FOODS.length)].id
+    b.found.foods.push(food)
+    ev.push({ t: "chest", food })
+    return
+  }
+  const [lo, hi] = b.chest.coins
+  const coins = Math.round((lo + rnd(b) * (hi - lo)) / 5) * 5
+  b.coins += coins
+  ev.push({ t: "chest", coins })
+}
+
+function meetFriend(b, id, ev) {
+  const f = findFriend(id)
+  b.found.friends += 1
+  const me = b.me
+  const e = { t: "friend", friend: f.id, line: f.line }
+  if (f.effect === "hp") {
+    e.heal = Math.min(me.maxHp - me.hp, Math.round(me.maxHp * f.amount))
+    me.hp += e.heal
+    e.hp = me.hp
+  } else if (f.effect === "mp") {
+    e.mp = me.maxMp - me.mp
+    me.mp = me.maxMp
+  } else if (f.effect === "food") {
+    e.food = FOODS[Math.floor(rnd(b) * FOODS.length)].id
+    b.found.foods.push(e.food)
+  }
+  ev.push(e)
 }
 
 function buffMult(who, stat) {
@@ -363,14 +503,7 @@ function hitFoe(b, ev, info) {
   b.exp += m.exp
   ev.push({ t: "down", foe: b.foe.id, coins: m.coins, exp: m.exp })
   b.idx += 1
-  if (b.idx >= b.foes.length) {
-    b.over = true
-    b.win = true
-    ev.push({ t: "win" })
-  } else {
-    b.foe = spawn(b.foes[b.idx], b.power)
-    ev.push({ t: "appear", foe: b.foe.id, hp: b.foe.hp, maxHp: b.foe.maxHp })
-  }
+  nextStep(b, ev) // また 歩いて、つぎの 出会いへ（さいごまで 行ったら かち）
 }
 
 function foeAct(b, ev) {
