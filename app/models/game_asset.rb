@@ -2,30 +2,32 @@ require "concurrent/map"
 
 # 🌱 買った 素材（Sprout Lands - premium pack。作者 Cup Nooble）を 町に 出す。docs/town/requirements.md の 4.5
 # 素材パックは 配るのが 禁止なので、公開リポジトリには 入れない。DB も 使わない（N2）
-#   本番：S3（ActiveStorage と 同じ バケット。Heroku の S3_BUCKET）の game_assets/sprout_lands/ の 下
-#   手元：private_assets/sprout_lands/ の 下（.gitignore 済み）。なければ、AWS の 鍵（.env）が あれば 開発でも S3 から 読む
+#   本番：S3（ActiveStorage と 同じ バケット。Heroku の S3_BUCKET）の game_assets/ の 下（sprout_lands/・sprout_sorry/）
+#   手元：private_assets/ の 下（.gitignore 済み）。なければ、AWS の 鍵（.env）が あれば 開発でも S3 から 読む
 #   どちらも 素材パックの 中の 形のまま 置く（Animals・Characters・Objects・Tilesets・read_me.txt が ある フォルダの 中身）
 # 画面には ログインした人にだけ 出す（GameAssetsController）。そろっていなければ 町は 前の コードで 描く 絵
 class GameAsset
-  S3_PREFIX = "game_assets/sprout_lands/"
+  S3_PREFIX = "game_assets/"
   # キー → 素材パックの 中の 場所。キーは app/javascript/town_sprout.js の SPROUT_FILES と そろえる
   SPROUT = {
-    "grass" => "Tilesets/ground tiles/New tiles/Grass_Tile_Layers.png",
-    "soil" => "Tilesets/ground tiles/New tiles/Soil_Ground_Tiles.png",
-    "trees" => "Objects/Trees, stumps and bushes.png",
-    "flowers" => "Objects/Mushrooms, Flowers, Stones.png",
-    "fences" => "Tilesets/Building parts/Fences.png",
-    "well" => "Objects/Water well.png",
-    "signs" => "Objects/signs.png",
-    "chicken" => "Animals/Chicken/chicken default.png",
-    "chara" => "Characters/Premium Charakter Spritesheet.png" # 🐱 Teemo 型の アバター（なくても 町は 出る）
+    "grass" => "sprout_lands/Tilesets/ground tiles/New tiles/Grass_Tile_Layers.png",
+    "soil" => "sprout_lands/Tilesets/ground tiles/New tiles/Soil_Ground_Tiles.png",
+    "trees" => "sprout_lands/Objects/Trees, stumps and bushes.png",
+    "flowers" => "sprout_lands/Objects/Mushrooms, Flowers, Stones.png",
+    "fences" => "sprout_lands/Tilesets/Building parts/Fences.png",
+    "well" => "sprout_lands/Objects/Water well.png",
+    "signs" => "sprout_lands/Objects/signs.png",
+    "chicken" => "sprout_lands/Animals/Chicken/chicken default.png",
+    "chara" => "sprout_lands/Characters/Premium Charakter Spritesheet.png", # 🐱 Teemo 型の アバター（なくても 町は 出る）
+    # 🧑 人の テンプレート（Sprout Sorry pack。非商用 ライセンス。この アプリは 非商用 と ayaribon が 判断。2026-11-18）
+    "human" => "sprout_sorry/Tests/free_character_spritesheet_by-cupnooble.png"
   }.freeze
   # なくても 町を 出せる もの（なければ アバターは 前の 絵）
-  OPTIONAL = %w[chara].freeze
+  OPTIONAL = %w[chara human].freeze
   # そろっているか を 確かめなおす 間かく（S3 に 上げてから 町に 出るまで、長くて この 時間）
   CHECK_EVERY = 10.minutes
 
-  class_attribute :local_root, default: Rails.root.join("private_assets/sprout_lands")
+  class_attribute :local_root, default: Rails.root.join("private_assets")
 
   @bytes = Concurrent::Map.new
   @lock = Mutex.new

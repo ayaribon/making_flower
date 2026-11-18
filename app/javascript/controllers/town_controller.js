@@ -5,6 +5,9 @@ import { drawDettyan, SPRITE_W, SPRITE_H } from "dettyan_sprite"
 import { TOWN_W, TOWN_H, VIEW_NARROW, BUILDINGS, BUILDING_W, WALK, doorOf, clampWalk, drawTownBase, drawTownSky, drawTownLive, drawTownNight } from "town_world"
 import { loadSprout, drawSproutBase, drawSproutLive, sproutWindows, SPROUT_LAMPS } from "town_sprout"
 import { drawTeemo, facing, DETTYAN_TEEMO, TEEMO_W, TEEMO_H } from "avatar_teemo"
+import { drawHuman, facing8, HUMAN_W, HUMAN_H } from "avatar_human"
+// 🧑 町の Dettyan（人の テンプレート）：黒い 髪・マンバン・茶色の ジャケット
+const DETTYAN_HUMAN = { skin: "#f7e0cf", hair: "#3a3242", top: "#8a5a33", bottom: "#3a3a4a", shoes: "#4a3a32", acc: "manbun" }
 
 // 🏘️ はじまりのまち（トップページ）。docs/town/requirements.md
 // - 自分の アバター を タップした所へ 歩かせる。建物を タップすると、入口まで 歩いて 入る
@@ -198,6 +201,7 @@ export default class extends Controller {
     }
     const step = Math.min(dist, speed * dt)
     a.dir = facing(dx, dy, a.dir)
+    a.dir8 = facing8(dx, dy, a.dir8)
     a.x += (dx / dist) * step
     a.y += (dy / dist) * step
     a.stepT += dt
@@ -215,7 +219,7 @@ export default class extends Controller {
     const y = ((event.clientY - rect.top) / rect.height) * TOWN_H
     // ほかの人・Dettyan を タップしたら あいさつ
     const hit = (a, w, h) => x >= a.x - w / 2 - 2 && x <= a.x + w / 2 + 2 && y >= a.y - h - 2 && y <= a.y + 2
-    const [w, h] = USE_TEEMO && this.sprout?.chara ? [TEEMO_W, TEEMO_H] : [AV_W, AV_H]
+    const [w, h] = this.sprout?.human ? [HUMAN_W, HUMAN_H] : USE_TEEMO && this.sprout?.chara ? [TEEMO_W, TEEMO_H] : [AV_W, AV_H]
     const other = this.others.find((o) => hit(o, w, h))
     if (other) return this.say(other, `${other.name}「${this.lineOf(other)}」`)
     if (hit(this.dettyan, SPRITE_W, SPRITE_H)) {
@@ -309,7 +313,12 @@ export default class extends Controller {
     for (const a of actors) {
       g.fillStyle = "rgba(0, 0, 0, 0.18)"
       g.fillRect(Math.round(a.x) - 6, Math.round(a.y) - 1, 12, 2)
-      if (USE_TEEMO && this.sprout?.chara) {
+      if (this.sprout?.human) {
+        // 🧑 人の テンプレート（8方向。色・こもの は その人の キャラ）
+        g.globalAlpha = a.self && this.entering ? 0.4 : 1
+        drawHuman(g, this.sprout.human, a.x, a.y, a.npc ? null : a.avatar, { dir: a.dir8 || "down", walking: !!a.walking, t: this.t + (a.phase || 0), look: a.npc ? DETTYAN_HUMAN : null })
+        g.globalAlpha = 1
+      } else if (USE_TEEMO && this.sprout?.chara) {
         // 🐱 Teemo 型（素材の キャラ画像。毛の 色・首の 色・こもの は その人の キャラ）
         const fade = a.self && this.entering ? 0.4 : 1
         g.globalAlpha = fade
@@ -330,7 +339,7 @@ export default class extends Controller {
     this.placeBuildings(cam)
     // 名前・ふきだし（画面の ことば）
     this.place(this.nameTag, this.me.x, this.me.y + 1)
-    for (const a of [this.me, ...this.others, this.dettyan]) if (a.bubble && !a.bubble.hidden) this.placeBubble(a.bubble, a.x, a.y - (USE_TEEMO && this.sprout?.chara ? TEEMO_H + 4 : AV_H) - 2)
+    for (const a of [this.me, ...this.others, this.dettyan]) if (a.bubble && !a.bubble.hidden) this.placeBubble(a.bubble, a.x, a.y - (this.sprout?.human ? HUMAN_H + 1 : USE_TEEMO && this.sprout?.chara ? TEEMO_H + 4 : AV_H) - 2)
   }
 
   // ふきだし は 町の はし で はみ出さないように よせる

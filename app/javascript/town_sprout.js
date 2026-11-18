@@ -18,10 +18,11 @@ export const SPROUT_FILES = {
   well: "Objects/Water well.png",
   signs: "Objects/signs.png",
   chicken: "Animals/Chicken/chicken default.png",
-  chara: "Characters/Premium Charakter Spritesheet.png" // 🐱 Teemo 型の アバター（avatar_teemo.js。なくても よい）
+  chara: "Characters/Premium Charakter Spritesheet.png", // 🐱 Teemo 型の アバター（avatar_teemo.js。なくても よい）
+  human: "../sprout_sorry/Tests/free_character_spritesheet_by-cupnooble.png" // 🧑 人の テンプレート（avatar_human.js。なくても よい）
 }
 // なくても 町を 出せる もの
-export const SPROUT_OPTIONAL = ["chara"]
+export const SPROUT_OPTIONAL = ["chara", "human"]
 
 const T = 16
 

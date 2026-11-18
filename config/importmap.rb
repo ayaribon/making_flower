@@ -39,4 +39,5 @@ pin "avatar_sprite" # 👤 みんなの アバター（キャラメイクの 部
 pin "town_world" # 🏘️ はじまりのまち（トップページの 町）の 絵
 pin "avatar_chibi" # 👤 アバターの 絵（16×20 の 2頭身。Sprout Lands の 町に なじむ）
 pin "avatar_teemo" # 🐱 Teemo 型の アバター（Sprout Lands の キャラ画像を もとに）
+pin "avatar_human" # 🧑 人の アバター（Cup Nooble の 人の テンプレート。8方向）
 pin "town_sprout" # 🌱 はじまりのまち を Sprout Lands の 素材で 描く 版

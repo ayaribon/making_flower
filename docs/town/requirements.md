@@ -92,7 +92,7 @@
   - 町の 大きさ・建物の 場所・歩ける ところ は 前と 同じ（256×120）。ふんすい の 場所に 井戸
   - 画像が そろっていない（読めない）ときは、前の コードで 描く 町に もどる
 - **画像の 置き場所：S3**（2026-11-18 に ayaribon が 決めた。公開リポジトリには 入れない）。`app/models/game_asset.rb`
-  - 本番：ActiveStorage と 同じ バケット（Heroku の `S3_BUCKET`）の **`game_assets/sprout_lands/`** の 下に、**素材パックの 中の 形のまま** 置く（`Animals/` `Characters/` `Objects/` `Tilesets/` `read_me.txt` が ある フォルダの 中身。例：`game_assets/sprout_lands/Objects/Water well.png`）
+  - 本番：ActiveStorage と 同じ バケット（Heroku の `S3_BUCKET`）の **`game_assets/sprout_lands/`**（と 人の テンプレートは `game_assets/sprout_sorry/`。Sorry pack は 非商用ライセンス。この アプリは 非商用 と ayaribon が 判断）の 下に、**素材パックの 中の 形のまま** 置く（`Animals/` `Characters/` `Objects/` `Tilesets/` `read_me.txt` が ある フォルダの 中身。例：`game_assets/sprout_lands/Objects/Water well.png`）
   - 手元：`private_assets/sprout_lands/` の 下に 同じ 形で 置く（.gitignore 済み）。元の ファイルは 非公開リポジトリ `ayaribon/making_flower_assets`
   - **開発でも S3 から 読める**：手元に ファイルが なく、`.env` に 本番と 同じ `AWS_ACCESS_KEY_ID`・`AWS_SECRET_ACCESS_KEY`・`AWS_REGION`・`S3_BUCKET` が あれば、storage.yml の `amazon` で S3 を 読む（`docker compose` の web は .env から わたす。`bin/rails server` で 動かすときは `set -a; source .env; set +a` してから）。手元に ファイルが あれば そちらが 先
   - 画面へは `GET /game_assets/sprout/:key`（ログインした人だけ。`GameAssetsController`）。知らない キー・ない 画像は 404。ブラウザには「この人だけ・1日」キャッシュ
@@ -117,6 +117,7 @@
 | 🏷️ 表示名（キャラメイク で かえる。まち・あいさつ・管理画面に 出る） | ✅（実機確認は残っている） |
 | 👤 アバターを 16×20 の 2頭身に 描き直し（町・キャラメイク） | ✅（実機確認は残っている） |
 | 🐱 Teemo 型の アバター（Sprout Lands の キャラ画像。4方向の 立ち・歩き。毛の色＝髪の色・首の色＝服の色・こもの を 重ねる。Dettyan も Teemo 型＋マンバン。キャラ画像が ないときは 2頭身） | ✅ 町だけ 試し中（キャラメイクは まだ） |
+| 🧑 人の テンプレート（Cup Nooble。Sprout Sorry pack の Tests/free_character_spritesheet_by-cupnooble.png。16×32・8方向×3コマ）で 町の アバター。色は その人の キャラ（はだ・髪・服・した・くつ）、こもの を 頭に 重ねる。Dettyan も（黒髪・マンバン・茶色）。画像が ない ときは 2頭身。Teemo 型は 止めた（`USE_TEEMO`） | ✅ 町だけ（キャラメイクは まだ） |
 | `users.display_name` の列（N2） | ✅ 作った。**OK するか まだ** |
 | 📖 あんない（はじめて 開いたとき「SiVA へ ようこそ！」から・❓ あんない で もう一度） | ✅（実機確認は残っている） |
 | 🌱 Sprout Lands 版の 町（画像が あれば。なければ 前の 町） | ✅ 見本（本番は S3 に 画像を 上げると 出る） |

@@ -64,7 +64,7 @@ class GameAssetsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "本番：S3 の game_assets/sprout_lands/ の 下から 読む（手元に なくても）" do
-    files = GameAsset::SPROUT.values.to_h { |path| ["game_assets/sprout_lands/#{path}", PNG] }
+    files = GameAsset::SPROUT.values.to_h { |path| ["game_assets/#{path}", PNG] }
     ActiveStorage::Blob.stub(:service, FakeS3.new(files)) do
       assert GameAsset.available?
       assert_equal PNG, GameAsset.read("well")
@@ -80,7 +80,7 @@ class GameAssetsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "開発：AWS の 鍵と S3_BUCKET が あれば、ActiveStorage が 手元でも S3 から 読む" do
-    files = GameAsset::SPROUT.values.to_h { |path| ["game_assets/sprout_lands/#{path}", PNG] }
+    files = GameAsset::SPROUT.values.to_h { |path| ["game_assets/#{path}", PNG] }
     saved = ENV.to_h.slice("S3_BUCKET", "AWS_ACCESS_KEY_ID")
     registry = Object.new
     registry.define_singleton_method(:fetch) { |name| name == :amazon ? FakeS3.new(files) : raise(KeyError) }

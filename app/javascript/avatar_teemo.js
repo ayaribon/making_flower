@@ -177,13 +177,18 @@ const ACC_ART = {
   cap: { colors: { A: "#e07a7a", a: "#f4a6a6", d: "#b85a66" }, dy: -2, art: ["...AAAA...", ".AAaaAAAA.", ".dddddddd.", "AAAAAAAAAA"] },
   headphones: { colors: { A: "#5d6aa6", a: "#9ab0e8" }, dy: -1, art: ["..AAAAAAAAAA..", ".A..........A.", "AaA........AaA", "AAA........AAA"] },
   ribbon: { colors: { A: "#f28aa8", a: "#ffc6d6" }, dy: -1, art: ["......A...A", "......AaAaA", ".......AAA.", "......A...A"] },
-  // ねこみみ は Teemo に もともと 耳が あるので 描かない
+  nekomimi: { colors: { A: "#f6f1e7", i: "#f4a6c4" }, dy: -2, art: [".A........A.", "AiA......AiA"] },
   usamimi: { colors: { A: "#f6f1e7", i: "#f4a6c4" }, dy: -6, art: ["...AA..AA...", "...Ai..Ai...", "...Ai..Ai...", "...Ai..Ai...", "...AA..AA...", "...AA..AA..."] },
   hanakanmuri: { colors: { A: "#f4a6c4", a: "#f2df8c", g: "#8cc589" }, dy: 0, art: [".A..a..A..a.", "gAggagAggagg"] },
   crown: { colors: { A: "#eec170", a: "#fff1b8", r: "#e07a7a" }, dy: -3, art: ["A.AA.A", "AArAAA", "AAAAaA"] },
   manbun: { colors: { A: "#2a2230", a: "#4a4058", b: "#6b4a2e" }, dy: -4, art: ["....AAA....", "...AaAAA...", "....bbb....", "..AAAAAAA.."] }
 }
 const ACC_LINE = "#4e3448"
+
+// 人の アバター（avatar_human.js）でも 使う
+export function drawAccessory(g, id, cx, top) {
+  drawAcc(g, id, cx, top)
+}
 
 function drawAcc(g, id, cx, top) {
   const acc = ACC_ART[id]
@@ -230,5 +235,6 @@ export function drawTeemo(g, sheet, x, y, raw, { dir = "down", walking = false, 
   const left = Math.round(x - ANCHOR_X)
   const top = Math.round(y - ANCHOR_Y)
   g.drawImage(canvas, f * FRAME, row * FRAME, FRAME, FRAME, left, top, FRAME, FRAME)
-  if (acc && acc !== "none") drawAcc(g, acc, x + (dir === "right" ? 1 : dir === "left" ? -1 : 0), top + tops[row][f])
+  // ねこみみ は Teemo に もともと 耳が あるので 描かない
+  if (acc && acc !== "none" && acc !== "nekomimi") drawAcc(g, acc, x + (dir === "right" ? 1 : dir === "left" ? -1 : 0), top + tops[row][f])
 }
