@@ -29,7 +29,8 @@
       <% if flash[:notice] %><p class="auth-notice"><%= flash[:notice] %></p><% end %>
       <% if flash[:alert] %><p class="auth-alert"><%= flash[:alert] %></p><% end %>
 
-      <%= yield %>
+      <%# ログインIDを出すときは、ここを まるごと 入れかえる（Admin::UsersController#render_issued） %>
+      <div id="admin-main"><%= yield %></div>
     </main>
   </body>
 </html>
