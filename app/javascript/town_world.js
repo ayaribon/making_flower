@@ -1,25 +1,29 @@
 // 🏘️ はじまりのまち（ログインしたあとの 入口の 世界）の 絵。docs/town/requirements.md
-// 160×120 ドット。建物に 入ると、歌ってみた・サムネ・Dettyan・切り抜き の 画面へ
+// 町（世界）は 256×120 ドット。画面に 見せるのは その一部（スマホは 160 はば、PC は ぜんぶ。town_controller.js）
+// 建物に 入ると、歌ってみた・サムネ・Dettyan・切り抜き の 画面へ
 // - 動かないところは drawTownBase で1回だけ描いて取っておく。空・ふんすい・夜のあかり は毎コマ
 // - 空は 日本の時間で 朝・昼・夕方・夜（Dettyan 育成ゲームの部屋と同じ色）
 
-export const TOWN_W = 160
+export const TOWN_W = 256 // 世界の はば
 export const TOWN_H = 120
+export const VIEW_NARROW = 160 // スマホで 見せる はば（自分の キャラに ついて 横に 動く）
 export const GROUND = 62 // 建物の 足もと
 // 歩けるところ（ふんすい の まわりは よける）
-export const WALK = { left: 10, right: 150, top: 68, bottom: 114 }
-export const FOUNTAIN = { x: 80, y: 92, rx: 20, ry: 9 }
+export const WALK = { left: 10, right: TOWN_W - 10, top: 68, bottom: 114 }
+export const FOUNTAIN = { x: 128, y: 92, rx: 20, ry: 9 }
 
 // 建物（id は トップページの カードの data-town-place と同じ）
 export const BUILDINGS = [
-  { id: "sing", name: "スタジオ", icon: "🎤", x: 3, wall: "#6a9ae8", shade: "#4a76c8", roof: "#2a4a9a", sign: "mic" },
-  { id: "art", name: "アトリエ", icon: "🎨", x: 42, wall: "#ffaed0", shade: "#e88ab0", roof: "#c0487a", sign: "palette" },
-  { id: "dettyan", name: "Dettyan の 事務所", icon: "🏢", x: 84, wall: "#d8a870", shade: "#b88a50", roof: "#6e4423", sign: "dettyan" },
-  { id: "clip", name: "編集室", icon: "✂️", x: 123, wall: "#7ad8c0", shade: "#4ab8a0", roof: "#2a8a7a", sign: "scissors" }
+  { id: "sing", name: "スタジオ", icon: "🎤", x: 12, wall: "#6a9ae8", shade: "#4a76c8", roof: "#2a4a9a", sign: "mic" },
+  { id: "art", name: "アトリエ", icon: "🎨", x: 62, wall: "#ffaed0", shade: "#e88ab0", roof: "#c0487a", sign: "palette" },
+  { id: "dettyan", name: "Dettyan の 事務所", icon: "🏢", x: 160, wall: "#d8a870", shade: "#b88a50", roof: "#6e4423", sign: "dettyan" },
+  { id: "clip", name: "編集室", icon: "✂️", x: 210, wall: "#7ad8c0", shade: "#4ab8a0", roof: "#2a8a7a", sign: "scissors" }
 ]
 const BW = 34
 
 // 建物の 入口（ここまで 歩いてから 入る）
+export const BUILDING_W = BW
+
 export function doorOf(id) {
   const b = BUILDINGS.find((x) => x.id === id)
   return b ? { x: b.x + BW / 2, y: GROUND + 5 } : null
@@ -38,6 +42,25 @@ export function clampWalk(x, y) {
     cy = FOUNTAIN.y + (d < 0.01 ? 1.05 : dy * k) * FOUNTAIN.ry
   }
   return { x: cx, y: cy }
+}
+
+const LAMPS = [50, 116, 140, 204]
+
+// けいじばん（町の おしらせ。絵だけ）
+function drawBoard(g, x, y) {
+  const K = "#1a1414"
+  px(g, K, x + 2, y + 12, 2, 12)
+  px(g, K, x + 28, y + 12, 2, 12)
+  px(g, "#6e4423", x + 2, y + 12, 1, 12)
+  px(g, "#6e4423", x + 28, y + 12, 1, 12)
+  px(g, K, x - 1, y - 1, 34, 15)
+  px(g, "#8a5a33", x, y, 32, 13)
+  px(g, "#f4ecd8", x + 2, y + 2, 12, 9)
+  px(g, "#ffd8e8", x + 17, y + 2, 13, 5)
+  px(g, "#d8ecff", x + 17, y + 8, 13, 3)
+  for (const [lx, ly, lw] of [[3, 4, 9], [3, 6, 7], [3, 8, 9], [18, 4, 10], [18, 9, 8]]) px(g, "#9a8a70", x + lx, y + ly, lw, 1)
+  px(g, "#e0484d", x + 7, y + 1, 2, 2)
+  px(g, "#4f8fe8", x + 23, y + 1, 2, 2)
 }
 
 const px = (g, color, x, y, w = 1, h = 1) => { g.fillStyle = color; g.fillRect(Math.round(x), Math.round(y), w, h) }
@@ -92,6 +115,13 @@ export function drawTownBase(g) {
     px(g, "#7cb86a", x, 40 - h, 1, h + 4)
     px(g, "#6aa85a", x, 40 - Math.max(0, h - 3), 1, 1)
   }
+  // 建物の うしろ：くさはら と いけがき（建物の すきま から 見える）
+  px(g, "#86c474", 0, 38, TOWN_W, GROUND - 36)
+  for (let x = 0; x < TOWN_W; x += 6) {
+    px(g, "#4f9a52", x, GROUND - 10, 6, 8)
+    px(g, "#5cae5c", x + 1, GROUND - 11, 4, 2)
+    px(g, "#3f8a44", x, GROUND - 3, 6, 1)
+  }
   // ひろば（いしだたみ）
   for (let y = GROUND - 2; y < TOWN_H; y += 4) {
     for (let x = (y / 4) % 2 ? -4 : 0; x < TOWN_W; x += 8) {
@@ -106,8 +136,10 @@ export function drawTownBase(g) {
     for (let y = GROUND; y < GROUND + 10; y++) px(g, "#d4c4a4", b.x + 11, y, 12, 1)
   }
   for (const b of BUILDINGS) drawBuilding(g, b)
-  // 木（左右のはし）
-  for (const [tx, ty] of [[8, 76], [152, 76]]) {
+  // まんなかの おく：けいじばん と 大きな木
+  drawBoard(g, 112, 40)
+  // 木（はし と 建物の あいだ）
+  for (const [tx, ty] of [[6, 76], [104, 66], [152, 66], [250, 76], [56, 104], [200, 104]]) {
     px(g, "#1a1414", tx - 2, ty - 6, 5, 14)
     px(g, "#6e4423", tx - 1, ty - 6, 3, 14)
     disc(g, tx, ty - 12, 8, "#1a1414")
@@ -116,7 +148,7 @@ export function drawTownBase(g) {
     px(g, "rgba(0,0,0,0.15)", tx - 6, ty + 7, 13, 2)
   }
   // 花だん
-  for (const fx of [4, 128]) {
+  for (const fx of [12, 86, 142, 216]) {
     px(g, "#1a1414", fx, 108, 28, 8)
     px(g, "#8a5a33", fx + 1, 109, 26, 6)
     for (let i = 0; i < 9; i++) {
@@ -125,8 +157,16 @@ export function drawTownBase(g) {
       px(g, c, fx + 1 + i * 3, 106, 3, 2)
     }
   }
+  // ベンチ
+  for (const bx of [92, 152]) {
+    px(g, "#1a1414", bx, 98, 14, 1)
+    px(g, "#9a6a3a", bx, 95, 14, 3)
+    px(g, "#b88a5a", bx, 95, 14, 1)
+    px(g, "#2b2b35", bx + 1, 99, 1, 3)
+    px(g, "#2b2b35", bx + 12, 99, 1, 3)
+  }
   // 街灯
-  for (const lx of [40, 120]) {
+  for (const lx of LAMPS) {
     px(g, "#2b2b35", lx, 66, 2, 26)
     px(g, "#2b2b35", lx - 2, 64, 6, 3)
     px(g, "#fff2b0", lx - 1, 65, 4, 1)
@@ -260,7 +300,7 @@ export function drawTownNight(g, now) {
     for (const wx of [b.x + 3, b.x + BW - 10]) px(g, "#ffd86a", wx, 35, 6, 6)
   }
   g.fillStyle = "rgba(255, 230, 150, 0.12)"
-  for (const lx of [40, 120]) {
+  for (const lx of LAMPS) {
     for (let r = 4; r <= 14; r += 5) g.fillRect(lx + 1 - r, 66 - r / 2, r * 2, r)
   }
 }

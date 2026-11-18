@@ -92,6 +92,13 @@ test("まち：建物の 入口・歩けるところ", () => {
   assert.ok(q.x >= town.WALK.left && q.y <= town.WALK.bottom)
 })
 
+test("まち：建物は 世界の中で かさならない。スマホで 見せる はば は 世界より せまい", () => {
+  const xs = town.BUILDINGS.map((b) => b.x).sort((a, b) => a - b)
+  for (let i = 1; i < xs.length; i++) assert.ok(xs[i] - xs[i - 1] >= town.BUILDING_W + 4, "建物の あいだ")
+  assert.ok(xs[0] >= 0 && xs.at(-1) + town.BUILDING_W <= town.TOWN_W)
+  assert.ok(town.VIEW_NARROW < town.TOWN_W)
+})
+
 test("まち：朝・昼・夕方・夜 で 描ける", () => {
   const g = fakeCanvas()
   town.drawTownBase(g)

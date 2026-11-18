@@ -9,7 +9,8 @@
   color: #fff;
   font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
 }
-.dt-inner { width: 100%; max-width: 640px; }
+/* PC では 画面の 高さに あわせて 大きく（ステージは 4:3。上と下の ぶん 約 260px を のこす） */
+.dt-inner { width: 100%; max-width: max(640px, min(1100px, calc((100vh - 260px) * 4 / 3))); }
 
 .dt-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .dt-home-link {

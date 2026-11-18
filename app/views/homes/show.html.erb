@@ -18,11 +18,14 @@
              data-town-owner-value="<%= !!current_user&.dettyan_owner? %>"
              aria-label="はじまりのまち">
       <canvas class="hm-town__canvas" data-town-target="canvas" data-action="pointerdown->town#tap" role="img" aria-label="自分の キャラが いる まち"></canvas>
-      <%# 建物（town_world.js の BUILDINGS と 同じ 場所。160×120 ドットの わりあい） %>
-      <% [["sing", "🎤 スタジオ", 3], ["art", "🎨 アトリエ", 42], ["dettyan", "🏢 事務所", 84], ["clip", "✂️ 編集室", 123]].each do |id, label, x| %>
-        <button type="button" class="hm-town__building" style="left: <%= (x - 3) / 1.6 %>%;"
+      <%# 建物（場所は town_world.js の BUILDINGS。town_controller.js が カメラに あわせて 動かす） %>
+      <% [["sing", "🎤 スタジオ"], ["art", "🎨 アトリエ"], ["dettyan", "🏢 事務所"], ["clip", "✂️ 編集室"]].each do |id, label| %>
+        <button type="button" class="hm-town__building" data-town-target="building"
                 data-action="town#goPlace" data-town-place-param="<%= id %>"><span><%= label %></span></button>
       <% end %>
+      <%# スマホ：見えていない がわ に 町が つづくとき %>
+      <button type="button" class="hm-town__edge hm-town__edge--left" data-town-target="edgeLeft" data-action="town#walkLeft" aria-label="ひだり へ 歩く" hidden>◀</button>
+      <button type="button" class="hm-town__edge hm-town__edge--right" data-town-target="edgeRight" data-action="town#walkRight" aria-label="みぎ へ 歩く" hidden>▶</button>
       <div class="hm-town__layer" data-town-target="layer"></div>
       <div class="hm-town__intro" data-town-target="intro" hidden>
         <p>まずは じぶんの キャラを つくろう！</p>

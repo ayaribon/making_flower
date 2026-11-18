@@ -10,7 +10,8 @@
   color: #fff;
   font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
 }
-.hm-inner { width: 100%; max-width: 880px; }
+.hm-inner { width: 100%; max-width: 1100px; }
+.hm-menu { max-width: 880px; margin: 0 auto; }
 
 .hm-header { text-align: center; margin-bottom: 28px; }
 .hm-eyebrow { margin: 0; letter-spacing: 0.2em; font-size: 0.85rem; opacity: 0.75; }
@@ -25,7 +26,7 @@
   background: rgba(255, 255, 255, 0.16); color: #fff; font-size: 0.85rem; text-decoration: none; white-space: nowrap;
 }
 .hm-town {
-  position: relative; width: 100%; max-width: 720px; margin: 0 auto 8px;
+  position: relative; width: 100%; max-width: 1100px; margin: 0 auto 8px;
   border-radius: 18px; overflow: hidden; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
   border: 3px solid rgba(255, 255, 255, 0.25);
 }
@@ -46,6 +47,14 @@
 .hm-town__building:hover span, .hm-town__building:focus-visible span { background: #ff5fa2; }
 .hm-town__building:focus-visible { outline: 3px solid #fff; outline-offset: -3px; border-radius: 8px; }
 .hm-town__layer { position: absolute; inset: 0; pointer-events: none; }
+/* ◀ ▶（スマホ：町が 横に つづく） */
+.hm-town__edge {
+  position: absolute; top: 72%; z-index: 2; width: 34px; height: 44px; border: 0; cursor: pointer;
+  background: rgba(14, 26, 51, 0.6); color: #fff; font-size: 1rem; touch-action: manipulation;
+}
+.hm-town__edge[hidden] { display: none; }
+.hm-town__edge--left { left: 0; border-radius: 0 12px 12px 0; }
+.hm-town__edge--right { right: 0; border-radius: 12px 0 0 12px; }
 .hm-town__name, .hm-town__bubble {
   position: absolute; transform: translate(-50%, 0); white-space: nowrap;
   padding: 1px 6px; border-radius: 6px; font-size: clamp(0.58rem, 2vw, 0.75rem); font-weight: 700;
