@@ -18,6 +18,56 @@
 .hm-hello { margin: 8px 0 0; opacity: 0.85; }
 
 .hm-menu { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+
+/* 🏘️ はじまりのまち（controllers/town_controller.js・town_world.js。160×120 ドット） */
+.hm-avatar-link {
+  display: inline-block; margin-left: 4px; padding: 2px 10px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16); color: #fff; font-size: 0.85rem; text-decoration: none; white-space: nowrap;
+}
+.hm-town {
+  position: relative; width: 100%; max-width: 720px; margin: 0 auto 8px;
+  border-radius: 18px; overflow: hidden; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  border: 3px solid rgba(255, 255, 255, 0.25);
+}
+.hm-town__canvas {
+  display: block; width: 100%; height: auto; aspect-ratio: 4 / 3;
+  image-rendering: crisp-edges; image-rendering: pixelated; touch-action: manipulation; cursor: pointer;
+}
+/* 建物（すきとおった ボタン。名前の ふだ を 屋根の上に） */
+.hm-town__building {
+  position: absolute; top: 15%; width: 25%; height: 37%; padding: 0; border: 0; cursor: pointer;
+  background: transparent; touch-action: manipulation;
+}
+.hm-town__building span {
+  position: absolute; left: 50%; top: 0; transform: translate(-50%, -110%);
+  padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+  background: rgba(14, 26, 51, 0.82); color: #fff; font: inherit; font-size: clamp(0.62rem, 2.4vw, 0.85rem); font-weight: 700;
+}
+.hm-town__building:hover span, .hm-town__building:focus-visible span { background: #ff5fa2; }
+.hm-town__building:focus-visible { outline: 3px solid #fff; outline-offset: -3px; border-radius: 8px; }
+.hm-town__layer { position: absolute; inset: 0; pointer-events: none; }
+.hm-town__name, .hm-town__bubble {
+  position: absolute; transform: translate(-50%, 0); white-space: nowrap;
+  padding: 1px 6px; border-radius: 6px; font-size: clamp(0.58rem, 2vw, 0.75rem); font-weight: 700;
+}
+.hm-town__name { background: rgba(255, 255, 255, 0.85); color: #1b2f5c; }
+.hm-town__bubble { transform: translate(-50%, -100%); background: #fff; color: #1b2f5c; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25); }
+.hm-town__bubble[hidden] { display: none; }
+/* まだ キャラを つくっていない人へ */
+.hm-town__intro {
+  position: absolute; left: 50%; bottom: 8%; transform: translateX(-50%); width: min(90%, 360px);
+  padding: 12px 14px; border-radius: 14px; text-align: center;
+  background: rgba(14, 26, 51, 0.92); color: #fff; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.hm-town__intro[hidden] { display: none; }
+.hm-town__intro p { margin: 0 0 8px; font-weight: 700; }
+.hm-town__intro-go {
+  display: inline-block; padding: 8px 16px; border-radius: 999px; background: #ff5fa2; color: #fff;
+  font-weight: 800; text-decoration: none;
+}
+.hm-town__intro-later { margin-left: 8px; padding: 8px 12px; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.16); color: #fff; font: inherit; cursor: pointer; }
+.hm-town__help { margin: 0 0 22px; text-align: center; font-size: 0.82rem; opacity: 0.75; }
+.hm-menu-title { margin: 0 0 12px; font-size: 1rem; text-align: center; opacity: 0.85; }
 .hm-card {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
   min-height: 220px; padding: 24px 16px; border-radius: 24px;

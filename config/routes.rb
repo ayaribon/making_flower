@@ -3,6 +3,10 @@ Rails.application.routes.draw do
   root "homes#show"
   get "home", to: "homes#show"
 
+  # 👤 キャラメイク（はじまりのまち の アバター）
+  get   "avatar", to: "avatars#edit", as: :avatar
+  patch "avatar", to: "avatars#update"
+
   get    "login",  to: "sessions#new"
   post   "login",  to: "sessions#create"
   delete "logout", to: "sessions#destroy"

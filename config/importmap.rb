@@ -35,3 +35,5 @@ pin "dettyan_battle" # ⚔️ バトル（手動・オート）・ステータ�
 pin "dettyan_home" # 🏠 テント → マイホーム・家具
 pin "dettyan_camp" # ⛺ テントと おはなしの けしき
 pin "dettyan_story" # 📖 おはなし（目標と ページ）
+pin "avatar_sprite" # 👤 みんなの アバター（キャラメイクの 部品と 絵）
+pin "town_world" # 🏘️ はじまりのまち（トップページの 町）の 絵

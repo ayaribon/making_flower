@@ -1,0 +1,30 @@
+<%# 👤 キャラメイク（はじまりのまち の アバター）。動きは controllers/avatar_maker_controller.js、見た目は app/assets/stylesheets/avatar.css %>
+<div class="av" data-controller="avatar-maker"
+     data-avatar-maker-avatar-value="<%= (current_user.avatar || {}).to_json %>"
+     data-avatar-maker-url-value="<%= avatar_path %>"
+     data-avatar-maker-back-value="<%= root_path %>">
+  <div class="av-inner">
+    <header class="av-bar">
+      <a class="av-back" href="<%= root_path %>" data-turbo="false">🏘️ まち へ</a>
+      <h1 class="av-title">👤 キャラメイク</h1>
+    </header>
+
+    <div class="av-main">
+      <div class="av-stage">
+        <canvas class="av-preview" data-avatar-maker-target="preview" role="img" aria-label="じぶんの キャラ"></canvas>
+        <p class="av-name"><%= current_user.name %></p>
+        <div class="av-tools">
+          <button type="button" class="av-tool" data-action="avatar-maker#random">🎲 おまかせ</button>
+          <button type="button" class="av-tool" data-action="avatar-maker#reset">↩ もとにもどす</button>
+        </div>
+      </div>
+      <%# えらぶところ（中身は avatar_sprite.js の 表から 作る） %>
+      <div class="av-groups" data-avatar-maker-target="groups"></div>
+    </div>
+
+    <div class="av-save">
+      <button type="button" class="av-save__btn" data-avatar-maker-target="save" data-action="avatar-maker#save">💾 これにする</button>
+      <p class="av-save__status" data-avatar-maker-target="status" role="status" aria-live="polite"></p>
+    </div>
+  </div>
+</div>

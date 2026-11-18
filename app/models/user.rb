@@ -18,6 +18,24 @@ class User < ApplicationRecord
   # ✂️ 切り抜き動画の依頼（ひとり1回1依頼）
   has_many :clip_requests, dependent: :destroy
 
+  # 👤 はじまりのまち の アバター（キャラメイク）。{ "hair" => "bob", "skin" => 1, ... }。まだ作っていないときは nil
+  # 中身の形は app/javascript/avatar_sprite.js（えらべる値は そちらで そろえる。ここでは 知らない項目・へんな値を すてるだけ）
+  serialize :avatar, coder: JSON
+  AVATAR_KEYS = %w[v skin hair hairColor eyes top topColor bottom bottomColor shoes acc].freeze
+
+  def self.clean_avatar(raw)
+    return nil unless raw.respond_to?(:to_h)
+    raw.to_h.stringify_keys.slice(*AVATAR_KEYS).each_with_object({}) do |(key, value), out|
+      case value
+      when Integer then out[key] = value if value.between?(0, 99)
+      when String
+        if value.match?(/\A\d{1,2}\z/) then out[key] = value.to_i
+        elsif value.match?(/\A[a-z]{1,20}\z/) then out[key] = value
+        end
+      end
+    end.presence
+  end
+
   # 🧑‍💼 Dettyan 本人のアカウントか（育成ゲームのドット絵の Dettyan が「俺やん」と言う）
   # 呼び名（name）で決める。ふだんは dettyan。変えたいときは ENV["DETTYAN_OWNER_NAMES"] にカンマ区切りで書く
   DETTYAN_OWNER_NAMES = "dettyan"
