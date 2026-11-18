@@ -564,9 +564,9 @@ const CUTE = {
     "..SSSSSSSSSSSS..",
     ".SSSSSSSSSSSSSS.",
     ".SSSSSSSSSSSSSS.",
-    "..ScSSSSSSSScS..",
-    "...SSSSmmSSSS...",
-    ".....SSSSSS....."
+    "..SSSSSSSSSSSS..",
+    "..ccSSSSSSSScc..",
+    "....SSSmmSSS...."
   ],
   body: {
     jacket: [
@@ -604,14 +604,14 @@ const CUTE = {
       ["..PPPPPPPPPPPP..", "....SS....SS....", "....SS....SS....", "...FFF....FFF..."]
     ]
   },
-  // 目（y 9 から 3だん。E まつげ・I 瞳・i 瞳の かげ・o ひかり）
+  // 目（y 9 から 4だん。E まつげ・I 瞳の 上（こい）・J 瞳の まんなか・L 瞳の 下（明るい）・o ひかり・w 小さい ひかり）
   eyes: {
-    dot: ["....EE....EE....", "....oI....oI....", "....Ii....Ii...."],
-    smile: ["................", "....EE....EE....", "...E..E..E..E..."],
-    big: ["...EEE....EEE...", "...oII....oII...", "...IiI....IiI..."],
-    sharp: ["...EEE....EEE...", "....oI....oI....", "....II....II...."]
+    dot: ["...EEE....EEE...", "....oI....oI....", "....JJ....JJ....", "....Lw....Lw...."],
+    smile: ["................", "....EE....EE....", "...E..E..E..E...", "................"],
+    big: ["..EEEE....EEEE..", "...oII....oII...", "...JJJ....JJJ...", "...LwL....LwL..."],
+    sharp: ["...EEE....EEE...", "....oI....oI....", "....JJ....JJ....", "................"]
   },
-  blink: ["................", "................", "...EEE....EEE..."],
+  blink: ["................", "................", "...EEE....EEE...", "................"],
   hair: {
     short: { front: [
       "....HHHHHHHH....",
@@ -778,7 +778,7 @@ const CUTE = {
 // 頭の 大きい 絵柄で 描く（見本）。ox, oy は 16×25 の 左上
 export function drawCute(g, ox, oy, raw, { frame = 0, blink = false, mood = null } = {}) {
   const a = normalizeAvatar(raw)
-  const colors = { ...paletteOf(a), I: IRIS, i: shadeOf(IRIS) }
+  const colors = { ...paletteOf(a), I: mix(IRIS, INK, 0.35), J: IRIS, L: lightOf(IRIS), w: "#e8f2ff", i: shadeOf(IRIS) }
   const grid = new Grid()
   const style = CUTE.hair[a.hair] || CUTE.hair.short
   if (style.back) grid.put(style.back, colors, style.backDx || 0, 0)
@@ -787,9 +787,14 @@ export function drawCute(g, ox, oy, raw, { frame = 0, blink = false, mood = null
   grid.put(CUTE.body[a.top] || CUTE.body.tee, colors, 0, 15)
   grid.put(CUTE.face, colors, 0, 0)
   const eyes = blink ? CUTE.blink : CUTE.eyes[mood === "smile" ? "smile" : a.eyes] || CUTE.eyes.dot
-  grid.put(eyes, colors, 0, 9)
+  grid.put(eyes, colors, 0, 10)
   if (style.top) grid.put(style.top, colors, 0, -3)
   grid.put(style.front, colors, 0, 0)
+  // 天使の わ（頭の まるみに そった つや）
+  for (let x = 3; x <= 12; x++) {
+    const y = x < 6 || x > 9 ? 3 : 2
+    if (x % 3 !== 0 && (grid.get(x, y) === colors.H)) grid.set(x, y, colors.h)
+  }
   // まえがみ の 下の はし（顔との さかい）は こく して、髪と 顔を わける
   for (const [k, c] of [...grid.cells]) {
     if (c !== colors.H && c !== colors.h) continue
