@@ -82,9 +82,9 @@ export function learnedSkills(s) {
   return SKILLS.filter((k) => k.job === job.id && k.level <= s.dettyan.level).sort((a, b) => a.level - b.level)
 }
 
-// ---- スライム ----
+// ---- モンスター（スライム と なかま） ----
 //   hp・atk・def・spd：強さ、coins / exp：1ぴき たおすと もらえる量
-//   special：every ターンごとに 大わざ（mult 倍）。絵は dettyan_adventure.js の SLIME_SPRITE（色だけちがう）
+//   special：every ターンごとに 大わざ（mult 倍）。絵は sprite（なければ スライムの形 SLIME_ROWS で 色だけちがう）
 export const MONSTERS = {
   green:  { name: "みどりスライム", hp: 10, atk: 4, def: 0, spd: 2, coins: 20, exp: 3, colors: { O: "#1f5a2a", B: "#5cc46a", L: "#a6eaa0" } },
   blue:   { name: "あおスライム", hp: 18, atk: 7, def: 1, spd: 3, coins: 40, exp: 6, colors: { O: "#1d3d7a", B: "#4f8fe8", L: "#a9cdff" } },
@@ -92,8 +92,133 @@ export const MONSTERS = {
   red:    { name: "あかスライム", hp: 44, atk: 14, def: 5, spd: 6, coins: 90, exp: 16, colors: { O: "#6a1a1a", B: "#e0484d", L: "#ffb0a8" },
     special: { name: "ほのおの たいあたり", every: 3, mult: 1.5 } },
   king:   { name: "キングスライム", hp: 70, atk: 16, def: 6, spd: 3, coins: 180, exp: 30, colors: { O: "#6b4a00", B: "#f0b52a", L: "#ffe38a" }, crown: true,
-    special: { name: "のしかかり", every: 3, mult: 1.7 } }
+    special: { name: "のしかかり", every: 3, mult: 1.7 } },
+  // ---- スライム いがいの モンスター（2026-11-18 に ふやした） ----
+  //   sprite：ドット絵（よこ 12・たて 12 まで。O：ふち、E：目、ほかは colors）。fly：ういている（ふわふわ うごく）
+  crow:   { name: "いたずらカラス", hp: 8, atk: 5, def: 0, spd: 6, coins: 25, exp: 4, fly: true,
+    colors: { O: "#14141e", B: "#2e2e44", L: "#5a5a7a", E: "#ffd84d", Y: "#f0a020" },
+    sprite: [
+      "....OOO.....",
+      "...OBBBO....",
+      "..OBEBBBOYY.",
+      "..OBBBBBOY..",
+      ".OBBBBBBBO..",
+      "OBBLBBBBBBO.",
+      "OBLLLBBBBBBO",
+      ".OBLBBBBBOO.",
+      "..OOOOOOO...",
+      "...Y...Y...."
+    ] },
+  mushroom: { name: "おばけキノコ", hp: 22, atk: 6, def: 2, spd: 1, coins: 45, exp: 7,
+    colors: { O: "#4a1414", R: "#d8383d", W: "#fff4e8", S: "#f2dcc0", E: "#1a1414" },
+    sprite: [
+      "...OOOOOO...",
+      "..ORRWRRRO..",
+      ".ORRRRRWRRO.",
+      "ORWRRRRRRRRO",
+      "ORRRRWRRRWRO",
+      "OOOOOOOOOOOO",
+      "..OSSSSSSO..",
+      "..OSESSESO..",
+      "..OSSSSSSO..",
+      "..OSSSSSSO..",
+      "...OOOOOO..."
+    ] },
+  bee:    { name: "おおばち", hp: 14, atk: 8, def: 0, spd: 7, coins: 45, exp: 7, fly: true,
+    colors: { O: "#2a1a00", Y: "#ffc820", K: "#2a2010", W: "#e6f6ff", E: "#1a1414" },
+    special: { name: "どくばり", every: 4, mult: 1.4 },
+    sprite: [
+      "..WW..WW....",
+      "..WWWOWW....",
+      "...OYYYO....",
+      "..OYKYKYOO..",
+      ".OEYKYKYKYO.",
+      ".OYYKYKYKYKO",
+      "..OYKYKYKO..",
+      "...OOOOOO..."
+    ] },
+  bat:    { name: "どうくつコウモリ", hp: 24, atk: 11, def: 1, spd: 8, coins: 65, exp: 11, fly: true,
+    colors: { O: "#1a0e22", B: "#5a3a7a", L: "#8a6aaa", E: "#ff5050" },
+    sprite: [
+      "O..........O",
+      "OO..O..O..OO",
+      "OBO.OOOO.OBO",
+      "OBBOBBBBOBBO",
+      "OBLBBEEBBLBO",
+      ".OBBBBBBBBO.",
+      "..OOBBBBOO..",
+      "....OOOO...."
+    ] },
+  golem:  { name: "いわゴーレム", hp: 42, atk: 12, def: 8, spd: 1, coins: 90, exp: 15,
+    colors: { O: "#2a2a2a", G: "#8a8a80", L: "#b4b4a8", E: "#5ec8ff" },
+    special: { name: "いわおとし", every: 4, mult: 1.6 },
+    sprite: [
+      "...OOOOOO...",
+      "..OGGGGGGO..",
+      "..OGEGGEGO..",
+      "..OGGGGGGO..",
+      "OOOOGGGGOOOO",
+      "OGLOGLGGOGLO",
+      "OGGOGGGGOGGO",
+      "OOOOGGGLOOOO",
+      "...OGGGGO...",
+      "...OGOOGO...",
+      "..OGGO.OGGO.",
+      "..OOOO.OOOO."
+    ] },
+  yeti:   { name: "ゆきおとこ", hp: 44, atk: 14, def: 5, spd: 4, coins: 110, exp: 20,
+    colors: { O: "#3a4a5a", W: "#f4f8ff", S: "#a8c8e8", K: "#2a3a4a", E: "#1a1414" },
+    special: { name: "ふぶき", every: 3, mult: 1.4 },
+    sprite: [
+      "...OOOOOO...",
+      "..OWWWWWWO..",
+      ".OWWSSSSWWO.",
+      ".OWSESSESWO.",
+      ".OWSSKKSSWO.",
+      "OWWWSSSSWWWO",
+      "OWWWWWWWWWWO",
+      "OWOWWWWWWOWO",
+      "OWOWWWWWWOWO",
+      ".O.OWWWWO.O.",
+      "...OWWOWWO..",
+      "...OOO.OOO.."
+    ] },
+  wyvern: { name: "ちびドラゴン", hp: 42, atk: 15, def: 4, spd: 9, coins: 120, exp: 22, fly: true,
+    colors: { O: "#1e3a1a", G: "#4aa84a", L: "#9ae08a", W: "#c0504a", E: "#ffd84d", R: "#ff8a3a" },
+    special: { name: "ほのおの いき", every: 3, mult: 1.6 },
+    sprite: [
+      "..O......O..",
+      ".OWO....OWO.",
+      "OWWWO..OWWWO",
+      "OWWWOOOOWWWO",
+      ".OWOGGGGOWO.",
+      "..OGGEGGEGO.",
+      "..OGGGGGGGO.",
+      ".OGLLGGGRRO.",
+      ".OGLLGGGGO..",
+      "..OGGOOGGO..",
+      "...OO..OO..."
+    ] }
 }
+
+// モンスターの ドット絵（sprite が なければ スライムの形）
+export function monsterSprite(m) {
+  return m.sprite || SLIME_ROWS
+}
+
+// スライムの ドット絵（12×10）。O：ふち、B：からだ、L：ひかり、E：目
+export const SLIME_ROWS = [
+  "....OOOO....",
+  "..OOBBBBOO..",
+  ".OBLLBBBBBO.",
+  ".OBLBBBBBBO.",
+  "OBBBEBBEBBBO",
+  "OBBBEBBEBBBO",
+  "OBBBBBBBBBBO",
+  "OBBBBBBBBBBO",
+  ".OBBBBBBBBO.",
+  "..OOOOOOOO.."
+]
 
 // ---- 強さ（レベル・職業・ふりわけ・そうび） ----
 // 返すもの：{ hp（たいりょく）, atk, def, mag, spd, maxHp（じっさいの HP）, mp, parts: { level, alloc, gear } }（parts は画面の内わけ用）

@@ -282,3 +282,15 @@ test("たんけん：もらったもの（宝箱・友達）は セーブに入�
   assert.deepEqual(a.steps, b.steps)
   assert.deepEqual(a.intro, b.intro)
 })
+
+test("モンスターの ドット絵：よこ 12・たて 12 まで、色が ぜんぶ ある。どの行き先にも スライム いがい が いる", () => {
+  for (const [id, m] of Object.entries(bt.MONSTERS)) {
+    const rows = bt.monsterSprite(m)
+    assert.ok(rows.length <= 12, id)
+    for (const row of rows) {
+      assert.equal(row.length, 12, `${id} ${row}`)
+      for (const ch of row) assert.ok(ch === "." || ch === "E" || m.colors[ch], `${id} の色 ${ch}`)
+    }
+  }
+  for (const p of adv.PLACES) assert.ok(p.monsters.some((id) => bt.MONSTERS[id].sprite), p.id)
+})
