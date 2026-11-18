@@ -547,3 +547,256 @@ export function drawSlim(g, ox, oy, raw, { frame = 0, blink = false, mood = null
   if (acc) grid.put(acc.art, { ...colors, ...acc.colors }, 0, acc.y)
   render(g, grid, ox, oy)
 }
+
+// ==== 頭の 大きい 絵柄（見本）：16×25。頭 15ドット（6割）・横に 広い 顔・目は 顔の 下の ほうで 大きく 色つき ====
+// 2026-11-18 に ayaribon が 見せてくれた 参考の 絵の つりあい（2頭身・頭が 大きく 横に 広い）に あわせた。絵は オリジナル
+export const CUTE_W = 16
+export const CUTE_H = 25
+const IRIS = "#5b7fc9" // 瞳の 色（見本では 青 に そろえる）
+
+const CUTE = {
+  face: [
+    "................", "................", "................", "................", "................",
+    "....SSSSSSSS....",
+    "...SSSSSSSSSS...",
+    "..SSSSSSSSSSSS..",
+    "..SSSSSSSSSSSS..",
+    "..SSSSSSSSSSSS..",
+    ".SSSSSSSSSSSSSS.",
+    ".SSSSSSSSSSSSSS.",
+    "..ScSSSSSSSScS..",
+    "...SSSSmmSSSS...",
+    ".....SSSSSS....."
+  ],
+  body: {
+    jacket: [
+      "....TTTWWTTT....",
+      "...TTTTWWTTTT...",
+      "...TTTTWWTTTT...",
+      "..STTTTWWTTTTS..",
+      "..STTTTTTTTTTS..",
+      "...TTTTTTTTTT..."
+    ],
+    tee: [
+      "....TTTTTTTT....",
+      "...TTTTTTTTTT...",
+      "..SSTTTTTTTTSS..",
+      "..STTTTTTTTTTS..",
+      "..STTTTTTTTTTS..",
+      "...TTTTTTTTTT..."
+    ],
+    hoodie: [
+      "...WWWWWWWWWW...",
+      "...TTTTWWTTTT...",
+      "...TTTTTTTTTT...",
+      "..STTTTTTTTTTS..",
+      "..STTWWWWWWTTS..",
+      "...TTTTTTTTTT..."
+    ]
+  },
+  legs: {
+    pants: [
+      ["....PPPPPPPP....", ".....PP..PP.....", ".....PP..PP.....", "....FFF..FFF...."],
+      ["....PPPPPPPP....", "....PP....PP....", "....PP....PP....", "...FFF....FFF..."]
+    ],
+    skirt: [
+      ["..PPPPPPPPPPPP..", ".....SS..SS.....", ".....SS..SS.....", "....FFF..FFF...."],
+      ["..PPPPPPPPPPPP..", "....SS....SS....", "....SS....SS....", "...FFF....FFF..."]
+    ]
+  },
+  // 目（y 9 から 3だん。E まつげ・I 瞳・i 瞳の かげ・o ひかり）
+  eyes: {
+    dot: ["....EE....EE....", "....oI....oI....", "....Ii....Ii...."],
+    smile: ["................", "....EE....EE....", "...E..E..E..E..."],
+    big: ["...EEE....EEE...", "...oII....oII...", "...IiI....IiI..."],
+    sharp: ["...EEE....EEE...", "....oI....oI....", "....II....II...."]
+  },
+  blink: ["................", "................", "...EEE....EEE..."],
+  hair: {
+    short: { front: [
+      "....HHHHHHHH....",
+      "..HHHHhhHHHHHH..",
+      ".HHHhHHHHHHHHHH.",
+      ".HHhHHHHHHHHHHH.",
+      "HHHHHHHHHHHHHHHH",
+      "HHHHHHHHHHHHHHHH",
+      "HHHHHHH..HHHHHHH",
+      "HHH.HH....HH.HHH",
+      "HH............HH",
+      "H..............H"
+    ] },
+    bun: { front: [
+      "....HHHHHHHH....",
+      "..HHHHhhHHHHHH..",
+      ".HHHhHHHHHHHHHH.",
+      ".HHhHHHHHHHHHHH.",
+      "HHHHHHHHHHHHHHHH",
+      "HHHHHHHHHHHHHHHH",
+      "HHHHHH....HHHHHH",
+      "HHHH........HHHH",
+      "HH............HH",
+      "H..............H"
+    ], top: ["......HHHH......", ".....HhHHHH.....", ".....HHHHHH....."] },
+    bob: { front: [
+      "....HHHHHHHH....",
+      "..HHHHhhHHHHHH..",
+      ".HHHhHHHHHHHHHH.",
+      ".HHhHHHHHHHHHHH.",
+      "HHHHHHHHHHHHHHHH",
+      "HHHHHHHHHHHHHHHH",
+      "HHHHHHH..HHHHHHH",
+      "HHHHH......HHHHH",
+      "HHH..........HHH",
+      "HHH..........HHH",
+      "HHH..........HHH",
+      "HHH..........HHH",
+      "HHH..........HHH",
+      "HHHH........HHHH",
+      "HHHH........HHHH"
+    ] },
+    long: {
+      front: [
+        "....HHHHHHHH....",
+        "..HHHHhhHHHHHH..",
+        ".HHHhHHHHHHHHHH.",
+        ".HHhHHHHHHHHHHH.",
+        "HHHHHHHHHHHHHHHH",
+        "HHHHHHHHHHHHHHHH",
+        "HHHHHH.HH.HHHHHH",
+        "HHHH........HHHH",
+        "HHH..........HHH",
+        "HHH..........HHH",
+        "HHH..........HHH",
+        "HHH..........HHH",
+        "HHH..........HHH",
+        "HHH..........HHH",
+        "HHH..........HHH"
+      ],
+      back: [
+        "................", "................", "................", "................",
+        "HHHHHHHHHHHHHHHH", "HHHHHHHHHHHHHHHH", "HHHHHHHHHHHHHHHH", "HHHHHHHHHHHHHHHH", "HHHHHHHHHHHHHHHH",
+        "HHHHHHHHHHHHHHHH", "HHHHHHHHHHHHHHHH", "HHHHHHHHHHHHHHHH", "HHHHHHHHHHHHHHHH", "HHHHHHHHHHHHHHHH",
+        "HHHHHHHHHHHHHHHH", "HHHHHHHHHHHHHHHH", ".HHHHHHHHHHHHHH.", ".HHHHHHHHHHHHHH.", ".HHHHHHHHHHHHHH.",
+        "..HH.HHHHHH.HH.."
+      ]
+    },
+    twin: {
+      front: [
+        "....HHHHHHHH....",
+        "..HHHHhhHHHHHH..",
+        ".HHHhHHHHHHHHHH.",
+        ".HHhHHHHHHHHHHH.",
+        "HHHHHHHHHHHHHHHH",
+        "HHHHHHHHHHHHHHHH",
+        "HHHHHHH..HHHHHHH",
+        "HHHHH......HHHHH",
+        "HHH..........HHH",
+        "HH............HH"
+      ],
+      // ツインテールは 顔の 外がわ（x -2〜-1 と 16〜17）。dx -2 で おく
+      back: [
+        "....................", "....................", "....................",
+        "rr................rr", "HHH..............HHH", "HHH..............HHH", "HHHH............HHHH",
+        "HHHH............HHHH", "HHHH............HHHH", "HHHH............HHHH", "HHH..............HHH",
+        "HHH..............HHH", "HHH..............HHH", "HH................HH", ".H................H."
+      ],
+      backDx: -2
+    },
+    pony: {
+      front: [
+        "....HHHHHHHH....",
+        "..HHHHhhHHHHHH..",
+        ".HHHhHHHHHHHHHH.",
+        ".HHhHHHHHHHHHHH.",
+        "HHHHHHHHHHHHHHHH",
+        "HHHHHHHHHHHHHHHH",
+        "HHHHHHH..HHHHHHH",
+        "HHHH.......HHHHH",
+        "HH...........HHH",
+        "H.............HH"
+      ],
+      back: [
+        "..................", "..................", "..............rr..", "..............HHH.",
+        "...............HHH", "...............HHH", "...............HHH", "...............HHH",
+        "................HH", "................HH", "...............HH.", "................H."
+      ]
+    }
+  },
+  accs: {
+    cap: { y: -1, colors: { A: "#e07a7a", a: "#f4a6a6", d: "#b85a66", w: "#f6f1e7" }, art: [
+      ".....AAwwAA.....",
+      "....AAaaAAAA....",
+      "...AAaAAAAAAA...",
+      "..AAAAAAAAAAAA..",
+      "..dddddddddddd..",
+      ".AAAAAAAAAAAAAA."
+    ] },
+    headphones: { y: -1, colors: { A: "#5d6aa6", a: "#9ab0e8" }, art: [
+      "...AAAAAAAAAA...",
+      "..A..........A..",
+      ".A............A.",
+      ".A............A.",
+      ".A............A.",
+      ".A............A.",
+      ".A............A.",
+      "AAA..........AAA",
+      "AaA..........AaA",
+      "AAA..........AAA"
+    ] },
+    ribbon: { y: -1, colors: { A: "#f28aa8", a: "#ffc6d6" }, art: [
+      "..........A...A.",
+      "..........AaAaA.",
+      "...........AAA..",
+      "..........A...A."
+    ] },
+    nekomimi: { y: -2, colors: { i: "#f4a6c4" }, art: [
+      ".HH..........HH.",
+      ".HiH........HiH.",
+      ".HiiH......HiiH."
+    ] },
+    usamimi: { y: -6, colors: { A: "#f6f1e7", i: "#f4a6c4" }, art: [
+      "....AA....AA....",
+      "....Ai....Ai....",
+      "....Ai....Ai....",
+      "....Ai....Ai....",
+      "....AA....AA....",
+      "....AA....AA....",
+      "....AA....AA...."
+    ] },
+    hanakanmuri: { y: 0, colors: { A: "#f4a6c4", a: "#f2df8c", g: "#8cc589" }, art: [
+      "..A..a..A..a..A.",
+      ".gAggagAggaggAg."
+    ] },
+    crown: { y: -3, colors: { A: "#eec170", a: "#fff1b8", r: "#e07a7a" }, art: [
+      ".....A.AA.A.....",
+      ".....AArrAA.....",
+      ".....AAAAaA....."
+    ] }
+  }
+}
+
+// 頭の 大きい 絵柄で 描く（見本）。ox, oy は 16×25 の 左上
+export function drawCute(g, ox, oy, raw, { frame = 0, blink = false, mood = null } = {}) {
+  const a = normalizeAvatar(raw)
+  const colors = { ...paletteOf(a), I: IRIS, i: shadeOf(IRIS) }
+  const grid = new Grid()
+  const style = CUTE.hair[a.hair] || CUTE.hair.short
+  if (style.back) grid.put(style.back, colors, style.backDx || 0, 0)
+  const legs = CUTE.legs[a.bottom] || CUTE.legs.pants
+  grid.put(legs[frame ? 1 : 0], colors, 0, 21)
+  grid.put(CUTE.body[a.top] || CUTE.body.tee, colors, 0, 15)
+  grid.put(CUTE.face, colors, 0, 0)
+  const eyes = blink ? CUTE.blink : CUTE.eyes[mood === "smile" ? "smile" : a.eyes] || CUTE.eyes.dot
+  grid.put(eyes, colors, 0, 9)
+  if (style.top) grid.put(style.top, colors, 0, -3)
+  grid.put(style.front, colors, 0, 0)
+  // まえがみ の 下の はし（顔との さかい）は こく して、髪と 顔を わける
+  for (const [k, c] of [...grid.cells]) {
+    if (c !== colors.H && c !== colors.h) continue
+    const [x, y] = k.split(",").map(Number)
+    if (grid.get(x, y + 1) === colors.S) grid.set(x, y, lineOf(colors.H))
+  }
+  const acc = CUTE.accs[a.acc]
+  if (acc) grid.put(acc.art, { ...colors, ...acc.colors }, 0, acc.y)
+  render(g, grid, ox, oy)
+}
