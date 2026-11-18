@@ -157,3 +157,25 @@ test("🌱 Sprout Lands 版の 町：画像が なければ 読まない・あ�
   // 街灯は 井戸（ふんすいの 場所）と かさならない
   for (const lx of sprout.SPROUT_LAMPS) assert.ok(Math.abs(lx - town.FOUNTAIN.x) > town.FOUNTAIN.rx + 4)
 })
+
+test("👤 新しい 絵柄（見本）：どの くみあわせ でも 描ける・16×20 に おさまる（こもの は 上に はみ出して よい）", async () => {
+  const ch = await import("avatar_chibi")
+  assert.equal(ch.CHIBI_SKINS.length, av.SKINS.length, "色の 数は 前と 同じ（保存した 番号が 使える）")
+  assert.equal(ch.CHIBI_HAIRS.length, av.HAIR_COLORS.length)
+  assert.equal(ch.CHIBI_CLOTHS.length, av.CLOTH_COLORS.length)
+  for (const hair of av.HAIRS) {
+    for (const eyes of av.EYES) {
+      for (const acc of av.ACCESSORIES) {
+        for (const [top, bottom] of [["jacket", "pants"], ["tee", "skirt"], ["hoodie", "pants"]]) {
+          const g = fakeCanvas()
+          ch.drawChibi(g, 10, 10, { hair: hair.id, eyes: eyes.id, acc, top, bottom }, { frame: acc === "cap" ? 1 : 0 })
+          assertClean(g, `${hair.id}/${eyes.id}/${acc}`)
+          for (const c of g.calls) {
+            assert.ok(c.x >= 10 - 1 && c.x <= 10 + ch.CHIBI_W, `よこに はみ出す ${hair.id}/${acc}`)
+            assert.ok(c.y >= 10 - 6 && c.y <= 10 + ch.CHIBI_H, `たてに はみ出す ${hair.id}/${acc}`)
+          }
+        }
+      }
+    }
+  }
+})
