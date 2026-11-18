@@ -352,7 +352,7 @@ export default class extends Controller {
       list.innerHTML = ""
       if (items.length === 0) {
         list.innerHTML = mine
-          ? '<p class="studio-tab-note">この比率のマイテンプレはまだありません。👤メニューの「⭐ マイテンプレに保存」で作れます</p>'
+          ? '<p class="studio-tab-note">この比率のマイテンプレはまだありません。画面上部の「⭐ マイテンプレに保存」で作れます</p>'
           : '<p class="studio-tab-note">この比率のテンプレはまだありません</p>'
         return
       }
