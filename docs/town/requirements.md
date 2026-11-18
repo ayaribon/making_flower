@@ -85,6 +85,7 @@
 - **画像の 置き場所：S3**（2026-11-18 に ayaribon が 決めた。公開リポジトリには 入れない）。`app/models/game_asset.rb`
   - 本番：ActiveStorage と 同じ バケット（Heroku の `S3_BUCKET`）の **`game_assets/sprout_lands/`** の 下に、**素材パックの 中の 形のまま** 置く（`Animals/` `Characters/` `Objects/` `Tilesets/` `read_me.txt` が ある フォルダの 中身。例：`game_assets/sprout_lands/Objects/Water well.png`）
   - 手元：`private_assets/sprout_lands/` の 下に 同じ 形で 置く（.gitignore 済み）。元の ファイルは 非公開リポジトリ `ayaribon/making_flower_assets`
+  - **開発でも S3 から 読める**：手元に ファイルが なく、`.env` に 本番と 同じ `AWS_ACCESS_KEY_ID`・`AWS_SECRET_ACCESS_KEY`・`AWS_REGION`・`S3_BUCKET` が あれば、storage.yml の `amazon` で S3 を 読む（`docker compose` の web は .env から わたす。`bin/rails server` で 動かすときは `set -a; source .env; set +a` してから）。手元に ファイルが あれば そちらが 先
   - 画面へは `GET /game_assets/sprout/:key`（ログインした人だけ。`GameAssetsController`）。知らない キー・ない 画像は 404。ブラウザには「この人だけ・1日」キャッシュ
   - 8まい ぜんぶ そろっているか は 10分ごとに 確かめる（`GameAsset::CHECK_EVERY`）。**S3 に 上げてから 町が 変わるまで、長くて 10分**（すぐ 見たいときは アプリを 再起動）
   - 読んだ 画像は サーバーが おぼえておく（ぜんぶで 30KB くらい）。DB は 使わない（N2）

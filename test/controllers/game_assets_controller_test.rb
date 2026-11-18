@@ -79,6 +79,26 @@ class GameAssetsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "開発：AWS の 鍵と S3_BUCKET が あれば、ActiveStorage が 手元でも S3 から 読む" do
+    files = GameAsset::SPROUT.values.to_h { |path| ["game_assets/sprout_lands/#{path}", PNG] }
+    saved = ENV.to_h.slice("S3_BUCKET", "AWS_ACCESS_KEY_ID")
+    registry = Object.new
+    registry.define_singleton_method(:fetch) { |name| name == :amazon ? FakeS3.new(files) : raise(KeyError) }
+    begin
+      ENV["S3_BUCKET"] = "test-bucket"
+      ENV["AWS_ACCESS_KEY_ID"] = "test-key"
+      ActiveStorage::Blob.stub(:services, registry) do
+        assert GameAsset.available?
+        assert_equal PNG, GameAsset.read("trees")
+      end
+      GameAsset.reset!
+      ENV.delete("S3_BUCKET")
+      assert_not GameAsset.available?, "鍵が なければ S3 は 見ない"
+    ensure
+      %w[S3_BUCKET AWS_ACCESS_KEY_ID].each { |k| saved.key?(k) ? ENV[k] = saved[k] : ENV.delete(k) }
+    end
+  end
+
   test "町：ぜんぶ そろったときだけ 画像の URL を わたす" do
     login_as("assettown")
     GameAsset::SPROUT.keys.first(3).each { |key| put(key) }

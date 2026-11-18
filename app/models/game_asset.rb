@@ -3,7 +3,7 @@ require "concurrent/map"
 # 🌱 買った 素材（Sprout Lands - premium pack。作者 Cup Nooble）を 町に 出す。docs/town/requirements.md の 4.5
 # 素材パックは 配るのが 禁止なので、公開リポジトリには 入れない。DB も 使わない（N2）
 #   本番：S3（ActiveStorage と 同じ バケット。Heroku の S3_BUCKET）の game_assets/sprout_lands/ の 下
-#   手元：private_assets/sprout_lands/ の 下（.gitignore 済み）
+#   手元：private_assets/sprout_lands/ の 下（.gitignore 済み）。なければ、AWS の 鍵（.env）が あれば 開発でも S3 から 読む
 #   どちらも 素材パックの 中の 形のまま 置く（Animals・Characters・Objects・Tilesets・read_me.txt が ある フォルダの 中身）
 # 画面には ログインした人にだけ 出す（GameAssetsController）。そろっていなければ 町は 前の コードで 描く 絵
 class GameAsset
@@ -50,6 +50,7 @@ class GameAsset
     # テスト用：おぼえている ものを わすれる
     def reset!
       @bytes = Concurrent::Map.new
+      @s3 = nil
       @lock.synchronize { @checked_at = nil }
     end
 
@@ -68,11 +69,15 @@ class GameAsset
       file.file? ? file.binread : nil
     end
 
-    # 本番だけ（ActiveStorage が S3 の とき）
+    # S3：本番は ActiveStorage の S3 そのもの。開発でも AWS の 鍵と S3_BUCKET が あれば、storage.yml の amazon で 読む
     def s3
       service = ActiveStorage::Blob.service
-      service.respond_to?(:bucket) ? service : nil
-    rescue StandardError
+      return service if service.respond_to?(:bucket)
+      return nil if ENV["S3_BUCKET"].blank? || ENV["AWS_ACCESS_KEY_ID"].blank?
+
+      @s3 ||= ActiveStorage::Blob.services.fetch(:amazon)
+    rescue StandardError => e
+      Rails.logger.warn("[GameAsset] S3: #{e.class}")
       nil
     end
 
