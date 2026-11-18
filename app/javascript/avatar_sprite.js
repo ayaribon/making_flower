@@ -19,7 +19,11 @@ export const HAIRS = [
   { id: "bob", name: "ボブ" },
   { id: "long", name: "ロング" },
   { id: "twin", name: "ツインテール" },
-  { id: "pony", name: "ポニーテール" }
+  { id: "pony", name: "ポニーテール" },
+  // 💇 人の アバター（髪の パーツ）で ふえた 髪型。2頭身の 絵では ショートと 同じ
+  { id: "blunt", name: "ぱっつんボブ" },
+  { id: "braid", name: "みつあみ" },
+  { id: "wolf", name: "ウルフカット" }
 ]
 export const EYES = [
   { id: "dot", name: "ふつう" },
@@ -243,7 +247,7 @@ export function drawAvatar(g, ox, oy, raw, { frame = 0, blink = false, mood = nu
     pal.K = line
     pal.E = line
   }
-  const hair = HAIR_ART[a.hair]
+  const hair = HAIR_ART[a.hair] || HAIR_ART.short
   if (hair.back) drawArt(g, hair.back, pal, ox, oy)
   for (let y = 0; y < AV_H; y++) {
     let row = BASE[y]

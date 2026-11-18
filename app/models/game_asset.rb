@@ -21,9 +21,15 @@ class GameAsset
     "chara" => "sprout_lands/Characters/Premium Charakter Spritesheet.png", # 🐱 Teemo 型の アバター（なくても 町は 出る）
     # 🧑 人の テンプレート（Sprout Sorry pack。非商用 ライセンス。この アプリは 非商用 と ayaribon が 判断。2026-11-18）
     "human" => "sprout_sorry/Tests/free_character_spritesheet_by-cupnooble.png"
-  }.freeze
+  }.merge(
+    # 💇 髪の パーツ（docs/town/hair_parts_spec.md。人の テンプレートに 重ねる）
+    %w[short_bob blunt_bob long_straight twin_tails ponytail bun braids wolf_cut].flat_map do |stem|
+      %w[back front].map { |side| ["hair_#{stem}_#{side}", "sprout_hair/#{stem}_#{side}.png"] }
+    end.to_h
+  ).freeze
+  HAIR_KEYS = SPROUT.keys.grep(/\Ahair_/).freeze
   # なくても 町を 出せる もの（なければ アバターは 前の 絵）
-  OPTIONAL = %w[chara human].freeze
+  OPTIONAL = (%w[chara human] + HAIR_KEYS).freeze
   # そろっているか を 確かめなおす 間かく（S3 に 上げてから 町に 出るまで、長くて この 時間）
   CHECK_EVERY = 10.minutes
 

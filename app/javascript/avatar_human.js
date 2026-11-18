@@ -9,6 +9,11 @@ import { normalizeAvatar } from "avatar_sprite"
 import { CHIBI_SKINS, CHIBI_HAIRS, CHIBI_CLOTHS } from "avatar_chibi"
 import { drawAccessory } from "avatar_teemo"
 
+// 💇 髪型の パーツ画像（docs/town/hair_parts_spec.md。S3 の game_assets/sprout_hair/）。キャラの 髪型 id → ファイル名
+// ない 髪型・画像が ないときは、頭の 大きさに あわせて 髪を 足す（下の hairShapes）
+export const HAIR_PARTS = { bob: "short_bob", blunt: "blunt_bob", long: "long_straight", twin: "twin_tails", pony: "ponytail", bun: "bun", braid: "braids", wolf: "wolf_cut" }
+const PART_ROLE = { "#42353a": "line", "#695154": "hairDark", "#97756f": "hairMid", "#be9d89": "hairLight" }
+
 export const HUMAN_W = 14 // あたり判定・ふきだし の ための 体の 大きさ
 export const HUMAN_H = 21
 const FW = 16
@@ -35,6 +40,55 @@ const ROLE_OF = new Map(Object.entries(ROLE).map(([hex, role]) => [rgbOf(hex).jo
 function rgbOf(hex) {
   const n = parseInt(hex.slice(1), 16)
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
+
+// 頭の なかの 髪の 色を 消して、まわりが 消えた ふち も 消す
+function removeHair(d, stride, roleOf, heads) {
+  const isHair = (role) => role === "hairDark" || role === "hair" || role === "hairMid" || role === "hairLight"
+  for (let r = 0; r < 3; r++) for (let col = 0; col < 8; col++) {
+    const { chin } = heads[r][col]
+    const at = (x, y) => ((r * FH + y) * stride + col * FW + x) * 4
+    for (let y = 0; y < chin; y++) for (let x = 0; x < FW; x++) {
+      const i = at(x, y)
+      if (d[i + 3] && isHair(roleOf.get(`${d[i]},${d[i + 1]},${d[i + 2]}`))) d[i + 3] = 0
+    }
+    for (let pass = 0; pass < 2; pass++) {
+      for (let y = 0; y < chin; y++) for (let x = 0; x < FW; x++) {
+        const i = at(x, y)
+        if (!d[i + 3] || roleOf.get(`${d[i]},${d[i + 1]},${d[i + 2]}`) !== "line") continue
+        let solid = false
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = x + dx, ny = y + dy
+          if (nx < 0 || ny < 0 || nx >= FW || ny >= FH) continue
+          const j = at(nx, ny)
+          if (d[j + 3] && roleOf.get(`${d[j]},${d[j + 1]},${d[j + 2]}`) !== "line") solid = true
+        }
+        if (!solid) d[i + 3] = 0
+      }
+    }
+  }
+}
+
+// 髪の パーツ画像を その人の 髪の 色に（おぼえておく）
+const partCache = new Map()
+function recolorPart(img, pal, key) {
+  if (partCache.has(key)) return partCache.get(key)
+  const c = document.createElement("canvas")
+  c.width = FW * 8
+  c.height = FH * 3
+  const g = c.getContext("2d")
+  g.drawImage(img, 0, 0)
+  const data = g.getImageData(0, 0, c.width, c.height)
+  const d = data.data
+  const map = new Map(Object.entries(PART_ROLE).map(([hex, role]) => [rgbOf(hex).join(), pal[role]]))
+  for (let i = 0; i < d.length; i += 4) {
+    if (!d[i + 3]) continue
+    const to = map.get(`${d[i]},${d[i + 1]},${d[i + 2]}`)
+    if (to) { d[i] = to[0]; d[i + 1] = to[1]; d[i + 2] = to[2] }
+  }
+  g.putImageData(data, 0, 0)
+  partCache.set(key, c)
+  return c
 }
 
 function measureHeads(d, stride, roleOf) {
@@ -87,8 +141,9 @@ function paletteFor(spec) {
 
 const cache = new Map()
 // 色を おきかえた 画像（ぜんぶの コマ）と、コマごとの 頭の いちばん 上
-export function humanSheet(sheet, spec) {
-  const key = JSON.stringify(spec)
+// bald：テンプレートの 髪を 消す（髪の パーツを 重ねる とき）
+export function humanSheet(sheet, spec, { bald = false } = {}) {
+  const key = JSON.stringify(spec) + (bald ? "|bald" : "")
   if (cache.has(key)) return cache.get(key)
   const c = document.createElement("canvas")
   c.width = FW * 8
@@ -101,6 +156,7 @@ export function humanSheet(sheet, spec) {
   const roleOf = ROLE_OF
   // コマごとの 頭（てっぺん・あご・左右）。色を かえる 前に はかる
   const heads = measureHeads(d, c.width, roleOf)
+  if (bald) removeHair(d, c.width, roleOf, heads)
   for (let y = 0; y < c.height; y++) {
     for (let x = 0; x < c.width; x++) {
       const i = (y * c.width + x) * 4
@@ -217,28 +273,39 @@ export function facing8(dx, dy, prev = "down") {
 }
 
 // 人の アバターを 描く。x, y は 足もと。opts：{ dir, walking, t（秒）, look（Dettyan など。データの かわり） }
-export function drawHuman(g, sheet, x, y, raw, { dir = "down", walking = false, t = 0, look = null } = {}) {
+// parts：{ ファイル名: { back: 画像, front: 画像 } }（髪の パーツ。なければ 足した 髪）
+export function drawHuman(g, sheet, x, y, raw, { dir = "down", walking = false, t = 0, look = null, parts = null } = {}) {
   const a = normalizeAvatar(raw)
   const spec = look ? { skin: look.skin, hair: look.hair, top: look.top, bottom: look.bottom, shoes: look.shoes || look.bottom }
     : { skin: CHIBI_SKINS[a.skin], hair: CHIBI_HAIRS[a.hairColor], top: CHIBI_CLOTHS[a.topColor], bottom: CHIBI_CLOTHS[a.bottomColor], shoes: CHIBI_CLOTHS[a.shoes] }
   const acc = look?.acc || a.acc
   const style = look?.style || a.hair
-  const { canvas, tops, heads } = humanSheet(sheet, spec)
   const col = COLUMNS[dir] ?? 4
   const row = walking ? WALK[Math.floor(t * 8) % 4] : 1
   const left = Math.round(x - ANCHOR_X)
   const top = Math.round(y - ANCHOR_Y)
-  const shapes = hairShapes(style, dir, heads[row][col])
   const pal = paletteFor(spec)
-  drawHair(g, shapes.behind, left, top, pal)
-  g.drawImage(canvas, col * FW, row * FH, FW, FH, left, top, FW, FH)
-  drawHair(g, shapes.front, left, top, pal)
-  if (style === "twin" && !BACK.has(dir)) {
-    // ツインテールの むすびめ（リボン）
-    g.fillStyle = "#f28aa8"
-    const h = heads[row][col]
-    if (!(dir.includes("right") && !dir.startsWith("down") && !dir.startsWith("up"))) g.fillRect(left + h.left - 2, top + h.top + 3, 2, 1)
-    if (!(dir === "left")) g.fillRect(left + h.right + 1, top + h.top + 3, 2, 1)
+  const stem = HAIR_PARTS[style]
+  const part = stem && parts?.[stem]
+  let tops
+  if (part?.back && part?.front) {
+    // 💇 パーツ：うしろ → 髪を 消した 体 → まえ
+    const body = humanSheet(sheet, spec, { bald: true })
+    tops = body.tops
+    const back = recolorPart(part.back, pal, `${stem}|back|${spec.hair}`)
+    const front = recolorPart(part.front, pal, `${stem}|front|${spec.hair}`)
+    g.drawImage(back, col * FW, row * FH, FW, FH, left, top, FW, FH)
+    g.drawImage(body.canvas, col * FW, row * FH, FW, FH, left, top, FW, FH)
+    g.drawImage(front, col * FW, row * FH, FW, FH, left, top, FW, FH)
+  } else {
+    const body = humanSheet(sheet, spec)
+    tops = body.tops
+    const shapes = hairShapes(style, dir, body.heads[row][col])
+    drawHair(g, shapes.behind, left, top, pal)
+    g.drawImage(body.canvas, col * FW, row * FH, FW, FH, left, top, FW, FH)
+    drawHair(g, shapes.front, left, top, pal)
+    g.fillStyle = "#f28aa8" // むすびめ の リボン
+    for (const [rx, ry] of shapes.ties) g.fillRect(left + rx, top + ry, 2, 2)
   }
   if (acc && acc !== "none") drawAccessory(g, acc, x, top + tops[row][col])
 }

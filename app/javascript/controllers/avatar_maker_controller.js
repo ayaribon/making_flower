@@ -18,7 +18,7 @@ const OY = 6
 
 export default class extends Controller {
   static targets = ["preview", "groups", "save", "status", "msg", "displayName", "nameLabel"]
-  static values = { avatar: Object, url: String, back: String, account: String, humanUrl: String }
+  static values = { avatar: Object, url: String, back: String, account: String, humanUrl: String, hairUrls: Object }
 
   connect() {
     this.saved = normalizeAvatar(this.hasSaved() ? this.avatarValue : DEFAULT_AVATAR)
@@ -34,6 +34,7 @@ export default class extends Controller {
       const img = new Image()
       img.onload = () => { this.human = img; this.useHumanPreview(); this.renderGroups() }
       img.src = this.humanUrlValue
+      this.loadHairParts()
     }
     this.t = 0
     this.last = performance.now()
@@ -54,6 +55,21 @@ export default class extends Controller {
     return this.avatarValue && Object.keys(this.avatarValue).length > 0
   }
 
+  // 💇 髪の パーツ（hair_<ファイル名>_back / _front）を 読んで、そろった ものから 使う
+  loadHairParts() {
+    this.hairParts = {}
+    for (const [key, url] of Object.entries(this.hairUrlsValue || {})) {
+      const m = key.match(/^hair_(.+)_(back|front)$/)
+      if (!m) continue
+      const img = new Image()
+      img.onload = () => {
+        this.hairParts[m[1]] = { ...(this.hairParts[m[1]] || {}), [m[2]]: img }
+        if (this.human) this.renderGroups()
+      }
+      img.src = url
+    }
+  }
+
   useHumanPreview() {
     const c = this.previewTarget
     c.width = 24
@@ -72,7 +88,7 @@ export default class extends Controller {
       g.fillRect(6, 36, 12, 2)
       const dirs = ["down", "downright", "right", "upright", "up", "upleft", "left", "downleft"]
       const dir = dirs[Math.floor(this.t / 1.5) % dirs.length]
-      drawHuman(g, this.human, 12, 37, this.avatar, { dir, walking: this.t % 6 > 3, t: this.t })
+      drawHuman(g, this.human, 12, 37, this.avatar, { dir, walking: this.t % 6 > 3, t: this.t, parts: this.hairParts })
       return
     }
     g.clearRect(0, 0, PW, PH)
@@ -159,7 +175,7 @@ export default class extends Controller {
         c.height = 34
         c.style.width = "53px"
         c.style.height = "82px"
-        drawHuman(c.getContext("2d"), this.human, 11, 32, item.preview, { dir: "down" })
+        drawHuman(c.getContext("2d"), this.human, 11, 32, item.preview, { dir: "down", parts: this.hairParts })
       } else if (item.face) drawAvatar(g, -1, -4, item.preview) // 目のあたりだけ
       else drawAvatar(g, 3, 5, item.preview)
       const label = document.createElement("span")

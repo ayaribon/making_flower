@@ -3,7 +3,7 @@ import { normalizeAvatar, avatarFromName, cleanMsg } from "avatar_sprite"
 import { drawChibi, CHIBI_W as AV_W, CHIBI_H as AV_H } from "avatar_chibi"
 import { drawDettyan, SPRITE_W, SPRITE_H } from "dettyan_sprite"
 import { TOWN_W, TOWN_H, VIEW_NARROW, BUILDINGS, BUILDING_W, WALK, doorOf, clampWalk, drawTownBase, drawTownSky, drawTownLive, drawTownNight } from "town_world"
-import { loadSprout, drawSproutBase, drawSproutLive, sproutWindows, SPROUT_LAMPS } from "town_sprout"
+import { loadSprout, drawSproutBase, drawSproutLive, sproutWindows, SPROUT_LAMPS, hairPartsOf } from "town_sprout"
 import { drawTeemo, facing, DETTYAN_TEEMO, TEEMO_W, TEEMO_H } from "avatar_teemo"
 import { drawHuman, facing8, HUMAN_W, HUMAN_H } from "avatar_human"
 // 🧑 町の Dettyan（人の テンプレート）：黒い 髪・マンバン・茶色の ジャケット
@@ -62,6 +62,7 @@ export default class extends Controller {
       this.baseReady = false
       loadSprout(urls).then((sheets) => {
         this.sprout = sheets
+        this.hairParts = hairPartsOf(sheets)
         drawSproutBase(this.base.getContext("2d"), sheets)
       }).catch(() => {
         drawTownBase(this.base.getContext("2d"))
@@ -316,7 +317,7 @@ export default class extends Controller {
       if (this.sprout?.human) {
         // 🧑 人の テンプレート（8方向。色・こもの は その人の キャラ）
         g.globalAlpha = a.self && this.entering ? 0.4 : 1
-        drawHuman(g, this.sprout.human, a.x, a.y, a.npc ? null : a.avatar, { dir: a.dir8 || "down", walking: !!a.walking, t: this.t + (a.phase || 0), look: a.npc ? DETTYAN_HUMAN : null })
+        drawHuman(g, this.sprout.human, a.x, a.y, a.npc ? null : a.avatar, { dir: a.dir8 || "down", walking: !!a.walking, t: this.t + (a.phase || 0), look: a.npc ? DETTYAN_HUMAN : null, parts: this.hairParts })
         g.globalAlpha = 1
       } else if (USE_TEEMO && this.sprout?.chara) {
         // 🐱 Teemo 型（素材の キャラ画像。毛の 色・首の 色・こもの は その人の キャラ）

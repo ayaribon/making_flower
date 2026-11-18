@@ -7,7 +7,10 @@
 class AvatarsController < ApplicationController
   def edit
     # 🧑 人の テンプレート（町と 同じ 絵で 見本を 出す）。S3 に なければ 2頭身の 絵
-    @human_url = GameAsset.present_keys.include?("human") ? sprout_asset_path("human") : nil
+    present = GameAsset.present_keys
+    @human_url = present.include?("human") ? sprout_asset_path("human") : nil
+    # 💇 髪の パーツ（あるものだけ）
+    @hair_urls = GameAsset::HAIR_KEYS.select { |key| present.include?(key) }.index_with { |key| sprout_asset_path(key) }
   end
 
   def update
