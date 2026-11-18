@@ -90,4 +90,34 @@ class AvatarsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal({ "hair" => "twin", "skin" => 2 }, user.reload.avatar, "から で けす")
   end
+
+  test "🏷️ 表示名：キャラメイク から かえられる。まち・あいさつ に 出る。空で 呼び名に もどる" do
+    user = login_as("avnick")
+    other = User.create!(name: "avfriend", login_digest: "pending-avfriend", avatar: { "hair" => "bob" }, display_name: "スタッフ赤")
+    patch avatar_path, params: { avatar: { hair: "bob" }, display_name: "  スタッフ\n青\u202e#{"ー" * 20}" }, as: :json
+    assert_response :success
+    user.reload
+    assert_equal 12, user.display_name.length
+    assert user.display_name.start_with?("スタッフ 青")
+    assert_equal user.display_name, response.parsed_body["display_label"]
+    assert_equal "avnick", user.name, "ログインの 呼び名は かわらない"
+
+    get root_path
+    assert_select ".hm-hello", text: /#{Regexp.escape(user.display_name)} さん/
+    town = css_select("[data-controller=town]").first
+    assert_equal user.display_name, town["data-town-name-value"]
+    assert_equal "avnick", town["data-town-account-value"], "あんない の しるしは 呼び名の まま"
+    assert_includes JSON.parse(town["data-town-others-value"]).map { |o| o["name"] }, "スタッフ赤"
+    assert_equal "スタッフ赤", other.display_label
+
+    get avatar_path
+    assert_select "input[data-avatar-maker-target=displayName][value=?]", user.display_name
+
+    patch avatar_path, params: { avatar: { hair: "bob" }, display_name: "   " }, as: :json
+    assert_nil user.reload.display_name
+    assert_equal "avnick", user.display_label
+
+    patch avatar_path, params: { avatar: { msg: "やあ" } }, as: :json
+    assert_nil user.reload.display_name, "display_name を 送らなければ かわらない"
+  end
 end

@@ -14,8 +14,8 @@ const OX = 4
 const OY = 6
 
 export default class extends Controller {
-  static targets = ["preview", "groups", "save", "status", "msg"]
-  static values = { avatar: Object, url: String, back: String }
+  static targets = ["preview", "groups", "save", "status", "msg", "displayName", "nameLabel"]
+  static values = { avatar: Object, url: String, back: String, account: String }
 
   connect() {
     this.saved = normalizeAvatar(this.hasSaved() ? this.avatarValue : DEFAULT_AVATAR)
@@ -139,6 +139,11 @@ export default class extends Controller {
     this.renderGroups()
   }
 
+  // 🏷️ なまえ を 打つと 見本の 下の なまえも かわる（空なら ログインの 呼び名）
+  nameChanged() {
+    if (this.hasNameLabelTarget) this.nameLabelTarget.textContent = cleanMsg(this.displayNameTarget.value) || this.accountValue
+  }
+
   reset() {
     this.avatar = { ...this.saved }
     if (this.hasMsgTarget) this.msgTarget.value = this.saved.msg || ""
@@ -155,7 +160,10 @@ export default class extends Controller {
         credentials: "same-origin",
         headers: { "Content-Type": "application/json", Accept: "application/json", "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')?.content || "" },
         // msg は から でも 送る（サーバーは 送った 項目だけ かえるので、から ＝ けす）
-        body: JSON.stringify({ avatar: { ...this.avatar, msg: this.hasMsgTarget ? cleanMsg(this.msgTarget.value) : this.avatar.msg || "" } })
+        body: JSON.stringify({
+          avatar: { ...this.avatar, msg: this.hasMsgTarget ? cleanMsg(this.msgTarget.value) : this.avatar.msg || "" },
+          ...(this.hasDisplayNameTarget ? { display_name: cleanMsg(this.displayNameTarget.value) } : {})
+        })
       })
       if (!res.ok) throw new Error(String(res.status))
       this.saved = { ...this.avatar }

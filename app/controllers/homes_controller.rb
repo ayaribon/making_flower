@@ -11,7 +11,7 @@ class HomesController < ApplicationController
     @town_sprites = sprout_sprites
     @town_others = User.where.not(id: current_user.id).where.not(avatar: nil)
                        .order(updated_at: :desc).limit(TOWN_OTHERS)
-                       .map { |u| { name: u.name, avatar: u.avatar } }
+                       .map { |u| { name: u.display_label, avatar: u.avatar } }
   end
 
   private

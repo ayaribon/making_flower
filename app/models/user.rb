@@ -50,6 +50,20 @@ class User < ApplicationRecord
     value.gsub(AVATAR_MSG_HIDDEN, " ").squish.each_char.first(AVATAR_MSG_MAX).join.presence
   end
 
+  # 🏷️ 表示名（まち・あいさつ・キャラメイク に 出る なまえ）。みんな 自分で かえられる（キャラメイク の 画面）
+  # ログインの 呼び名（name）は ログインID の 頭に 入るので かえない。表示名が 空なら 呼び名を 出す
+  DISPLAY_NAME_MAX = 12
+  before_validation { self.display_name = self.class.clean_display_name(display_name) }
+
+  def self.clean_display_name(value)
+    return nil unless value.is_a?(String)
+    value.gsub(AVATAR_MSG_HIDDEN, " ").squish.each_char.first(DISPLAY_NAME_MAX).join.presence
+  end
+
+  def display_label
+    display_name.presence || name
+  end
+
   # 🧑‍💼 Dettyan 本人のアカウントか（育成ゲームのドット絵の Dettyan が「俺やん」と言う）
   # 呼び名（name）で決める。ふだんは dettyan。変えたいときは ENV["DETTYAN_OWNER_NAMES"] にカンマ区切りで書く
   DETTYAN_OWNER_NAMES = "dettyan"

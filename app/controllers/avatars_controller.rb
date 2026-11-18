@@ -2,6 +2,7 @@
 #   GET   /avatar   キャラメイクの画面
 #   PATCH /avatar   保存（JSON：{ avatar: { hair: "bob", ... } }）。知らない項目・へんな値は すてる
 #                   送った 項目だけ かわる（まちの 💬 ひとこと は { avatar: { msg: "..." } } だけ 送る。msg: "" で けす）
+#                   🏷️ 表示名は display_name（キャラメイク から。"" で 呼び名に もどす）
 # ログイン必須は ApplicationController の require_login がかかる
 class AvatarsController < ApplicationController
   def edit
@@ -12,7 +13,9 @@ class AvatarsController < ApplicationController
     avatar = User.clean_avatar((current_user.avatar || {}).merge(raw))
     return render json: { error: "キャラの形が ちがいます" }, status: :unprocessable_entity unless avatar
 
-    current_user.update!(avatar: avatar)
-    render json: { ok: true, avatar: avatar }
+    current_user.avatar = avatar
+    current_user.display_name = params[:display_name] if params.key?(:display_name)
+    current_user.save!
+    render json: { ok: true, avatar: avatar, display_name: current_user.display_name, display_label: current_user.display_label }
   end
 end

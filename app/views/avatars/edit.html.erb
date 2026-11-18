@@ -2,6 +2,7 @@
 <div class="av" data-controller="avatar-maker"
      data-avatar-maker-avatar-value="<%= (current_user.avatar || {}).to_json %>"
      data-avatar-maker-url-value="<%= avatar_path %>"
+     data-avatar-maker-account-value="<%= current_user.name %>"
      data-avatar-maker-back-value="<%= root_path %>">
   <div class="av-inner">
     <header class="av-bar">
@@ -12,7 +13,14 @@
     <div class="av-main">
       <div class="av-stage">
         <canvas class="av-preview" data-avatar-maker-target="preview" role="img" aria-label="じぶんの キャラ"></canvas>
-        <p class="av-name"><%= current_user.name %></p>
+        <p class="av-name" data-avatar-maker-target="nameLabel"><%= current_user.display_label %></p>
+        <%# 🏷️ 表示名（まち・あいさつ に 出る なまえ）。空なら ログインの 呼び名 %>
+        <label class="av-msg">
+          <span class="av-msg__label">🏷️ なまえ（まちに 出る）</span>
+          <input class="av-msg__input" type="text" maxlength="<%= User::DISPLAY_NAME_MAX %>" data-avatar-maker-target="displayName"
+                 data-action="input->avatar-maker#nameChanged"
+                 value="<%= current_user.display_name %>" placeholder="<%= current_user.name %>" autocomplete="off">
+        </label>
         <%# 💬 まちで キャラが ときどき 言う ことば（ほかの人にも 見える） %>
         <label class="av-msg">
           <span class="av-msg__label">💬 ひとこと</span>

@@ -35,7 +35,8 @@ export default class extends Controller {
     "guide", "guideSiva", "guideFace", "guideTitle", "guideText", "guideCount", "guideSkip", "guideMake", "guideNext",
     "sayForm", "sayInput", "sayButton", "sayStatus"
   ]
-  static values = { me: Object, name: String, others: Array, owner: Boolean, avatarUrl: String, sprites: Object }
+  // name：表示名（まちに 出る）。account：ログインの 呼び名（あんない を 見たか の しるし。表示名を かえても かわらない）
+  static values = { me: Object, name: String, account: String, others: Array, owner: Boolean, avatarUrl: String, sprites: Object }
 
   connect() {
     const c = this.canvasTarget
@@ -400,7 +401,7 @@ export default class extends Controller {
 
   // ---- 📖 あんない ----
   guideKey() {
-    return `${GUIDE_KEY}:${this.nameValue}`
+    return `${GUIDE_KEY}:${this.accountValue || this.nameValue}`
   }
 
   // 見たか どうか（おぼえられない 端末では 毎回 出さない。❓ あんない で 見られる）

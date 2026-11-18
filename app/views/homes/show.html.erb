@@ -6,7 +6,7 @@
       <p class="hm-eyebrow">KotoBouquet</p>
       <h1 class="hm-title">はじまりのまち</h1>
       <% if current_user %>
-        <p class="hm-hello"><%= current_user.name %> さん、うぇるかむ ✨　<a class="hm-avatar-link" href="<%= avatar_path %>" data-turbo="false">👤 キャラを <%= current_user.avatar ? "かえる" : "つくる" %></a></p>
+        <p class="hm-hello"><%= current_user.display_label %> さん、うぇるかむ ✨　<a class="hm-avatar-link" href="<%= avatar_path %>" data-turbo="false">👤 キャラを <%= current_user.avatar ? "かえる" : "つくる" %></a></p>
       <% end %>
     </header>
 
@@ -14,7 +14,8 @@
     <%# はじめて 開いた人には「SiVA へ ようこそ！」からの あんない（town_controller.js の GUIDE。見たかどうかは この端末だけに おぼえる） %>
     <div class="hm-townwrap" data-controller="town"
          data-town-me-value="<%= (current_user&.avatar || {}).to_json %>"
-         data-town-name-value="<%= current_user&.name %>"
+         data-town-name-value="<%= current_user&.display_label %>"
+         data-town-account-value="<%= current_user&.name %>"
          data-town-others-value="<%= (@town_others || []).to_json %>"
          data-town-owner-value="<%= !!current_user&.dettyan_owner? %>"
          data-town-avatar-url-value="<%= avatar_path %>"
