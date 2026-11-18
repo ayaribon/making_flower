@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 import {
   normalizeAvatar, randomAvatar, cleanMsg, DEFAULT_AVATAR, HAIRS, EYES, TOPS, BOTTOMS, ACCESSORIES
 } from "avatar_sprite"
-import { drawHuman } from "avatar_human"
+import { drawHuman, USE_HAIR_VARIANTS, USE_ACCESSORIES } from "avatar_human"
 import { drawChibi as drawAvatar, CHIBI_SKINS as SKINS, CHIBI_HAIRS as HAIR_COLORS, CHIBI_CLOTHS as CLOTH_COLORS } from "avatar_chibi"
 import { findGear } from "dettyan_gear"
 
@@ -108,12 +108,12 @@ export default class extends Controller {
     if (this.human) {
       // 人の テンプレートで 変えられる のは 色 と こもの
       this.group(box, "はだ", this.swatches("skin", SKINS))
-      this.group(box, "かみがた", this.choices("hair", HAIRS.map((h) => ({ id: h.id, label: h.name, preview: { ...a, hair: h.id } }))))
+      if (USE_HAIR_VARIANTS) this.group(box, "かみがた", this.choices("hair", HAIRS.map((h) => ({ id: h.id, label: h.name, preview: { ...a, hair: h.id } }))))
       this.group(box, "かみの いろ", this.swatches("hairColor", HAIR_COLORS))
       this.group(box, "ふくの いろ", this.swatches("topColor", CLOTH_COLORS))
       this.group(box, "ズボンの いろ", this.swatches("bottomColor", CLOTH_COLORS))
       this.group(box, "くつ", this.swatches("shoes", CLOTH_COLORS))
-      this.group(box, "こもの", this.choices("acc", ACCESSORIES.map((id) => ({ id, label: id === "none" ? "なし" : findGear(id)?.name || ACC_NAMES[id] || id, preview: { ...a, acc: id } }))))
+      if (USE_ACCESSORIES) this.group(box, "こもの", this.choices("acc", ACCESSORIES.map((id) => ({ id, label: id === "none" ? "なし" : findGear(id)?.name || ACC_NAMES[id] || id, preview: { ...a, acc: id } }))))
       return
     }
     this.group(box, "はだ", this.swatches("skin", SKINS))

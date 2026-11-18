@@ -14,6 +14,10 @@ import { drawAccessory } from "avatar_teemo"
 export const HAIR_PARTS = { bob: "short_bob", blunt: "blunt_bob", long: "long_straight", twin: "twin_tails", pony: "ponytail", braid: "braids", wolf: "wolf_cut" }
 const PART_ROLE = { "#42353a": "line", "#695154": "hairDark", "#97756f": "hairMid", "#be9d89": "hairLight" }
 
+// 💇 髪型の ちがい と 🎀 こもの は いったん 保留（2026-11-19 ayaribon）。true に すると もどる
+export const USE_HAIR_VARIANTS = false
+export const USE_ACCESSORIES = false
+
 export const HUMAN_W = 14 // あたり判定・ふきだし の ための 体の 大きさ
 export const HUMAN_H = 21
 const FW = 16
@@ -282,7 +286,7 @@ export function drawHuman(g, sheet, x, y, raw, { dir = "down", walking = false, 
   const left = Math.round(x - ANCHOR_X)
   const top = Math.round(y - ANCHOR_Y)
   const pal = paletteFor(spec)
-  const stem = HAIR_PARTS[style]
+  const stem = USE_HAIR_VARIANTS ? HAIR_PARTS[style] : null
   const part = stem && parts?.[stem]
   let tops
   if (part?.back && part?.front) {
@@ -297,12 +301,12 @@ export function drawHuman(g, sheet, x, y, raw, { dir = "down", walking = false, 
   } else {
     const body = humanSheet(sheet, spec)
     tops = body.tops
-    const shapes = hairShapes(style, dir, body.heads[row][col])
+    const shapes = hairShapes(USE_HAIR_VARIANTS ? style : "short", dir, body.heads[row][col])
     drawHair(g, shapes.behind, left, top, pal)
     g.drawImage(body.canvas, col * FW, row * FH, FW, FH, left, top, FW, FH)
     drawHair(g, shapes.front, left, top, pal)
     g.fillStyle = "#f28aa8" // むすびめ の リボン
     for (const [rx, ry] of shapes.ties) g.fillRect(left + rx, top + ry, 2, 2)
   }
-  if (acc && acc !== "none") drawAccessory(g, acc, x, top + tops[row][col])
+  if (USE_ACCESSORIES && acc && acc !== "none") drawAccessory(g, acc, x, top + tops[row][col])
 }
