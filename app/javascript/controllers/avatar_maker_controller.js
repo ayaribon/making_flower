@@ -1,16 +1,17 @@
 import { Controller } from "@hotwired/stimulus"
 import {
-  drawAvatar, normalizeAvatar, randomAvatar, cleanMsg, DEFAULT_AVATAR,
-  SKINS, HAIR_COLORS, CLOTH_COLORS, HAIRS, EYES, TOPS, BOTTOMS, ACCESSORIES
+  normalizeAvatar, randomAvatar, cleanMsg, DEFAULT_AVATAR, HAIRS, EYES, TOPS, BOTTOMS, ACCESSORIES
 } from "avatar_sprite"
+import { drawChibi as drawAvatar, CHIBI_SKINS as SKINS, CHIBI_HAIRS as HAIR_COLORS, CHIBI_CLOTHS as CLOTH_COLORS } from "avatar_chibi"
 import { findGear } from "dettyan_gear"
 
 // 👤 キャラメイク。docs/town/requirements.md
 // 左に 大きく 見本（まばたき・ときどき 足ぶみ）、右で えらぶ。💾 で サーバーに 保存して まち へ もどる
 // 💬 ひとこと（まちで キャラが 言う ことば）も ここで かえられる（まちの 下の 入力でも かえられる）
-const PW = 28 // 見本の 大きさ（ドット。こもの が はみ出しても 入るように）
-const PH = 32
-const OX = 4
+// 絵は avatar_chibi.js（16×20。Sprout Lands の 町と 同じ 細かさ）
+const PW = 20 // 見本の 大きさ（ドット。こもの が 上に はみ出しても 入るように）
+const PH = 28
+const OX = 2
 const OY = 6
 
 export default class extends Controller {
@@ -49,7 +50,7 @@ export default class extends Controller {
     const g = this.g
     g.clearRect(0, 0, PW, PH)
     g.fillStyle = "rgba(0, 0, 0, 0.18)"
-    g.fillRect(OX + 4, OY + 23, 12, 2)
+    g.fillRect(OX + 3, OY + 19, 10, 2)
     const t = this.t
     const blink = t % 3.2 > 3.05
     const frame = t % 6 > 4.5 ? Math.floor(t * 5) % 2 : 0 // ときどき 足ぶみ
@@ -112,10 +113,10 @@ export default class extends Controller {
       b.setAttribute("aria-checked", String(on))
       const c = document.createElement("canvas")
       c.className = "av-choice__img" + (item.face ? " av-choice__img--face" : "")
-      c.width = item.face ? 16 : 26
-      c.height = item.face ? 8 : 30
+      c.width = item.face ? 14 : 22
+      c.height = item.face ? 7 : 26
       const g = c.getContext("2d")
-      if (item.face) drawAvatar(g, -2, -7, item.preview) // 目のあたりだけ
+      if (item.face) drawAvatar(g, -1, -4, item.preview) // 目のあたりだけ
       else drawAvatar(g, 3, 5, item.preview)
       const label = document.createElement("span")
       label.textContent = item.label

@@ -1,4 +1,5 @@
-// 👤 アバターの 新しい 絵柄（見本）：Sprout Lands の 町に なじむ 2頭身。docs/town/requirements.md
+// 👤 アバターの 絵：Sprout Lands の 町に なじむ 2頭身（町と キャラメイク で 使う）。docs/town/requirements.md
+// （前の 絵 avatar_sprite.js の drawAvatar は もう 画面では 使っていない。データの 形・パーツの 表 は avatar_sprite.js）
 // - データは avatar_sprite.js と 同じ（normalizeAvatar）。保存してある キャラは そのまま この 絵で 描ける
 // - 体は 16×20 ドット。頭は 大きく まるく、目は 小さい 点。色は パステル寄り
 // - ふちは 黒ではなく、となりの 色を こくした 色（自動で つける）。右と 下に うすい かげ

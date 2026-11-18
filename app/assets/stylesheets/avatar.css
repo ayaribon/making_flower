@@ -16,7 +16,7 @@
   position: sticky; top: 12px; padding: 16px; border-radius: 18px; text-align: center;
   background: radial-gradient(circle at 50% 75%, #fff6e4 0%, #e6d6b8 70%); color: #1b2f5c;
 }
-.av-preview { display: block; width: 196px; height: 224px; margin: 0 auto; image-rendering: crisp-edges; image-rendering: pixelated; }
+.av-preview { display: block; width: 160px; height: 224px; margin: 0 auto; image-rendering: crisp-edges; image-rendering: pixelated; }
 .av-name { margin: 6px 0 10px; font-weight: 800; }
 .av-tools { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 .av-msg { display: flex; flex-direction: column; gap: 4px; margin: 0 0 12px; text-align: left; }
@@ -40,7 +40,7 @@
   cursor: pointer; touch-action: manipulation;
 }
 .av-choice.is-on { border-color: #ff5fa2; background: rgba(255, 95, 162, 0.22); }
-.av-choice__img { width: 52px; height: 60px; image-rendering: crisp-edges; image-rendering: pixelated; background: #f6ecd8; border-radius: 8px; }
+.av-choice__img { width: 53px; height: 62px; image-rendering: crisp-edges; image-rendering: pixelated; background: #f6ecd8; border-radius: 8px; }
 .av-choice__img--face { width: 64px; height: 32px; }
 
 .av-save { position: sticky; bottom: 0; margin-top: 16px; padding: 10px 0 calc(6px + env(safe-area-inset-bottom)); text-align: center; background: linear-gradient(transparent, rgba(14, 26, 51, 0.95) 40%); }
@@ -51,7 +51,7 @@
 @media (max-width: 640px) {
   .av-main { grid-template-columns: 1fr; }
   .av-stage { position: static; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px; padding: 10px; text-align: left; }
-  .av-preview { grid-row: span 2; width: 112px; height: 128px; margin: 0; }
+  .av-preview { grid-row: span 2; width: 100px; height: 140px; margin: 0; }
   .av-name { margin: 0 0 6px; }
   .av-msg { grid-column: 1 / -1; order: 1; margin: 4px 0 0; }
   .av-tools { justify-content: flex-start; }

@@ -1,5 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
-import { drawAvatar, normalizeAvatar, avatarFromName, cleanMsg, AV_W, AV_H } from "avatar_sprite"
+import { normalizeAvatar, avatarFromName, cleanMsg } from "avatar_sprite"
+import { drawChibi, CHIBI_W as AV_W, CHIBI_H as AV_H } from "avatar_chibi"
 import { drawDettyan, SPRITE_W, SPRITE_H } from "dettyan_sprite"
 import { TOWN_W, TOWN_H, VIEW_NARROW, BUILDINGS, BUILDING_W, WALK, doorOf, clampWalk, drawTownBase, drawTownSky, drawTownLive, drawTownNight } from "town_world"
 import { loadSprout, drawSproutBase, drawSproutLive, sproutWindows, SPROUT_LAMPS } from "town_sprout"
@@ -25,7 +26,7 @@ const GUIDE_KEY = "town:guide:v1" // あんない を 見たか（+ ":呼び名"
 const GREETINGS = ["やっほー！", "こんにちは！", "いい天気だね", "歌ってきた！", "サムネ つくってる", "がんばろ〜", "またね！"]
 const DETTYAN_LINES = ["ようこそ、はじまりのまち へ！", "事務所で まってるよ", "じゅんさい たべたいな"]
 const OWNER_LINES = ["俺やん！", "お、俺が 立ってる", "本物の 俺やん"]
-// Sprout Lands の 町では、キャラの ふちを 黒ではなく やわらかい 色に する
+// Sprout Lands の 町では、Dettyan の ふちを 黒ではなく やわらかい 色に する（アバターは avatar_chibi.js が もともと やわらかい）
 const SOFT_LINE = "#4e3448"
 const SOFT_DETTYAN = { K: SOFT_LINE, E: SOFT_LINE }
 
@@ -308,7 +309,7 @@ export default class extends Controller {
       } else {
         const fade = a.self && this.entering ? 0.4 : 1
         g.globalAlpha = fade
-        drawAvatar(g, Math.round(a.x - AV_W / 2), Math.round(a.y - AV_H) - (a.frame === 1 ? 1 : 0), a.avatar, { frame: a.frame, blink: a.blink > 0, line: this.sprout ? SOFT_LINE : null })
+        drawChibi(g, Math.round(a.x - AV_W / 2), Math.round(a.y - AV_H) - (a.frame === 1 ? 1 : 0), a.avatar, { frame: a.frame, blink: a.blink > 0 })
         g.globalAlpha = 1
       }
     }
