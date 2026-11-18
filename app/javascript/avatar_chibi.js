@@ -776,15 +776,22 @@ const CUTE = {
 }
 
 // 頭の 大きい 絵柄で 描く（見本）。ox, oy は 16×25 の 左上
-export function drawCute(g, ox, oy, raw, { frame = 0, blink = false, mood = null } = {}) {
+// tall：体と 足を のばして 2〜2.5頭身に する（見本。16×28）
+export function drawCute(g, ox, oy, raw, { frame = 0, blink = false, mood = null, tall = false } = {}) {
   const a = normalizeAvatar(raw)
   const colors = { ...paletteOf(a), I: mix(IRIS, INK, 0.35), J: IRIS, L: lightOf(IRIS), w: "#e8f2ff", i: shadeOf(IRIS) }
   const grid = new Grid()
   const style = CUTE.hair[a.hair] || CUTE.hair.short
   if (style.back) grid.put(style.back, colors, style.backDx || 0, 0)
   const legs = CUTE.legs[a.bottom] || CUTE.legs.pants
-  grid.put(legs[frame ? 1 : 0], colors, 0, 21)
-  grid.put(CUTE.body[a.top] || CUTE.body.tee, colors, 0, 15)
+  let legArt = legs[frame ? 1 : 0]
+  let bodyArt = CUTE.body[a.top] || CUTE.body.tee
+  if (tall) {
+    legArt = [legArt[0], legArt[1], legArt[1], legArt[2], legArt[2], legArt[3]]
+    bodyArt = [bodyArt[0], bodyArt[1], bodyArt[2], bodyArt[2], bodyArt[3], bodyArt[4], bodyArt[5]]
+  }
+  grid.put(legArt, colors, 0, 15 + bodyArt.length)
+  grid.put(bodyArt, colors, 0, 15)
   grid.put(CUTE.face, colors, 0, 0)
   const eyes = blink ? CUTE.blink : CUTE.eyes[mood === "smile" ? "smile" : a.eyes] || CUTE.eyes.dot
   grid.put(eyes, colors, 0, 10)
