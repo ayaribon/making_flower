@@ -1,5 +1,6 @@
 // 🏘️ はじまりのまち：Sprout Lands（Cup Nooble）の 素材で 描く 版。docs/town/requirements.md
-// - 素材の画像（地面・草・木・花・柵・井戸・看板・ニワトリ）は 買ったもの。どこから読むかは サーバーが きめて data 属性で わたす
+// - 素材の画像（地面・草・木・花・柵・井戸・看板・ニワトリ）は 買ったもの。配布禁止なので リポジトリには ない
+//   本番は S3、手元は private_assets/ から、ログインした人にだけ 出す（app/models/game_asset.rb）。URL は data 属性で わたす
 //   画像が ない／読めないときは town_world.js の コードで描く 町に もどる
 // - 建物・街灯・ベンチ は ここで コードで 描く（Sprout Lands の 色と 雰囲気に あわせた オリジナル。ライセンスで ゆるされている）
 // - 町の 大きさ・建物の 場所・歩ける ところ は town_world.js と 同じ（town_controller.js は そのまま 使える）
@@ -7,16 +8,16 @@
 
 import { TOWN_W, TOWN_H, GROUND, BUILDINGS, FOUNTAIN, drawSign } from "town_world"
 
-// 使う 素材（キー → ファイル名）。サーバーは この キーで URL を わたす
+// 使う 素材（キー → 素材パックの 中の 場所）。サーバー（GameAsset::SPROUT）と そろえる。URL は キーごとに サーバーが わたす
 export const SPROUT_FILES = {
-  grass: "grass_layers.png", // Tilesets/ground tiles/New tiles/Grass_Tile_Layers.png
-  soil: "soil.png", // Tilesets/ground tiles/New tiles/Soil_Ground_Tiles.png
-  trees: "trees.png", // Objects/Trees, stumps and bushes.png
-  flowers: "flowers.png", // Objects/Mushrooms, Flowers, Stones.png
-  fences: "fences.png", // Tilesets/Building parts/Fences.png
-  well: "well.png", // Objects/Water well.png
-  signs: "signs.png", // Objects/signs.png
-  chicken: "chicken.png" // Animals/Chicken/chicken default.png
+  grass: "Tilesets/ground tiles/New tiles/Grass_Tile_Layers.png",
+  soil: "Tilesets/ground tiles/New tiles/Soil_Ground_Tiles.png",
+  trees: "Objects/Trees, stumps and bushes.png",
+  flowers: "Objects/Mushrooms, Flowers, Stones.png",
+  fences: "Tilesets/Building parts/Fences.png",
+  well: "Objects/Water well.png",
+  signs: "Objects/signs.png",
+  chicken: "Animals/Chicken/chicken default.png"
 }
 
 const T = 16

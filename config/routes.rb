@@ -6,6 +6,8 @@ Rails.application.routes.draw do
   # 👤 キャラメイク（はじまりのまち の アバター）
   get   "avatar", to: "avatars#edit", as: :avatar
   patch "avatar", to: "avatars#update"
+  # 🌱 買った 素材の 画像（Sprout Lands。本番は S3 から。ログインした人だけ）
+  get "game_assets/sprout/:key", to: "game_assets#show", as: :sprout_asset, constraints: { key: /[a-z]+/ }
 
   get    "login",  to: "sessions#new"
   post   "login",  to: "sessions#create"
