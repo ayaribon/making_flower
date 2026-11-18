@@ -115,6 +115,7 @@
       <% if current_user&.admin? %>
         <%= link_to "🛠 管理画面", admin_users_path, class: "hm-link" %>
       <% end %>
+      <%= link_to "🙏 クレジット", credits_path, class: "hm-link", data: { turbo: false } %>
       <%= button_to "ログアウト", logout_path, method: :delete, class: "hm-link hm-link--button", form: { class: "hm-logout" } %>
     </footer>
   </div>

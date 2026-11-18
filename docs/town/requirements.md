@@ -84,7 +84,7 @@
   - 商用 OK・手を 加えて OK・**この 絵柄で 自分の 絵を 描くのも OK**（参考に するのも OK）
   - **NFT と AI の 学習 には 使えない**
   - **素材パック そのものを 配る・売るのは ダメ**（少し 手を 加えても ダメ）。素材を 使った 作品（ゲーム・ソフト）を 配るのは OK、**オープンソースに するのも OK**（そのときは「素材の 一部は Cup Nooble の もの」と ライセンスの 条件を 書く）
-  - **クレジットが 必要**：`Assets - From: Sprout Lands - By: Cup Nooble`
+  - **クレジットが 必要**：`Assets - From: Sprout Lands - By: Cup Nooble`（アプリの `/credits` ページ・トップの いちばん下の「🙏 クレジット」・README に 書いてある）
 - 使い方（`app/javascript/town_sprout.js`）：
   - 素材の 絵：地面（草・つち）・木・しげみ・花・柵・井戸・看板・ニワトリ（8まい。キーと ファイル名は `SPROUT_FILES`、サーバーは `HomesController::SPROUT_FILES`）
   - **コードで 描く オリジナル**：建物（屋根の 色は 建物ごと）・街灯・ベンチ。Sprout Lands の 色に あわせた（ライセンスで ゆるされている）

@@ -120,4 +120,13 @@ class AvatarsControllerTest < ActionDispatch::IntegrationTest
     patch avatar_path, params: { avatar: { msg: "やあ" } }, as: :json
     assert_nil user.reload.display_name, "display_name を 送らなければ かわらない"
   end
+
+  test "🙏 クレジット：ログインしなくても 見られる・トップから リンク" do
+    get credits_path
+    assert_response :success
+    assert_select ".cr-credit", text: "Assets - From : Sprout Lands - By : Cup Nooble"
+    login_as("avcredit")
+    get root_path
+    assert_select "a[href='#{credits_path}']"
+  end
 end
