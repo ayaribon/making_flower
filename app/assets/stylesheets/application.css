@@ -1243,6 +1243,9 @@ button.studio-size-badge {
   font-weight: bold;
 }
 .studio-colorkey-ai { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.studio-colorkey-ai.is-three { grid-template-columns: 1fr 1fr 1fr; }
+.studio-colorkey-shape { display: grid; gap: 6px; }
+.studio-colorkey-shape[hidden] { display: none; }
 .studio-colorkey-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 .studio-colorkey-done { font-weight: bold; }
 
