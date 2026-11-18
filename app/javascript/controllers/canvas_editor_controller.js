@@ -58,7 +58,7 @@ export default class extends Controller {
     "colorKeyStart", "colorKeyTools", "colorKeyHint", "colorKeyToolButton",
     "colorKeyStrengthInput", "colorKeyStrengthValue", "colorKeyUndo",
     "partSettings", "colorKeySizeRow", "colorKeySizeInput", "colorKeySizeValue", "colorKeyStrengthRow",
-    "colorKeyAiRow", "colorKeyAiSign", "colorKeySharpRow", "colorKeySharpInput", "colorKeySharpValue",
+    "colorKeyAiRow", "colorKeyAiSign", "colorKeyShapeRow", "colorKeyShapeButton", "colorKeySideButton", "colorKeyPolyClose", "colorKeySharpRow", "colorKeySharpInput", "colorKeySharpValue",
     "colorKeyFeatherInput", "colorKeyFeatherValue",
     "colorKeyDetails", "colorKeyFoldButton",
     "loupe", "effectsFoldButton",
@@ -120,6 +120,10 @@ export default class extends Controller {
     this.canvas.on("mouse:up", (opt) => this.onColorKeyUp(opt))
     // なぞった線は目印だけ。キャンバスには残さない
     this.canvas.on("path:created", ({ path }) => { if (this.colorKeyPart) this.canvas.remove(path) })
+    // ✂️ かこむ：かいている とちゅうの 図形を、キャンバスの上に 線で 見せる（保存は しない）
+    this.colorKeyShape = "rect"
+    this.colorKeyOut = false
+    this.canvas.on("after:render", ({ ctx }) => this.drawShapeDraft(ctx))
 
     // 「全体を見る」の途中で、何もないところをタップしたら、バーとパネルを戻す
     this.canvas.on("mouse:down", ({ target }) => {
@@ -2015,7 +2019,7 @@ export default class extends Controller {
   // 選ばれているものに合わせて、パネルを出したり引っ込めたりする
   updatePanel() {
     // 🖌 なぞっている間は Fabric が選択を外すので、透過している部品を選んでいることにする
-    const drawingPart = this.canvas.isDrawingMode && this.canvas.getObjects().includes(this.colorKeyPart)
+    const drawingPart = (this.canvas.isDrawingMode || this.colorKeyShapeMode()) && this.canvas.getObjects().includes(this.colorKeyPart)
     const active = this.canvas.getActiveObject() || (drawingPart ? this.colorKeyPart : null)
     const isText = active instanceof Textbox
     const isPart = active instanceof FabricImage
@@ -2208,6 +2212,12 @@ export default class extends Controller {
     const brush = tool === "keep" || tool === "erase" || tool === "protect"
     this.colorKeyToolButtonTargets.forEach(b => b.classList.toggle("is-active", b.dataset.tool === this.colorKeyTool))
     this.colorKeySizeRowTarget.hidden = !brush
+    if (this.hasColorKeyShapeRowTarget) {
+      this.colorKeyShapeRowTarget.hidden = tool !== "shape"
+      this.colorKeyShapeButtonTargets.forEach(b => b.classList.toggle("is-active", b.dataset.shape === this.colorKeyShape))
+      this.colorKeySideButtonTargets.forEach(b => b.classList.toggle("is-active", (b.dataset.side === "out") === !!this.colorKeyOut))
+      this.colorKeyPolyCloseTarget.hidden = !(this.colorKeyShape === "poly" && (this.colorKeyPoly || []).length >= 3)
+    }
     this.colorKeyStrengthRowTarget.hidden = tool !== "all"
     if (this.hasColorKeyAiRowTarget) {
       this.colorKeyAiRowTarget.hidden = tool !== "ai"
@@ -2227,10 +2237,15 @@ export default class extends Controller {
       keep: "残したい所をなぞる（最初の1回で、なぞっていない所が消えます）",
       protect: "🌈で消したくない所をなぞる（なぞった所は、🌈色で消すが効きません）",
       erase: "消したい所をなぞる",
-      all: "消したい色の所をタップ（同じ色が全部消えます）"
+      all: "消したい色の所をタップ（同じ色が全部消えます）",
+      shape: {
+        rect: "ななめに ひっぱって しかくで かこむ",
+        ellipse: "ななめに ひっぱって まるで かこむ",
+        poly: "ぽちぽち タップして てん を つなぐ。さいしょの てん を タップするか「✓ ここで かこむ」で とじる"
+      }[this.colorKeyShape]
     }
-    this.colorKeyHintTarget.textContent = hints[this.colorKeyTool]
-    this.colorKeyUndoTarget.disabled = !(ck && ck.ops.length)
+    this.colorKeyHintTarget.textContent = hints[this.colorKeyTool] + (tool === "shape" ? (this.colorKeyOut ? "（そとが 消える）" : "（なかが 消える）") : "")
+    this.colorKeyUndoTarget.disabled = !((ck && ck.ops.length) || (this.colorKeyPoly || []).length)
   }
 
   // 「🪄 背景を透過」：編集を始める
@@ -2261,6 +2276,8 @@ export default class extends Controller {
     this.canvas.isDrawingMode = false
     this.colorKeyStroke = null
     this.colorKeyDown = null
+    this.clearShapeDraft()
+    this.setShapeMode(false)
     part.set(this.colorKeySaved || {})
     // 編集中に 🔒 を押していたら、ロックの設定に合わせ直す
     if (!!part.locked !== this.colorKeyWasLocked) this.setLocked(part, !!part.locked)
@@ -2284,6 +2301,8 @@ export default class extends Controller {
   applyColorKeyTool() {
     const brush = !!this.colorKeyPart && ["keep", "erase", "protect"].includes(this.colorKeyTool)
     this.canvas.isDrawingMode = brush
+    this.clearShapeDraft()
+    this.setShapeMode(!!this.colorKeyPart && this.colorKeyTool === "shape")
     if (!brush) return
     const pen = new PencilBrush(this.canvas)
     const penColors = { keep: "rgba(46, 204, 113, 0.55)", erase: "rgba(240, 115, 154, 0.55)", protect: "rgba(52, 152, 219, 0.55)" }
@@ -2303,6 +2322,118 @@ export default class extends Controller {
     this.aiPlus = true
     this.applyColorKeyTool()
     this.syncColorKeyPanel(this.colorKeyPart)
+  }
+
+  // ✂️ かこむ：しかく・まる・てん
+  chooseColorKeyShape(event) {
+    this.colorKeyShape = event.currentTarget.dataset.shape
+    this.clearShapeDraft()
+    this.syncColorKeyPanel(this.colorKeyPart)
+  }
+
+  // ✂️ かこむ：なかを消す／そとを消す
+  chooseColorKeySide(event) {
+    this.colorKeyOut = event.currentTarget.dataset.side === "out"
+    this.syncColorKeyPanel(this.colorKeyPart)
+  }
+
+  // ✂️ かこむ の あいだは、タップで ほかの部品を えらばない・はんいせんたく も しない
+  colorKeyShapeMode() {
+    return !!this.colorKeyPart && this.colorKeyTool === "shape"
+  }
+
+  setShapeMode(on) {
+    if (on && this.shapeModeSaved == null) this.shapeModeSaved = { selection: this.canvas.selection, skip: this.canvas.skipTargetFind }
+    if (on) {
+      this.canvas.selection = false
+      this.canvas.skipTargetFind = true
+    } else if (this.shapeModeSaved) {
+      this.canvas.selection = this.shapeModeSaved.selection
+      this.canvas.skipTargetFind = this.shapeModeSaved.skip
+      this.shapeModeSaved = null
+    }
+  }
+
+  clearShapeDraft() {
+    this.colorKeyDrag = null
+    this.colorKeyPoly = []
+    this.canvas?.requestRenderAll()
+  }
+
+  // ✂️ 📍：てん を つないで かこむ（3つ以上）
+  closeColorKeyPoly() {
+    const part = this.colorKeyPart
+    const pts = this.colorKeyPoly || []
+    if (!part || pts.length < 3) return
+    this.colorKeyPoly = []
+    this.addColorKeyShape(part, "poly", pts)
+  }
+
+  addColorKeyShape(part, shape, points) {
+    const pts = points.flatMap(p => [this.round(p.x), this.round(p.y)])
+    this.updateColorKey(part, ck => ck.ops.push({ act: "shape", shape, out: !!this.colorKeyOut, pts }))
+  }
+
+  // 部品の中の位置（0〜1）→ 画面（シーン）の位置
+  fromPartPoint(part, p) {
+    return util.transformPoint(new Point((p.x - 0.5) * part.width, (p.y - 0.5) * part.height), part.calcTransformMatrix())
+  }
+
+  // かいている とちゅうの 図形を、キャンバスの上に 点線で 描く
+  drawShapeDraft(ctx) {
+    const part = this.colorKeyPart
+    if (!part || this.colorKeyTool !== "shape") return
+    const drag = this.colorKeyDrag
+    const poly = this.colorKeyPoly || []
+    if (!drag && !poly.length) return
+    const r = this.canvas.getRetinaScaling()
+    const v = this.canvas.viewportTransform
+    const zoom = this.canvas.getZoom()
+    ctx.save()
+    ctx.setTransform(r * v[0], r * v[1], r * v[2], r * v[3], r * v[4], r * v[5])
+    ctx.lineWidth = 2 / zoom
+    ctx.setLineDash([6 / zoom, 4 / zoom])
+    ctx.strokeStyle = this.colorKeyOut ? "#3498db" : "#f0739a"
+    ctx.fillStyle = this.colorKeyOut ? "rgba(52, 152, 219, 0.15)" : "rgba(240, 115, 154, 0.2)"
+    ctx.beginPath()
+    if (drag) {
+      // しかく・まる は 部品の 向きに そろえて 描く（回転していても 合うように、4つの かどを 変換する）
+      const [x0, x1] = [Math.min(drag.a.x, drag.b.x), Math.max(drag.a.x, drag.b.x)]
+      const [y0, y1] = [Math.min(drag.a.y, drag.b.y), Math.max(drag.a.y, drag.b.y)]
+      const steps = this.colorKeyShape === "ellipse" ? 48 : 4
+      for (let i = 0; i <= steps; i++) {
+        let q
+        if (this.colorKeyShape === "ellipse") {
+          const t = (i / steps) * Math.PI * 2
+          q = { x: (x0 + x1) / 2 + Math.cos(t) * (x1 - x0) / 2, y: (y0 + y1) / 2 + Math.sin(t) * (y1 - y0) / 2 }
+        } else {
+          q = [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }, { x: x0, y: y0 }][i]
+        }
+        const s = this.fromPartPoint(part, q)
+        if (i === 0) ctx.moveTo(s.x, s.y)
+        else ctx.lineTo(s.x, s.y)
+      }
+      ctx.fill()
+      ctx.stroke()
+    } else {
+      poly.forEach((q, i) => {
+        const s = this.fromPartPoint(part, q)
+        if (i === 0) ctx.moveTo(s.x, s.y)
+        else ctx.lineTo(s.x, s.y)
+      })
+      ctx.stroke()
+      ctx.setLineDash([])
+      // てん（さいしょの てん は 大きめ。ここを タップすると とじる）
+      poly.forEach((q, i) => {
+        const s = this.fromPartPoint(part, q)
+        ctx.beginPath()
+        ctx.arc(s.x, s.y, (i === 0 ? 7 : 4) / zoom, 0, Math.PI * 2)
+        ctx.fillStyle = "#ffffff"
+        ctx.fill()
+        ctx.stroke()
+      })
+    }
+    ctx.restore()
   }
 
   changeColorKeySize(event) {
@@ -2328,12 +2459,24 @@ export default class extends Controller {
       this.colorKeyStroke = [this.toPartPoint(part, opt.e)]
       return
     }
+    // ✂️ かこむ：しかく・まる は ひっぱり はじめ、てん は タップの はじまり（部品の そと から でも かける）
+    if (this.colorKeyShapeMode()) {
+      const p = this.toPartPoint(part, opt.e)
+      if (this.colorKeyShape === "poly") this.colorKeyDown = { x: opt.e.clientX, y: opt.e.clientY }
+      else this.colorKeyDrag = { a: p, b: p }
+      return
+    }
     if (opt.target !== part) return
     this.colorKeyDown = { x: opt.e.clientX, y: opt.e.clientY }
   }
 
   onColorKeyMove(opt) {
     if (this.colorKeyPart && this.loupeOn) this.scheduleLoupe(opt.e)
+    if (this.colorKeyDrag && this.colorKeyPart) {
+      this.colorKeyDrag.b = this.toPartPoint(this.colorKeyPart, opt.e)
+      this.canvas.requestRenderAll()
+      return
+    }
     if (!this.colorKeyStroke || !this.colorKeyPart) return
     this.colorKeyStroke.push(this.toPartPoint(this.colorKeyPart, opt.e))
   }
@@ -2408,6 +2551,44 @@ export default class extends Controller {
         this.canvas.requestRenderAll()
       }, 0)
       if (!this.pinchUsed) this.addColorKeyStroke(part, stroke)   // 指2本を使った線は捨てる
+      return
+    }
+
+    // ✂️ かこむ
+    if (this.colorKeyShapeMode()) {
+      // Fabric が タップの はじめに 外した選択を、戻しておく
+      setTimeout(() => {
+        if (this.colorKeyPart !== part || !this.canvas.getObjects().includes(part)) return
+        this.canvas.setActiveObject(part)
+        this.canvas.requestRenderAll()
+      }, 0)
+      const drag = this.colorKeyDrag
+      this.colorKeyDrag = null
+      if (drag) {
+        // 小さすぎる（ほぼ タップ）ときや、指2本を使ったときは かかない
+        const a = this.fromPartPoint(part, drag.a), b = this.fromPartPoint(part, drag.b)
+        const px = Math.hypot(a.x - b.x, a.y - b.y) * this.canvas.getZoom()
+        if (!this.pinchUsed && px > 8) this.addColorKeyShape(part, this.colorKeyShape, [drag.a, drag.b])
+        else this.canvas.requestRenderAll()
+        return
+      }
+      const down = this.colorKeyDown
+      this.colorKeyDown = null
+      if (!down || this.pinchUsed) return
+      if (Math.hypot(opt.e.clientX - down.x, opt.e.clientY - down.y) > 10) return
+      const p = this.toPartPoint(part, opt.e)
+      const poly = this.colorKeyPoly || (this.colorKeyPoly = [])
+      // さいしょの てん の ちかく（画面で 14px）を タップしたら とじる
+      if (poly.length >= 3) {
+        const first = this.fromPartPoint(part, poly[0]), now = this.fromPartPoint(part, p)
+        if (Math.hypot(first.x - now.x, first.y - now.y) * this.canvas.getZoom() < 14) {
+          this.closeColorKeyPoly()
+          return
+        }
+      }
+      poly.push(p)
+      this.canvas.requestRenderAll()
+      this.syncColorKeyPanel(part)
       return
     }
 
@@ -2533,12 +2714,20 @@ export default class extends Controller {
 
   // 「↶ 1つ戻す」：最後のタップを取り消す
   undoColorKey() {
+    // 📍 てん を うっている とちゅう なら、さいごの てん を 消す
+    if ((this.colorKeyPoly || []).length) {
+      this.colorKeyPoly.pop()
+      this.canvas.requestRenderAll()
+      this.syncColorKeyPanel(this.colorKeyPart)
+      return
+    }
     this.aiPoints = []
     if (this.colorKeyPart) this.updateColorKey(this.colorKeyPart, ck => ck.ops.pop())
   }
 
   // 「↺ リセット」：透過を全部やめて、元の画像に戻す
   resetColorKey() {
+    this.clearShapeDraft()
     this.aiPoints = []
     if (this.colorKeyPart) this.updateColorKey(this.colorKeyPart, ck => { ck.ops = [] })
   }
