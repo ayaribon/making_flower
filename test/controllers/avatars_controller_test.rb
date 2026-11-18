@@ -67,6 +67,9 @@ class AvatarsControllerTest < ActionDispatch::IntegrationTest
       assert_select ".hm-town__building[data-town-place-param=#{id}][aria-label*=?]", word
     end
     assert_select "button[data-action='town#startGuide']"
+    sprites = JSON.parse(css_select("[data-controller=town]").first["data-town-sprites-value"])
+    assert_kind_of Hash, sprites
+    assert(sprites.empty? || sprites.keys.sort == HomesController::SPROUT_FILES.keys.sort, "素材が そろっているときだけ ぜんぶ わたす")
   end
 
   test "💬 ひとこと：見えない文字は すきまに・20文字まで。送った 項目だけ かわる（見た目は そのまま）" do

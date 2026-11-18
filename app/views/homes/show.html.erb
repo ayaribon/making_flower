@@ -17,7 +17,8 @@
          data-town-name-value="<%= current_user&.name %>"
          data-town-others-value="<%= (@town_others || []).to_json %>"
          data-town-owner-value="<%= !!current_user&.dettyan_owner? %>"
-         data-town-avatar-url-value="<%= avatar_path %>">
+         data-town-avatar-url-value="<%= avatar_path %>"
+         data-town-sprites-value="<%= (@town_sprites || {}).to_json %>">
       <section class="hm-town" aria-label="はじまりのまち">
         <canvas class="hm-town__canvas" data-town-target="canvas" data-action="pointerdown->town#tap" role="img" aria-label="自分の キャラが いる まち"></canvas>
         <%# 建物（場所は town_world.js の BUILDINGS。town_controller.js が カメラに あわせて 動かす）。名前の下に 何が できるか %>

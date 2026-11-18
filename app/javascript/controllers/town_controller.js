@@ -2,6 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 import { drawAvatar, normalizeAvatar, avatarFromName, cleanMsg, AV_W, AV_H } from "avatar_sprite"
 import { drawDettyan, SPRITE_W, SPRITE_H } from "dettyan_sprite"
 import { TOWN_W, TOWN_H, VIEW_NARROW, BUILDINGS, BUILDING_W, WALK, doorOf, clampWalk, drawTownBase, drawTownSky, drawTownLive, drawTownNight } from "town_world"
+import { loadSprout, drawSproutBase, drawSproutLive, sproutWindows, SPROUT_LAMPS } from "town_sprout"
 
 // 🏘️ はじまりのまち（トップページ）。docs/town/requirements.md
 // - 自分の アバター を タップした所へ 歩かせる。建物を タップすると、入口まで 歩いて 入る
@@ -11,6 +12,7 @@ import { TOWN_W, TOWN_H, VIEW_NARROW, BUILDINGS, BUILDING_W, WALK, doorOf, clamp
 // - 📖 はじめて 開いた人には「SiVA へ ようこそ！」からの あんない（見たかどうかは この端末の localStorage だけ）
 // - Dettyan が 事務所の前に 立っている
 // - 町は 横に 長い（256 ドット）。広い画面では ぜんぶ見せる。せまい画面（スマホ）は 160 はば を見せて、自分の キャラに ついて 横に 動く
+// - 🌱 Sprout Lands の 素材の URL（sprites）が わたされたら、その絵で 描く（town_sprout.js）。読めなければ コードで描く 町のまま
 const WIDE_PX = 700 // これより 広い 画面では 町を ぜんぶ 見せる
 // - まだ キャラを つくっていない人には「まずは キャラを つくろう」
 const SPEED = 22 // 1秒に 進むドット
@@ -22,6 +24,9 @@ const GUIDE_KEY = "town:guide:v1" // あんない を 見たか（+ ":呼び名"
 const GREETINGS = ["やっほー！", "こんにちは！", "いい天気だね", "歌ってきた！", "サムネ つくってる", "がんばろ〜", "またね！"]
 const DETTYAN_LINES = ["ようこそ、はじまりのまち へ！", "事務所で まってるよ", "じゅんさい たべたいな"]
 const OWNER_LINES = ["俺やん！", "お、俺が 立ってる", "本物の 俺やん"]
+// Sprout Lands の 町では、キャラの ふちを 黒ではなく やわらかい 色に する
+const SOFT_LINE = "#4e3448"
+const SOFT_DETTYAN = { K: SOFT_LINE, E: SOFT_LINE }
 
 export default class extends Controller {
   static targets = [
@@ -29,7 +34,7 @@ export default class extends Controller {
     "guide", "guideSiva", "guideFace", "guideTitle", "guideText", "guideCount", "guideSkip", "guideMake", "guideNext",
     "sayForm", "sayInput", "sayButton", "sayStatus"
   ]
-  static values = { me: Object, name: String, others: Array, owner: Boolean, avatarUrl: String }
+  static values = { me: Object, name: String, others: Array, owner: Boolean, avatarUrl: String, sprites: Object }
 
   connect() {
     const c = this.canvasTarget
@@ -42,7 +47,20 @@ export default class extends Controller {
     this.base = document.createElement("canvas")
     this.base.width = TOWN_W
     this.base.height = TOWN_H
-    drawTownBase(this.base.getContext("2d"))
+    const urls = this.spritesValue
+    if (urls && Object.keys(urls).length) {
+      // 素材の 絵が とどくまで 少し まつ（とどかなければ コードで描く 町）
+      this.baseReady = false
+      loadSprout(urls).then((sheets) => {
+        this.sprout = sheets
+        drawSproutBase(this.base.getContext("2d"), sheets)
+      }).catch(() => {
+        drawTownBase(this.base.getContext("2d"))
+      }).finally(() => { this.baseReady = true })
+    } else {
+      drawTownBase(this.base.getContext("2d"))
+      this.baseReady = true
+    }
     this.reduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
 
     const mine = this.meValue && Object.keys(this.meValue).length ? this.meValue : null
@@ -268,23 +286,32 @@ export default class extends Controller {
     const cam = Math.round(this.camX)
     g.save()
     g.translate(-cam, 0)
-    drawTownSky(g, now, this.t)
-    g.drawImage(this.base, 0, 0)
-    drawTownLive(g, this.t)
+    if (!this.baseReady) {
+      g.fillStyle = "#c0d470"
+      g.fillRect(0, 0, TOWN_W, TOWN_H)
+    } else if (this.sprout) {
+      g.drawImage(this.base, 0, 0)
+      drawSproutLive(g, this.t, this.sprout)
+    } else {
+      drawTownSky(g, now, this.t)
+      g.drawImage(this.base, 0, 0)
+      drawTownLive(g, this.t)
+    }
     const actors = [...this.others, this.me, { ...this.dettyan, npc: true }].sort((a, b) => a.y - b.y)
     for (const a of actors) {
       g.fillStyle = "rgba(0, 0, 0, 0.18)"
       g.fillRect(Math.round(a.x) - 6, Math.round(a.y) - 1, 12, 2)
       if (a.npc) {
-        drawDettyan(g, Math.round(a.x - SPRITE_W / 2), Math.round(a.y - SPRITE_H), { eyes: a.blink > 0 ? "blink" : "open" })
+        drawDettyan(g, Math.round(a.x - SPRITE_W / 2), Math.round(a.y - SPRITE_H), { eyes: a.blink > 0 ? "blink" : "open", colors: this.sprout ? SOFT_DETTYAN : null })
       } else {
         const fade = a.self && this.entering ? 0.4 : 1
         g.globalAlpha = fade
-        drawAvatar(g, Math.round(a.x - AV_W / 2), Math.round(a.y - AV_H) - (a.frame === 1 ? 1 : 0), a.avatar, { frame: a.frame, blink: a.blink > 0 })
+        drawAvatar(g, Math.round(a.x - AV_W / 2), Math.round(a.y - AV_H) - (a.frame === 1 ? 1 : 0), a.avatar, { frame: a.frame, blink: a.blink > 0, line: this.sprout ? SOFT_LINE : null })
         g.globalAlpha = 1
       }
     }
-    drawTownNight(g, now)
+    if (this.sprout) drawTownNight(g, now, sproutWindows(), SPROUT_LAMPS)
+    else drawTownNight(g, now)
     g.restore()
     this.placeBuildings(cam)
     // 名前・ふきだし（画面の ことば）

@@ -37,3 +37,4 @@ pin "dettyan_camp" # ⛺ テントと おはなしの けしき
 pin "dettyan_story" # 📖 おはなし（目標と ページ）
 pin "avatar_sprite" # 👤 みんなの アバター（キャラメイクの 部品と 絵）
 pin "town_world" # 🏘️ はじまりのまち（トップページの 町）の 絵
+pin "town_sprout" # 🌱 はじまりのまち を Sprout Lands の 素材で 描く 版

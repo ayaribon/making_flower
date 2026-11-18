@@ -240,14 +240,15 @@ function drawBuilding(g, b) {
 }
 
 // かんばんの 絵（8×7）
-function drawSign(g, kind, x, y) {
+// 建物の しるし（8×7 ドット）。line：ふちの 色（Sprout Lands 版は 黒ではなく 赤むらさき）
+export function drawSign(g, kind, x, y, line = "#1a1414") {
   const art = {
     mic: ["..KKK...", ".KMMMK..", ".KMMMK..", "..KKK...", "...K....", "...K....", "..KKK..."],
     palette: [".KKKKK..", "KYYrYYK.", "KYbYYgK.", "KYYYKKK.", "KYpYK...", ".KKK....", "........"],
     dettyan: ["..KKK...", ".KHHHK..", "KHSSSHK.", "KSESESK.", "KSSmSSK.", ".KSSSK..", "..KKK..."],
     scissors: ["K....K..", ".K..K...", "..KK....", "..KK....", ".KrKr...", "Kr..rK..", ".K...K.."]
   }[kind]
-  const colors = { K: "#1a1414", M: "#9aa0b0", Y: "#e8c890", r: "#e0484d", b: "#4f8fe8", g: "#5cc46a", p: "#9b5fd0", H: "#1f1f24", S: "#f6d3b3", E: "#1a1414", m: "#9a4a3a" }
+  const colors = { K: line, M: "#9aa0b0", Y: "#e8c890", r: "#e0484d", b: "#4f8fe8", g: "#5cc46a", p: "#9b5fd0", H: "#1f1f24", S: "#f6d3b3", E: "#1a1414", m: "#9a4a3a" }
   art.forEach((row, yy) => {
     for (let xx = 0; xx < row.length; xx++) if (row[xx] !== ".") px(g, colors[row[xx]], x + xx, y + yy, 1, 1)
   })
@@ -290,17 +291,19 @@ export function drawTownLive(g, t) {
 }
 
 // 夜：すこし くらく、まど と 街灯 に あかり
-export function drawTownNight(g, now) {
+// windows：夜に あかりを つける まど [x, y, w, h]（Sprout Lands 版は town_sprout.js の sproutWindows）
+export function drawTownNight(g, now, windows = null, lamps = LAMPS) {
   const tod = timeOfDay(now)
   if (tod !== "night" && tod !== "evening") return
   g.fillStyle = tod === "night" ? "rgba(14, 18, 50, 0.32)" : "rgba(60, 20, 50, 0.10)"
   g.fillRect(0, 0, TOWN_W, TOWN_H)
   if (tod !== "night") return
-  for (const b of BUILDINGS) {
+  if (windows) for (const [wx, wy, ww, wh] of windows) px(g, "#ffd86a", wx, wy, ww, wh)
+  else for (const b of BUILDINGS) {
     for (const wx of [b.x + 3, b.x + BW - 10]) px(g, "#ffd86a", wx, 35, 6, 6)
   }
   g.fillStyle = "rgba(255, 230, 150, 0.12)"
-  for (const lx of LAMPS) {
+  for (const lx of lamps) {
     for (let r = 4; r <= 14; r += 5) g.fillRect(lx + 1 - r, 66 - r / 2, r * 2, r)
   }
 }

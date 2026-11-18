@@ -134,3 +134,26 @@ test("まだ キャラが ない人：名前で 見た目が きまる（毎回 
   av.drawAvatar(g, 0, 0, a)
   assertClean(g, "avatarFromName")
 })
+
+test("🌱 Sprout Lands 版の 町：画像が なければ 読まない・あれば 描ける（建物・夜の まど・街灯）", async () => {
+  const sprout = await import("town_sprout")
+  await assert.rejects(sprout.loadSprout({}), "URL が ないときは コードで描く 町に もどる")
+  await assert.rejects(sprout.loadSprout({ grass: "x.png" }), "1つでも 足りなければ もどる")
+  const fakeImg = {}
+  const sheets = Object.fromEntries(Object.keys(sprout.SPROUT_FILES).map((k) => [k, fakeImg]))
+  const g = fakeCanvas()
+  let images = 0
+  g.drawImage = (img) => { assert.equal(img, fakeImg); images++ }
+  g.imageSmoothingEnabled = true
+  sprout.drawSproutBase(g, sheets)
+  assert.ok(images > 50, "地面・木・花 を 画像で 描く")
+  assertClean(g, "Sprout の 建物・街灯")
+  assert.equal(g.imageSmoothingEnabled, false, "ドットが ぼやけない")
+  g.translate = () => {}; g.scale = () => {}
+  sprout.drawSproutLive(g, 3.2, sheets)
+  const wins = sprout.sproutWindows()
+  assert.equal(wins.length, town.BUILDINGS.length * 2)
+  for (const [x, y, w, h] of wins) assert.ok(x >= 0 && x + w <= town.TOWN_W && y > 0 && y + h < town.GROUND)
+  // 街灯は 井戸（ふんすいの 場所）と かさならない
+  for (const lx of sprout.SPROUT_LAMPS) assert.ok(Math.abs(lx - town.FOUNTAIN.x) > town.FOUNTAIN.rx + 4)
+})

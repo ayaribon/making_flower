@@ -235,10 +235,14 @@ export function avatarPalette(a) {
   }
 }
 
-// アバターを描く。opts：{ frame：0|1（歩く）, blink：まばたき, mood："smile"（にっこり目に する） }
-export function drawAvatar(g, ox, oy, raw, { frame = 0, blink = false, mood = null } = {}) {
+// アバターを描く。opts：{ frame：0|1（歩く）, blink：まばたき, mood："smile"（にっこり目に する）, line：ふちと 目の 色（Sprout Lands の 町では やわらかい 色） }
+export function drawAvatar(g, ox, oy, raw, { frame = 0, blink = false, mood = null, line = null } = {}) {
   const a = normalizeAvatar(raw)
   const pal = avatarPalette(a)
+  if (line) {
+    pal.K = line
+    pal.E = line
+  }
   const hair = HAIR_ART[a.hair]
   if (hair.back) drawArt(g, hair.back, pal, ox, oy)
   for (let y = 0; y < AV_H; y++) {

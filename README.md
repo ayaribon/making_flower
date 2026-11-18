@@ -188,7 +188,10 @@ making_flower は、画像素材を組み合わせてレイアウトを作るた
 
 - キャラメイクは `/avatar`。保存先は `users.avatar`（JSON の text 列）。💬 ひとこと（20文字）も 同じ JSON の `msg`
 - 町には 事務所の みんな（20人まで）が 出る。はじめて 開いた人には「SiVA へ ようこそ！」からの あんない（見たかどうかは localStorage）
+- 町の 絵の 一部に Sprout Lands の 素材を 使う（画像が あるときだけ。`app/javascript/town_sprout.js`）
 - 詳しくは `docs/town/requirements.md`
+
+**クレジット**：Assets - From: Sprout Lands - By: Cup Nooble（https://cupnooble.itch.io/sprout-lands-asset-pack）。素材パックそのものは このリポジトリでは 配らない（ライセンス：商用 OK・改変 OK・素材パックの 再配布と 転売は 禁止・NFT と AI の 学習への 利用は 禁止・クレジット必須）
 
 ---
 
