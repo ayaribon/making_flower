@@ -28,6 +28,8 @@ const GREETINGS = ["やっほー！", "こんにちは！", "いい天気だね"
 const DETTYAN_LINES = ["ようこそ、はじまりのまち へ！", "事務所で まってるよ", "じゅんさい たべたいな"]
 const OWNER_LINES = ["俺やん！", "お、俺が 立ってる", "本物の 俺やん"]
 // Sprout Lands の 町では、Dettyan の ふちを 黒ではなく やわらかい 色に する（アバターは avatar_chibi.js が もともと やわらかい）
+// 🐱 Teemo 型（人の 形に した もの）は いったん やめ（2026-11-18 ayaribon）。true に すると 町で 使う
+const USE_TEEMO = false
 const SOFT_LINE = "#4e3448"
 const SOFT_DETTYAN = { K: SOFT_LINE, E: SOFT_LINE }
 
@@ -213,7 +215,7 @@ export default class extends Controller {
     const y = ((event.clientY - rect.top) / rect.height) * TOWN_H
     // ほかの人・Dettyan を タップしたら あいさつ
     const hit = (a, w, h) => x >= a.x - w / 2 - 2 && x <= a.x + w / 2 + 2 && y >= a.y - h - 2 && y <= a.y + 2
-    const [w, h] = this.sprout?.chara ? [TEEMO_W, TEEMO_H] : [AV_W, AV_H]
+    const [w, h] = USE_TEEMO && this.sprout?.chara ? [TEEMO_W, TEEMO_H] : [AV_W, AV_H]
     const other = this.others.find((o) => hit(o, w, h))
     if (other) return this.say(other, `${other.name}「${this.lineOf(other)}」`)
     if (hit(this.dettyan, SPRITE_W, SPRITE_H)) {
@@ -307,7 +309,7 @@ export default class extends Controller {
     for (const a of actors) {
       g.fillStyle = "rgba(0, 0, 0, 0.18)"
       g.fillRect(Math.round(a.x) - 6, Math.round(a.y) - 1, 12, 2)
-      if (this.sprout?.chara) {
+      if (USE_TEEMO && this.sprout?.chara) {
         // 🐱 Teemo 型（素材の キャラ画像。毛の 色・首の 色・こもの は その人の キャラ）
         const fade = a.self && this.entering ? 0.4 : 1
         g.globalAlpha = fade
@@ -328,7 +330,7 @@ export default class extends Controller {
     this.placeBuildings(cam)
     // 名前・ふきだし（画面の ことば）
     this.place(this.nameTag, this.me.x, this.me.y + 1)
-    for (const a of [this.me, ...this.others, this.dettyan]) if (a.bubble && !a.bubble.hidden) this.placeBubble(a.bubble, a.x, a.y - (this.sprout?.chara ? TEEMO_H + 4 : AV_H) - 2)
+    for (const a of [this.me, ...this.others, this.dettyan]) if (a.bubble && !a.bubble.hidden) this.placeBubble(a.bubble, a.x, a.y - (USE_TEEMO && this.sprout?.chara ? TEEMO_H + 4 : AV_H) - 2)
   }
 
   // ふきだし は 町の はし で はみ出さないように よせる
