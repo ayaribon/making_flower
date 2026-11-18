@@ -92,6 +92,7 @@ export default class extends Controller {
     if (this.human) {
       // 人の テンプレートで 変えられる のは 色 と こもの
       this.group(box, "はだ", this.swatches("skin", SKINS))
+      this.group(box, "かみがた", this.choices("hair", HAIRS.map((h) => ({ id: h.id, label: h.name, preview: { ...a, hair: h.id } }))))
       this.group(box, "かみの いろ", this.swatches("hairColor", HAIR_COLORS))
       this.group(box, "ふくの いろ", this.swatches("topColor", CLOTH_COLORS))
       this.group(box, "ズボンの いろ", this.swatches("bottomColor", CLOTH_COLORS))
