@@ -110,3 +110,27 @@ test("まち：朝・昼・夕方・夜 で 描ける", () => {
   }
   assertClean(g, "まち")
 })
+
+test("💬 ひとこと：見えない文字・改行は すきまに、20文字まで、から は のこさない", () => {
+  assert.equal(av.MSG_MAX, 20)
+  assert.equal(av.cleanMsg("  やっほー\n\tみんな  "), "やっほー みんな")
+  assert.equal(av.cleanMsg("a‮b​c"), "a b c")
+  assert.equal(av.cleanMsg("あ".repeat(30)), "あ".repeat(20))
+  assert.equal(Array.from(av.cleanMsg("🎤".repeat(25))).length, 20, "絵文字も 1文字")
+  assert.equal(av.cleanMsg(123), "")
+  assert.equal(av.cleanMsg("   "), "")
+  assert.equal(av.normalizeAvatar({ hair: "bob", msg: " うたうよ！ " }).msg, "うたうよ！")
+  assert.ok(!("msg" in av.normalizeAvatar({ hair: "bob", msg: "  " })), "から の ひとこと は のこさない")
+  assert.ok(!("msg" in av.DEFAULT_AVATAR))
+})
+
+test("まだ キャラが ない人：名前で 見た目が きまる（毎回 同じ・描ける）", () => {
+  const a = av.avatarFromName("neighbor")
+  assert.deepEqual(av.avatarFromName("neighbor"), a)
+  assert.deepEqual(av.normalizeAvatar(a), a, "使える値だけ")
+  const looks = new Set(["a1", "b2", "c3", "d4", "e5", "f6", "g7", "h8"].map((n) => JSON.stringify(av.avatarFromName(n))))
+  assert.ok(looks.size >= 6, "名前が ちがえば だいたい ちがう 見た目")
+  const g = fakeCanvas()
+  av.drawAvatar(g, 0, 0, a)
+  assertClean(g, "avatarFromName")
+})

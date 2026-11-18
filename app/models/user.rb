@@ -20,20 +20,34 @@ class User < ApplicationRecord
 
   # 👤 はじまりのまち の アバター（キャラメイク）。{ "hair" => "bob", "skin" => 1, ... }。まだ作っていないときは nil
   # 中身の形は app/javascript/avatar_sprite.js（えらべる値は そちらで そろえる。ここでは 知らない項目・へんな値を すてるだけ）
+  # 💬 "msg" は まちで みんなに 見える ひとこと（20文字まで）。同じ 列の 中に 入れる（列は 増やさない）
   serialize :avatar, coder: JSON
-  AVATAR_KEYS = %w[v skin hair hairColor eyes top topColor bottom bottomColor shoes acc].freeze
+  AVATAR_LOOK_KEYS = %w[v skin hair hairColor eyes top topColor bottom bottomColor shoes acc].freeze
+  AVATAR_KEYS = (AVATAR_LOOK_KEYS + %w[msg]).freeze
+  AVATAR_MSG_MAX = 20
+  # 見えない 文字（改行・タブ・ゼロはば・向きを かえる 文字）は すきまに する
+  AVATAR_MSG_HIDDEN = /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/
 
   def self.clean_avatar(raw)
     return nil unless raw.respond_to?(:to_h)
-    raw.to_h.stringify_keys.slice(*AVATAR_KEYS).each_with_object({}) do |(key, value), out|
+    hash = raw.to_h.stringify_keys
+    out = hash.slice(*AVATAR_LOOK_KEYS).each_with_object({}) do |(key, value), look|
       case value
-      when Integer then out[key] = value if value.between?(0, 99)
+      when Integer then look[key] = value if value.between?(0, 99)
       when String
-        if value.match?(/\A\d{1,2}\z/) then out[key] = value.to_i
-        elsif value.match?(/\A[a-z]{1,20}\z/) then out[key] = value
+        if value.match?(/\A\d{1,2}\z/) then look[key] = value.to_i
+        elsif value.match?(/\A[a-z]{1,20}\z/) then look[key] = value
         end
       end
-    end.presence
+    end
+    msg = clean_avatar_msg(hash["msg"])
+    out["msg"] = msg if msg
+    out.presence
+  end
+
+  def self.clean_avatar_msg(value)
+    return nil unless value.is_a?(String)
+    value.gsub(AVATAR_MSG_HIDDEN, " ").squish.each_char.first(AVATAR_MSG_MAX).join.presence
   end
 
   # 🧑‍💼 Dettyan 本人のアカウントか（育成ゲームのドット絵の Dettyan が「俺やん」と言う）

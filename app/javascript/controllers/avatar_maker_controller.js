@@ -1,24 +1,26 @@
 import { Controller } from "@hotwired/stimulus"
 import {
-  drawAvatar, normalizeAvatar, randomAvatar, DEFAULT_AVATAR,
+  drawAvatar, normalizeAvatar, randomAvatar, cleanMsg, DEFAULT_AVATAR,
   SKINS, HAIR_COLORS, CLOTH_COLORS, HAIRS, EYES, TOPS, BOTTOMS, ACCESSORIES
 } from "avatar_sprite"
 import { findGear } from "dettyan_gear"
 
 // 👤 キャラメイク。docs/town/requirements.md
 // 左に 大きく 見本（まばたき・ときどき 足ぶみ）、右で えらぶ。💾 で サーバーに 保存して まち へ もどる
+// 💬 ひとこと（まちで キャラが 言う ことば）も ここで かえられる（まちの 下の 入力でも かえられる）
 const PW = 28 // 見本の 大きさ（ドット。こもの が はみ出しても 入るように）
 const PH = 32
 const OX = 4
 const OY = 6
 
 export default class extends Controller {
-  static targets = ["preview", "groups", "save", "status"]
+  static targets = ["preview", "groups", "save", "status", "msg"]
   static values = { avatar: Object, url: String, back: String }
 
   connect() {
     this.saved = normalizeAvatar(this.hasSaved() ? this.avatarValue : DEFAULT_AVATAR)
     this.avatar = { ...this.saved }
+    if (this.hasMsgTarget) this.msgTarget.value = this.saved.msg || ""
     const c = this.previewTarget
     c.width = PW
     c.height = PH
@@ -139,6 +141,7 @@ export default class extends Controller {
 
   reset() {
     this.avatar = { ...this.saved }
+    if (this.hasMsgTarget) this.msgTarget.value = this.saved.msg || ""
     this.renderGroups()
   }
 
@@ -151,7 +154,8 @@ export default class extends Controller {
         method: "PATCH",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json", Accept: "application/json", "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')?.content || "" },
-        body: JSON.stringify({ avatar: this.avatar })
+        // msg は から でも 送る（サーバーは 送った 項目だけ かえるので、から ＝ けす）
+        body: JSON.stringify({ avatar: { ...this.avatar, msg: this.hasMsgTarget ? cleanMsg(this.msgTarget.value) : this.avatar.msg || "" } })
       })
       if (!res.ok) throw new Error(String(res.status))
       this.saved = { ...this.avatar }

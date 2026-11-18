@@ -13,6 +13,12 @@
       <div class="av-stage">
         <canvas class="av-preview" data-avatar-maker-target="preview" role="img" aria-label="じぶんの キャラ"></canvas>
         <p class="av-name"><%= current_user.name %></p>
+        <%# 💬 まちで キャラが ときどき 言う ことば（ほかの人にも 見える） %>
+        <label class="av-msg">
+          <span class="av-msg__label">💬 ひとこと</span>
+          <input class="av-msg__input" type="text" maxlength="<%= User::AVATAR_MSG_MAX %>" data-avatar-maker-target="msg"
+                 placeholder="まちで みんなに 見える ことば" autocomplete="off">
+        </label>
         <div class="av-tools">
           <button type="button" class="av-tool" data-action="avatar-maker#random">🎲 おまかせ</button>
           <button type="button" class="av-tool" data-action="avatar-maker#reset">↩ もとにもどす</button>

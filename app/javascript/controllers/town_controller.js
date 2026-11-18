@@ -1,12 +1,14 @@
 import { Controller } from "@hotwired/stimulus"
-import { drawAvatar, normalizeAvatar, AV_W, AV_H } from "avatar_sprite"
+import { drawAvatar, normalizeAvatar, avatarFromName, cleanMsg, AV_W, AV_H } from "avatar_sprite"
 import { drawDettyan, SPRITE_W, SPRITE_H } from "dettyan_sprite"
 import { TOWN_W, TOWN_H, VIEW_NARROW, BUILDINGS, BUILDING_W, WALK, doorOf, clampWalk, drawTownBase, drawTownSky, drawTownLive, drawTownNight } from "town_world"
 
 // 🏘️ はじまりのまち（トップページ）。docs/town/requirements.md
 // - 自分の アバター を タップした所へ 歩かせる。建物を タップすると、入口まで 歩いて 入る
 //   入るときは、下の カード（data-town-place）を 押したのと同じ（main_menu_controller.js が 画像を出して 移動する）
-// - ほかの人の アバター（さいきん キャラを つくった人）が うろうろ。タップすると あいさつ
+// - ほかの人（事務所の みんな）の アバターが うろうろ。タップすると あいさつ。まだ キャラが ない人は 名前から きまる おまかせの 見た目
+// - 💬 ひとこと：キャラに ひとこと を 書いておくと、ときどき ふきだしで 言う（ほかの人にも 見える）
+// - 📖 はじめて 開いた人には「SiVA へ ようこそ！」からの あんない（見たかどうかは この端末の localStorage だけ）
 // - Dettyan が 事務所の前に 立っている
 // - 町は 横に 長い（256 ドット）。広い画面では ぜんぶ見せる。せまい画面（スマホ）は 160 はば を見せて、自分の キャラに ついて 横に 動く
 const WIDE_PX = 700 // これより 広い 画面では 町を ぜんぶ 見せる
@@ -14,13 +16,20 @@ const WIDE_PX = 700 // これより 広い 画面では 町を ぜんぶ 見せ�
 const SPEED = 22 // 1秒に 進むドット
 const STEP_SEC = 0.2
 const BUBBLE_MS = 2600
+const MAX_OTHERS = 20 // homes_controller.rb の TOWN_OTHERS と そろえる
+const CHAT_FIRST = 1.4 // ひらいてから 最初の ひとこと まで（秒）
+const GUIDE_KEY = "town:guide:v1" // あんない を 見たか（+ ":呼び名"）。中身を かえたら v2 に して もう一度 見せる
 const GREETINGS = ["やっほー！", "こんにちは！", "いい天気だね", "歌ってきた！", "サムネ つくってる", "がんばろ〜", "またね！"]
 const DETTYAN_LINES = ["ようこそ、はじまりのまち へ！", "事務所で まってるよ", "じゅんさい たべたいな"]
 const OWNER_LINES = ["俺やん！", "お、俺が 立ってる", "本物の 俺やん"]
 
 export default class extends Controller {
-  static targets = ["canvas", "layer", "intro", "building", "edgeLeft", "edgeRight"]
-  static values = { me: Object, name: String, others: Array, owner: Boolean }
+  static targets = [
+    "canvas", "layer", "intro", "building", "edgeLeft", "edgeRight",
+    "guide", "guideSiva", "guideFace", "guideTitle", "guideText", "guideCount", "guideSkip", "guideMake", "guideNext",
+    "sayForm", "sayInput", "sayButton", "sayStatus"
+  ]
+  static values = { me: Object, name: String, others: Array, owner: Boolean, avatarUrl: String }
 
   connect() {
     const c = this.canvasTarget
@@ -37,16 +46,23 @@ export default class extends Controller {
     this.reduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
 
     const mine = this.meValue && Object.keys(this.meValue).length ? this.meValue : null
-    this.me = this.actor({ x: TOWN_W / 2 - 24, y: 110, avatar: normalizeAvatar(mine), name: this.nameValue, self: true })
+    this.hasMine = !!mine
+    const myLook = normalizeAvatar(mine)
+    this.me = this.actor({ x: TOWN_W / 2 - 24, y: 110, avatar: myLook, msg: myLook.msg || "", name: this.nameValue, self: true })
     this.camX = this.cameraTarget()
-    this.others = (this.othersValue || []).slice(0, 8).map((o, i) => {
+    this.others = (this.othersValue || []).slice(0, MAX_OTHERS).map((o, i) => {
       const spot = clampWalk(WALK.left + ((i * 37) % (WALK.right - WALK.left)), WALK.top + ((i * 23) % (WALK.bottom - WALK.top)))
-      return this.actor({ ...spot, avatar: normalizeAvatar(o.avatar), name: o.name, wait: 1 + (i % 4) })
+      const guest = !o.avatar || !Object.keys(o.avatar).length
+      const look = guest ? avatarFromName(o.name) : normalizeAvatar(o.avatar)
+      return this.actor({ ...spot, avatar: look, msg: look.msg || "", guest, name: o.name, wait: 1 + (i % 4) })
     })
     // Dettyan は 事務所の 前の ひろば に 立っている（建物の ボタンと かさならない 高さ）
     const door = doorOf("dettyan")
     this.dettyan = { x: door.x + 10, y: door.y + 18, blink: 0, nextBlink: 2 }
-    if (!mine && this.hasIntroTarget) this.introTarget.hidden = false
+    this.chatIn = CHAT_FIRST
+    this.drawGuideFace()
+    if (!this.guideSeen()) this.startGuide()
+    else if (!mine && this.hasIntroTarget) this.introTarget.hidden = false
 
     this.nameTag = this.label("hm-town__name", this.nameValue)
     this.t = 0
@@ -81,9 +97,10 @@ export default class extends Controller {
     if (this.me) this.camX = this.cameraTarget()
   }
 
-  // カメラ：自分の キャラが まんなか（町の はし では 止まる）
+  // カメラ：自分の キャラが まんなか（町の はし では 止まる）。あんない の あいだは その 建物
   cameraTarget() {
-    return Math.max(0, Math.min(TOWN_W - this.viewW, Math.round(this.me.x - this.viewW / 2)))
+    const x = this.focusX ?? this.me.x
+    return Math.max(0, Math.min(TOWN_W - this.viewW, Math.round(x - this.viewW / 2)))
   }
 
   actor(o) {
@@ -117,6 +134,14 @@ export default class extends Controller {
     d.nextBlink -= dt
     if (d.blink > 0) d.blink -= dt
     if (d.nextBlink <= 0) { d.blink = 0.14; d.nextBlink = 2.5 + Math.random() * 3 }
+    // 💬 ときどき だれかが ひとこと（あんない の あいだは しずかに）
+    if (!this.guiding) {
+      this.chatIn -= dt
+      if (this.chatIn <= 0) {
+        this.chatter()
+        this.chatIn = 3.5 + Math.random() * 3
+      }
+    }
     // ほかの人は ときどき うろうろ
     if (!this.reduced) {
       for (const o of this.others) {
@@ -159,19 +184,19 @@ export default class extends Controller {
 
   // ---- タップ ----
   tap(event) {
-    if (this.entering) return
+    if (this.entering || this.guiding) return
     const rect = this.canvasTarget.getBoundingClientRect()
     const x = this.camX + ((event.clientX - rect.left) / rect.width) * this.viewW
     const y = ((event.clientY - rect.top) / rect.height) * TOWN_H
     // ほかの人・Dettyan を タップしたら あいさつ
     const hit = (a, w, h) => x >= a.x - w / 2 - 2 && x <= a.x + w / 2 + 2 && y >= a.y - h - 2 && y <= a.y + 2
     const other = this.others.find((o) => hit(o, AV_W, AV_H))
-    if (other) return this.say(other, `${other.name}「${GREETINGS[Math.floor(Math.random() * GREETINGS.length)]}」`)
+    if (other) return this.say(other, `${other.name}「${this.lineOf(other)}」`)
     if (hit(this.dettyan, SPRITE_W, SPRITE_H)) {
       const lines = this.ownerValue ? OWNER_LINES : DETTYAN_LINES
       return this.say(this.dettyan, `Dettyan「${lines[Math.floor(Math.random() * lines.length)]}」`)
     }
-    if (hit(this.me, AV_W, AV_H)) return this.say(this.me, `${this.nameValue}`)
+    if (hit(this.me, AV_W, AV_H)) return this.say(this.me, this.me.msg ? `${this.nameValue}「${this.me.msg}」` : `${this.nameValue}`)
     const p = clampWalk(x, y)
     this.me.plan = null
     this.me.tx = p.x
@@ -181,7 +206,7 @@ export default class extends Controller {
 
   // 建物を タップ：入口まで 歩いて 入る
   goPlace(event) {
-    if (this.entering) return
+    if (this.entering || this.guiding) return
     const id = event.params.place
     const door = doorOf(id)
     if (!door) return
@@ -204,6 +229,28 @@ export default class extends Controller {
 
   closeIntro() {
     if (this.hasIntroTarget) this.introTarget.hidden = true
+  }
+
+  // ほかの人を タップした ときの ことば：ひとこと → まだ キャラが ない人 → あいさつ
+  lineOf(other) {
+    if (other.msg) return other.msg
+    if (other.guest) return "キャラ、まだ つくってないんだ〜"
+    return GREETINGS[Math.floor(Math.random() * GREETINGS.length)]
+  }
+
+  // 💬 見えている 人の 中から、ひとこと を 書いた人が 1人 言う（さいしょは 自分）
+  chatter() {
+    const shown = (a) => a.bubble && !a.bubble.hidden
+    const inView = (a) => a.x >= this.camX - 4 && a.x <= this.camX + this.viewW + 4
+    if (!this.chatted && this.me.msg && !shown(this.me)) {
+      this.chatted = true
+      return this.say(this.me, `${this.nameValue}「${this.me.msg}」`)
+    }
+    this.chatted = true
+    const list = [this.me, ...this.others].filter((a) => a.msg && !shown(a) && inView(a))
+    if (!list.length) return
+    const a = list[Math.floor(Math.random() * list.length)]
+    this.say(a, `${a.name}「${a.msg}」`)
   }
 
   say(actor, text) {
@@ -242,7 +289,18 @@ export default class extends Controller {
     this.placeBuildings(cam)
     // 名前・ふきだし（画面の ことば）
     this.place(this.nameTag, this.me.x, this.me.y + 1)
-    for (const a of [this.me, ...this.others, this.dettyan]) if (a.bubble && !a.bubble.hidden) this.place(a.bubble, a.x, a.y - AV_H - 2)
+    for (const a of [this.me, ...this.others, this.dettyan]) if (a.bubble && !a.bubble.hidden) this.placeBubble(a.bubble, a.x, a.y - AV_H - 2)
+  }
+
+  // ふきだし は 町の はし で はみ出さないように よせる
+  placeBubble(el, wx, y) {
+    const W = this.layerTarget.clientWidth || 1
+    const half = el.offsetWidth / 2
+    const x = ((wx - Math.round(this.camX)) / this.viewW) * W
+    const left = `${Math.round(Math.max(half + 2, Math.min(W - half - 2, x)))}px`
+    const top = `${(y / TOWN_H) * 100}%`
+    if (el.style.left !== left) el.style.left = left
+    if (el.style.top !== top) el.style.top = top
   }
 
   // 建物の ボタン を カメラに あわせて うごかす。見えていない 側に 建物があれば ◀ ▶
@@ -279,5 +337,134 @@ export default class extends Controller {
     const top = `${(y / TOWN_H) * 100}%`
     if (el.style.left !== left) el.style.left = left
     if (el.style.top !== top) el.style.top = top
+  }
+
+  // ---- 💬 ひとこと ----
+  async saveMsg(event) {
+    event.preventDefault()
+    if (this.saving || !this.hasSayInputTarget) return
+    const msg = cleanMsg(this.sayInputTarget.value)
+    this.saving = true
+    this.sayButtonTarget.disabled = true
+    this.sayStatusTarget.textContent = "ほぞん しています…"
+    try {
+      const res = await fetch(this.avatarUrlValue, {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json", Accept: "application/json", "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')?.content || "" },
+        body: JSON.stringify({ avatar: { msg } })
+      })
+      if (!res.ok) throw new Error(String(res.status))
+      const data = await res.json().catch(() => ({}))
+      const saved = cleanMsg(data?.avatar?.msg || "")
+      this.me.msg = saved
+      this.sayInputTarget.value = saved
+      this.sayStatusTarget.textContent = saved ? "かえたよ！ まちの みんなに 見えるよ" : "ひとこと を けしたよ"
+      if (saved) this.say(this.me, `${this.nameValue}「${saved}」`)
+      else if (this.me.bubble) this.me.bubble.hidden = true
+    } catch (e) {
+      this.sayStatusTarget.textContent = "かえられなかった… もう一度 おしてね"
+    } finally {
+      this.saving = false
+      this.sayButtonTarget.disabled = false
+    }
+  }
+
+  // ---- 📖 あんない ----
+  guideKey() {
+    return `${GUIDE_KEY}:${this.nameValue}`
+  }
+
+  // 見たか どうか（おぼえられない 端末では 毎回 出さない。❓ あんない で 見られる）
+  guideSeen() {
+    try { return !!window.localStorage.getItem(this.guideKey()) } catch (e) { return true }
+  }
+
+  markGuideSeen() {
+    try { window.localStorage.setItem(this.guideKey(), "1") } catch (e) { /* おぼえられなくても よい */ }
+  }
+
+  guideSteps() {
+    const narrow = this.viewW < TOWN_W
+    const steps = [
+      { who: "siva", title: "SiVA へ ようこそ！", text: "ここは「はじまりのまち」。SiVA の みんなが あつまる 町だよ。" },
+      {
+        title: "Dettyan",
+        focus: "npc",
+        text: this.ownerValue ? "まちを あんない するで。…って、あんない してるの 俺やん！" : "Dettyan だよ。まちを かんたんに あんない するね！"
+      },
+      { place: "sing", title: "🎤 スタジオ", text: "歌ってみた を つくる ところ。録音・ミックス・ハモリ・MV まで できるよ。" },
+      { place: "art", title: "🎨 アトリエ", text: "サムネ や 背景の 画像を つくる ところ。文字・部品・背景を ならべて つくれるよ。" },
+      { place: "dettyan", title: "🏢 事務所", text: "Dettyan を 育てる ゲームが できる ところ。ぼうけん・ショップ・おうち も あるよ。" },
+      { place: "clip", title: "✂️ 編集室", text: "配信の 切り抜き動画を たのめる ところ。「ここ！」を 送ってね。" },
+      { title: "あるきかた", text: "地面を タップすると 歩くよ。建物を タップすると 中に 入れるよ。" + (narrow ? "◀ ▶ で 町の はし まで 行けるよ。" : "") }
+    ]
+    if (this.hasMine) {
+      if (this.hasSayFormTarget) steps.push({ title: "💬 ひとこと", say: true, text: "下の「💬 ひとこと」に 書くと、まちで キャラが 言うよ。みんなにも 見えるよ。" })
+      steps.push({ title: "いってらっしゃい！", text: "また 見たく なったら、下の「❓ あんない」を おしてね。" })
+    } else {
+      steps.push({ title: "さいごに", make: true, text: "じぶんの キャラを つくろう！ そのキャラで まちを 歩けるよ。" })
+    }
+    return steps
+  }
+
+  startGuide() {
+    if (this.entering || !this.hasGuideTarget) return
+    this.closeIntro()
+    this.guiding = true
+    this.guideList = this.guideSteps()
+    this.guideAt = 0
+    this.renderGuide()
+    this.guideNextTarget.focus({ preventScroll: true })
+  }
+
+  nextGuide() {
+    if (!this.guiding) return
+    if (this.guideAt >= this.guideList.length - 1) return this.endGuide()
+    this.guideAt += 1
+    this.renderGuide()
+  }
+
+  endGuide() {
+    if (!this.guiding) return
+    const reachedEnd = this.guideAt >= this.guideList.length - 1
+    this.guiding = false
+    this.focusX = null
+    this.guideTarget.hidden = true
+    this.buildingTargets.forEach((b) => b.classList.remove("is-guide"))
+    if (this.hasSayFormTarget) this.sayFormTarget.classList.remove("is-guide")
+    this.markGuideSeen()
+    // とちゅうで とばした まだ キャラが ない人には「キャラを つくろう」
+    if (!this.hasMine && !reachedEnd && this.hasIntroTarget) this.introTarget.hidden = false
+    this.chatIn = CHAT_FIRST
+  }
+
+  renderGuide() {
+    const list = this.guideList
+    const st = list[this.guideAt]
+    const last = this.guideAt === list.length - 1
+    this.guideTarget.hidden = false
+    this.guideTarget.classList.toggle("is-welcome", st.who === "siva")
+    if (this.hasGuideSivaTarget) this.guideSivaTarget.hidden = st.who !== "siva"
+    if (this.hasGuideFaceTarget) this.guideFaceTarget.hidden = st.who === "siva"
+    this.guideTitleTarget.textContent = st.title
+    this.guideTextTarget.textContent = st.text
+    this.guideCountTarget.textContent = `${this.guideAt + 1} / ${list.length}`
+    this.guideSkipTarget.hidden = last
+    this.guideMakeTarget.hidden = !st.make
+    this.guideNextTarget.textContent = last ? (st.make ? "あとで" : "はじめる！") : "つぎへ ▶"
+    // その 建物 を 光らせて、スマホでは カメラを そっちへ
+    this.focusX = st.place ? doorOf(st.place).x : st.focus === "npc" ? this.dettyan.x : null
+    this.buildingTargets.forEach((b) => b.classList.toggle("is-guide", b.dataset.townPlaceParam === st.place))
+    if (this.hasSayFormTarget) this.sayFormTarget.classList.toggle("is-guide", !!st.say)
+  }
+
+  // あんない の 顔（Dettyan の 頭 だけ）
+  drawGuideFace() {
+    if (!this.hasGuideFaceTarget) return
+    const c = this.guideFaceTarget
+    c.width = SPRITE_W
+    c.height = 16
+    drawDettyan(c.getContext("2d"), 0, 0, { eyes: "open" })
   }
 }

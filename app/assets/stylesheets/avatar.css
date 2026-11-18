@@ -19,6 +19,9 @@
 .av-preview { display: block; width: 196px; height: 224px; margin: 0 auto; image-rendering: crisp-edges; image-rendering: pixelated; }
 .av-name { margin: 6px 0 10px; font-weight: 800; }
 .av-tools { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.av-msg { display: flex; flex-direction: column; gap: 4px; margin: 0 0 12px; text-align: left; }
+.av-msg__label { font-size: 0.8rem; font-weight: 800; }
+.av-msg__input { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 2px solid #1b2f5c33; border-radius: 10px; background: #fff; color: #1b2f5c; font: inherit; font-size: 16px; }
 .av-tool { padding: 8px 12px; border: 0; border-radius: 999px; background: #1b2f5c; color: #fff; font: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; touch-action: manipulation; }
 
 .av-groups { display: flex; flex-direction: column; gap: 12px; }
@@ -50,6 +53,7 @@
   .av-stage { position: static; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px; padding: 10px; text-align: left; }
   .av-preview { grid-row: span 2; width: 112px; height: 128px; margin: 0; }
   .av-name { margin: 0 0 6px; }
+  .av-msg { grid-column: 1 / -1; order: 1; margin: 4px 0 0; }
   .av-tools { justify-content: flex-start; }
   .av-tool { padding: 7px 10px; font-size: 0.8rem; }
   .av-swatch { width: 32px; height: 32px; }

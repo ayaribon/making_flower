@@ -50,6 +50,15 @@ const CHOICES = {
 }
 const RANGES = { skin: SKINS.length, hairColor: HAIR_COLORS.length, topColor: CLOTH_COLORS.length, bottomColor: CLOTH_COLORS.length, shoes: CLOTH_COLORS.length }
 
+// 💬 ひとこと（まちで みんなに 見える ことば）。20文字まで。サーバーの User.clean_avatar と 同じ きまり
+export const MSG_MAX = 20
+
+export function cleanMsg(text) {
+  if (typeof text !== "string") return ""
+  const flat = text.replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/g, " ").replace(/\s+/g, " ").trim()
+  return Array.from(flat).slice(0, MSG_MAX).join("")
+}
+
 // どんな データでも、いつも 使える形に そろえる（知らない値は 初めの値）
 export function normalizeAvatar(raw) {
   const a = { ...DEFAULT_AVATAR }
@@ -59,7 +68,24 @@ export function normalizeAvatar(raw) {
     if (Number.isInteger(v) && v >= 0 && v < n) a[k] = v
   }
   for (const [k, list] of Object.entries(CHOICES)) if (list.includes(raw[k])) a[k] = raw[k]
+  const msg = cleanMsg(raw.msg)
+  if (msg) a.msg = msg
   return a
+}
+
+// まだ キャラを つくっていない人：名前から きまる おまかせ（ひらくたびに かわらない）
+export function avatarFromName(name) {
+  let h = 2166136261
+  for (const ch of String(name || "")) h = Math.imul(h ^ ch.codePointAt(0), 16777619)
+  let s = h >>> 0
+  const rand = () => {
+    s = (s + 0x6d2b79f5) >>> 0
+    let t = s
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+  return randomAvatar(rand)
 }
 
 // 🎲 おまかせ

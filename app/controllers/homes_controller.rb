@@ -3,11 +3,15 @@
 # ログイン必須は ApplicationController の require_login がかかる
 # 🏘️ はじまりのまち：自分の アバター で 歩いて、建物（スタジオ・アトリエ・事務所・編集室）に 入る。カードの メニューも のこす
 class HomesController < ApplicationController
-  TOWN_OTHERS = 8 # 町に 出す ほかの人の かず（さいきん キャラを つくった・かえた 人から）
+  # 町に 出す ほかの人の かず。事務所の みんな が 出るように：キャラを つくった人 → まだの人 の じゅん
+  # まだ キャラが ない人は、名前から きまる おまかせの 見た目で 出る（avatar_sprite.js の avatarFromName）
+  # Dettyan 本人は、キャラを つくるまでは 町の Dettyan（ドット絵）が かわり
+  TOWN_OTHERS = 20
 
   def show
-    @town_others = User.where.not(id: current_user.id).where.not(avatar: nil)
-                       .order(updated_at: :desc).limit(TOWN_OTHERS)
+    @town_others = User.where.not(id: current_user.id)
+                       .order(Arel.sql("avatar IS NULL"), updated_at: :desc).limit(TOWN_OTHERS)
+                       .reject { |u| u.avatar.nil? && u.dettyan_owner? }
                        .map { |u| { name: u.name, avatar: u.avatar } }
   end
 end

@@ -11,29 +11,69 @@
     </header>
 
     <%# 🏘️ まち：建物を タップすると 入口まで 歩いて 入る。地面を タップすると そこへ 歩く %>
-    <section class="hm-town" data-controller="town"
-             data-town-me-value="<%= (current_user&.avatar || {}).to_json %>"
-             data-town-name-value="<%= current_user&.name %>"
-             data-town-others-value="<%= (@town_others || []).to_json %>"
-             data-town-owner-value="<%= !!current_user&.dettyan_owner? %>"
-             aria-label="はじまりのまち">
-      <canvas class="hm-town__canvas" data-town-target="canvas" data-action="pointerdown->town#tap" role="img" aria-label="自分の キャラが いる まち"></canvas>
-      <%# 建物（場所は town_world.js の BUILDINGS。town_controller.js が カメラに あわせて 動かす） %>
-      <% [["sing", "🎤 スタジオ"], ["art", "🎨 アトリエ"], ["dettyan", "🏢 事務所"], ["clip", "✂️ 編集室"]].each do |id, label| %>
-        <button type="button" class="hm-town__building" data-town-target="building"
-                data-action="town#goPlace" data-town-place-param="<%= id %>"><span><%= label %></span></button>
+    <%# はじめて 開いた人には「SiVA へ ようこそ！」からの あんない（town_controller.js の GUIDE。見たかどうかは この端末だけに おぼえる） %>
+    <div class="hm-townwrap" data-controller="town"
+         data-town-me-value="<%= (current_user&.avatar || {}).to_json %>"
+         data-town-name-value="<%= current_user&.name %>"
+         data-town-others-value="<%= (@town_others || []).to_json %>"
+         data-town-owner-value="<%= !!current_user&.dettyan_owner? %>"
+         data-town-avatar-url-value="<%= avatar_path %>">
+      <section class="hm-town" aria-label="はじまりのまち">
+        <canvas class="hm-town__canvas" data-town-target="canvas" data-action="pointerdown->town#tap" role="img" aria-label="自分の キャラが いる まち"></canvas>
+        <%# 建物（場所は town_world.js の BUILDINGS。town_controller.js が カメラに あわせて 動かす）。名前の下に 何が できるか %>
+        <% [["sing", "🎤 スタジオ", "歌ってみたを つくる", "録音・ミックス・ハモリ・MV まで できるよ"],
+            ["art", "🎨 アトリエ", "サムネ・背景を つくる", "文字・部品・背景で サムネや画像を つくれるよ"],
+            ["dettyan", "🏢 事務所", "Dettyan を そだてる", "Dettyan を 育てる ゲーム（音が出るよ）"],
+            ["clip", "✂️ 編集室", "切り抜きを たのむ", "配信の「ここ！」を送ると 切り抜き動画を つくってもらえるよ"]].each do |id, label, desc, more| %>
+          <button type="button" class="hm-town__building" data-town-target="building"
+                  data-action="town#goPlace" data-town-place-param="<%= id %>"
+                  title="<%= more %>" aria-label="<%= "#{label}：#{desc}。#{more}" %>">
+            <span class="hm-town__tag" aria-hidden="true"><b><%= label %></b><small><%= desc %></small></span>
+          </button>
+        <% end %>
+        <%# スマホ：見えていない がわ に 町が つづくとき %>
+        <button type="button" class="hm-town__edge hm-town__edge--left" data-town-target="edgeLeft" data-action="town#walkLeft" aria-label="ひだり へ 歩く" hidden>◀</button>
+        <button type="button" class="hm-town__edge hm-town__edge--right" data-town-target="edgeRight" data-action="town#walkRight" aria-label="みぎ へ 歩く" hidden>▶</button>
+        <div class="hm-town__layer" data-town-target="layer"></div>
+        <div class="hm-town__intro" data-town-target="intro" hidden>
+          <p>まずは じぶんの キャラを つくろう！</p>
+          <a class="hm-town__intro-go" href="<%= avatar_path %>" data-turbo="false">👤 キャラを つくる</a>
+          <button type="button" class="hm-town__intro-later" data-action="town#closeIntro">あとで</button>
+        </div>
+        <%# 📖 あんない（はじめて 開いたとき・❓ あんない を 押したとき） %>
+        <div class="hm-guide" data-town-target="guide" hidden role="dialog" aria-label="まちの あんない">
+          <div class="hm-guide__face">
+            <%= image_tag "sivaアイコン.png", class: "hm-guide__siva", alt: "SiVA", data: { town_target: "guideSiva" } %>
+            <canvas class="hm-guide__dettyan" data-town-target="guideFace" aria-hidden="true" hidden></canvas>
+          </div>
+          <div class="hm-guide__body">
+            <p class="hm-guide__title" data-town-target="guideTitle"></p>
+            <p class="hm-guide__text" data-town-target="guideText" aria-live="polite"></p>
+            <div class="hm-guide__btns">
+              <span class="hm-guide__count" data-town-target="guideCount"></span>
+              <button type="button" class="hm-guide__skip" data-town-target="guideSkip" data-action="town#endGuide">とばす</button>
+              <a class="hm-guide__make" data-town-target="guideMake" href="<%= avatar_path %>" data-turbo="false" data-action="town#endGuide" hidden>👤 キャラを つくる</a>
+              <button type="button" class="hm-guide__next" data-town-target="guideNext" data-action="town#nextGuide">つぎへ ▶</button>
+            </div>
+          </div>
+        </div>
+      </section>
+      <%# 💬 ひとこと：まちで 自分の キャラが ときどき 言う（ほかの人にも 見える）。キャラを つくった人だけ %>
+      <% if current_user&.avatar %>
+        <form class="hm-say" data-town-target="sayForm" data-action="submit->town#saveMsg">
+          <label class="hm-say__label" for="hm-say-input">💬 ひとこと</label>
+          <input id="hm-say-input" class="hm-say__input" type="text" maxlength="<%= User::AVATAR_MSG_MAX %>"
+                 data-town-target="sayInput" value="<%= current_user.avatar["msg"] %>"
+                 placeholder="まちの みんなに ひとこと（<%= User::AVATAR_MSG_MAX %>文字まで）" autocomplete="off" enterkeyhint="send">
+          <button type="submit" class="hm-say__btn" data-town-target="sayButton">かえる</button>
+        </form>
+        <p class="hm-say__status" data-town-target="sayStatus" role="status" aria-live="polite"></p>
       <% end %>
-      <%# スマホ：見えていない がわ に 町が つづくとき %>
-      <button type="button" class="hm-town__edge hm-town__edge--left" data-town-target="edgeLeft" data-action="town#walkLeft" aria-label="ひだり へ 歩く" hidden>◀</button>
-      <button type="button" class="hm-town__edge hm-town__edge--right" data-town-target="edgeRight" data-action="town#walkRight" aria-label="みぎ へ 歩く" hidden>▶</button>
-      <div class="hm-town__layer" data-town-target="layer"></div>
-      <div class="hm-town__intro" data-town-target="intro" hidden>
-        <p>まずは じぶんの キャラを つくろう！</p>
-        <a class="hm-town__intro-go" href="<%= avatar_path %>" data-turbo="false">👤 キャラを つくる</a>
-        <button type="button" class="hm-town__intro-later" data-action="town#closeIntro">あとで</button>
-      </div>
-    </section>
-    <p class="hm-town__help">建物を タップすると 入れるよ。地面を タップすると そこへ 歩くよ。</p>
+      <p class="hm-town__help">
+        建物を タップすると 入れるよ。地面を タップすると そこへ 歩くよ。
+        <button type="button" class="hm-town__guide-btn" data-action="town#startGuide">❓ あんない</button>
+      </p>
+    </div>
 
     <h2 class="hm-menu-title">📋 かんたんメニュー</h2>
 
