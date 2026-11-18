@@ -17,15 +17,19 @@ export const SPROUT_FILES = {
   fences: "Tilesets/Building parts/Fences.png",
   well: "Objects/Water well.png",
   signs: "Objects/signs.png",
-  chicken: "Animals/Chicken/chicken default.png"
+  chicken: "Animals/Chicken/chicken default.png",
+  chara: "Characters/Premium Charakter Spritesheet.png" // 🐱 Teemo 型の アバター（avatar_teemo.js。なくても よい）
 }
+// なくても 町を 出せる もの
+export const SPROUT_OPTIONAL = ["chara"]
 
 const T = 16
 
 // 画像を ぜんぶ 読む。1つでも 読めなければ reject（町は コードで描く 版に もどる）
 export function loadSprout(urls, timeoutMs = 6000) {
-  const keys = Object.keys(SPROUT_FILES)
+  const keys = Object.keys(SPROUT_FILES).filter((k) => !SPROUT_OPTIONAL.includes(k))
   if (!urls || keys.some((k) => !urls[k])) return Promise.reject(new Error("no sprout urls"))
+  const extra = SPROUT_OPTIONAL.filter((k) => urls[k])
   const one = (k) => new Promise((resolve, reject) => {
     const img = new Image()
     img.decoding = "async"
@@ -33,7 +37,9 @@ export function loadSprout(urls, timeoutMs = 6000) {
     img.onerror = () => reject(new Error(`load ${k}`))
     img.src = urls[k]
   })
-  const all = Promise.all(keys.map(one)).then((pairs) => Object.fromEntries(pairs))
+  // なくても よい もの は、読めなければ 入れない
+  const maybe = (k) => one(k).catch(() => null)
+  const all = Promise.all([...keys.map(one), ...extra.map(maybe)]).then((pairs) => Object.fromEntries(pairs.filter(Boolean)))
   const timer = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), timeoutMs))
   return Promise.race([all, timer])
 }

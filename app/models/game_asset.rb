@@ -17,8 +17,11 @@ class GameAsset
     "fences" => "Tilesets/Building parts/Fences.png",
     "well" => "Objects/Water well.png",
     "signs" => "Objects/signs.png",
-    "chicken" => "Animals/Chicken/chicken default.png"
+    "chicken" => "Animals/Chicken/chicken default.png",
+    "chara" => "Characters/Premium Charakter Spritesheet.png" # 🐱 Teemo 型の アバター（なくても 町は 出る）
   }.freeze
+  # なくても 町を 出せる もの（なければ アバターは 前の 絵）
+  OPTIONAL = %w[chara].freeze
   # そろっているか を 確かめなおす 間かく（S3 に 上げてから 町に 出るまで、長くて この 時間）
   CHECK_EVERY = 10.minutes
 
@@ -36,14 +39,19 @@ class GameAsset
       @bytes[key.to_s] ||= read_local(path) || read_s3(path)
     end
 
-    # 8まい ぜんぶ そろっているか（CHECK_EVERY ごとに 確かめなおす）
+    # 町に いる もの（OPTIONAL いがい）が ぜんぶ そろっているか（CHECK_EVERY ごとに 確かめなおす）
     def available?
+      present_keys.superset?((SPROUT.keys - OPTIONAL).to_set)
+    end
+
+    # ある キー（CHECK_EVERY ごとに 確かめなおす）
+    def present_keys
       @lock.synchronize do
         if @checked_at.nil? || Time.current - @checked_at > CHECK_EVERY
-          @available = SPROUT.values.all? { |path| exist_local?(path) || exist_s3?(path) }
+          @present = SPROUT.select { |_key, path| exist_local?(path) || exist_s3?(path) }.keys.to_set
           @checked_at = Time.current
         end
-        @available
+        @present
       end
     end
 
