@@ -6,7 +6,13 @@ class SessionsController < ApplicationController
   MAX_ATTEMPTS = 10
   LOCK_TIME = 15.minutes
 
+  # 合いことば（CSRF トークン）が 古いとき（ログイン画面を 開いたまま 時間がたった・べつのタブで ログインした など）
+  # 英語の エラー画面（422）ではなく、ログイン画面に もどして もう一度 入れてもらう（ログインは させない）
+  rescue_from ActionController::InvalidAuthenticityToken, with: :stale_form
+
   def new
+    # ログイン画面は ブラウザに 取っておかせない（古い合いことばの 画面が 「もどる」や タブの復元で 出ないように）
+    response.headers["Cache-Control"] = "no-store"
     redirect_to root_path if logged_in?
   end
 
@@ -37,6 +43,15 @@ class SessionsController < ApplicationController
   end
 
   private
+
+  def stale_form
+    reset_session
+    if action_name == "destroy"
+      redirect_to login_path, notice: "ログアウトしました"
+    else
+      redirect_to login_path, alert: "時間が たったので、もう一度 IDを 入れてね"
+    end
+  end
 
   def attempt_key
     "login_attempts:#{request.remote_ip}"

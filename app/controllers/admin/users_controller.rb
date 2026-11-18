@@ -17,7 +17,7 @@ class Admin::UsersController < Admin::BaseController
     if @user.save
       @login_code = @user.issue_login_code!
       @message = "#{@user.name} さんを作りました"
-      render :issued
+      render_issued
     else
       render :new, status: :unprocessable_entity
     end
@@ -27,7 +27,7 @@ class Admin::UsersController < Admin::BaseController
   def reissue
     @login_code = @user.issue_login_code!
     @message = "#{@user.name} さんのログインIDを作り直しました。前のIDはもう使えません"
-    render :issued
+    render_issued
   end
 
   def destroy
@@ -45,5 +45,16 @@ class Admin::UsersController < Admin::BaseController
 
   def set_user
     @user = User.find(params[:id])
+  end
+
+  # ログインIDの画面を出す
+  # 画面の切りかえ（Turbo）は、フォームの返事が「移動」でないと 画面を すててしまう。
+  # なので Turbo には「この部分を 入れかえて」という返事（turbo_stream）で返す。Turbo がないときは ふつうの画面
+  # （IDは リダイレクトや フラッシュには 載せない＝ブラウザに残さない、は そのまま）
+  def render_issued
+    respond_to do |format|
+      format.turbo_stream { render turbo_stream: turbo_stream.update("admin-main", template: "admin/users/issued", formats: [:html]) }
+      format.html { render :issued }
+    end
   end
 end
