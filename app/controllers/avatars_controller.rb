@@ -6,6 +6,8 @@
 # ログイン必須は ApplicationController の require_login がかかる
 class AvatarsController < ApplicationController
   def edit
+    # 🧑 人の テンプレート（町と 同じ 絵で 見本を 出す）。S3 に なければ 2頭身の 絵
+    @human_url = GameAsset.present_keys.include?("human") ? sprout_asset_path("human") : nil
   end
 
   def update
