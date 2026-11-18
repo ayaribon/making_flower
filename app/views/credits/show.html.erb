@@ -1,26 +1,12 @@
-<%# 🙏 クレジット。見た目は app/assets/stylesheets/credits.css %>
-<div class="cr">
-  <div class="cr-inner">
-    <header class="cr-bar">
-      <a class="cr-back" href="<%= root_path %>" data-turbo="false">🏘️ まち へ</a>
-      <h1 class="cr-title">🙏 クレジット</h1>
-    </header>
-
-    <section class="cr-card">
-      <h2 class="cr-head">ドット絵の 素材</h2>
-      <p class="cr-credit">Assets - From : Sprout Lands - By : Cup Nooble</p>
-      <p><a class="cr-link" href="https://cupnooble.itch.io/sprout-lands-asset-pack" target="_blank" rel="noopener">Sprout Lands（itch.io）</a></p>
-      <ul class="cr-list">
-        <li><strong>Sprout Lands - Sprites - Premium pack</strong>：まちの 地面・草・木・花・柵・井戸・看板・ニワトリ</li>
-        <li><strong>Sprout Lands - UI Pack - Premium pack</strong>：画面の 部品（つかう ときに）</li>
-        <li><strong>Sprout Sorry pack</strong>（人の キャラの テンプレート）：まちを 歩く みんなの キャラ と Dettyan。非商用 ライセンスで 使っています</li>
-      </ul>
-      <p class="cr-note">色を かえたり 組み合わせたり して 使っています。素材 そのものの 配布・転売・NFT・AI の 学習 への 利用は できません。</p>
-    </section>
-
-    <section class="cr-card">
-      <h2 class="cr-head">オリジナルの 絵</h2>
-      <p>まちの 建物・街灯・ベンチ・こもの、キャラメイクの 2頭身の キャラ、Dettyan 育成ゲームの 絵 は、このアプリの ために 描いた もの です（Sprout Lands の 絵柄を 参考に した ものを ふくみます）。</p>
-    </section>
-  </div>
+<%# 🙏 クレジット（書いてある だけの ページ） %>
+<div style="max-width: 720px; margin: 0 auto; padding: 16px; line-height: 1.7;">
+  <p><a href="<%= root_path %>" data-turbo="false">← まち へ もどる</a></p>
+  <h1 style="font-size: 1.2rem;">クレジット</h1>
+  <p class="cr-credit">Assets - From : Sprout Lands - By : Cup Nooble</p>
+  <p><a href="https://cupnooble.itch.io/sprout-lands-asset-pack" target="_blank" rel="noopener">https://cupnooble.itch.io/sprout-lands-asset-pack</a></p>
+  <ul>
+    <li>Sprout Lands - Sprites - Premium pack</li>
+    <li>Sprout Lands - UI Pack - Premium pack</li>
+    <li>Sprout Sorry pack（非商用 ライセンス）</li>
+  </ul>
 </div>
