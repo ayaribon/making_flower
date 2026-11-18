@@ -167,12 +167,14 @@ test("👤 新しい 絵柄（見本）：どの くみあわせ でも 描け�
     for (const eyes of av.EYES) {
       for (const acc of av.ACCESSORIES) {
         for (const [top, bottom] of [["jacket", "pants"], ["tee", "skirt"], ["hoodie", "pants"]]) {
-          const g = fakeCanvas()
-          ch.drawChibi(g, 10, 10, { hair: hair.id, eyes: eyes.id, acc, top, bottom }, { frame: acc === "cap" ? 1 : 0 })
-          assertClean(g, `${hair.id}/${eyes.id}/${acc}`)
-          for (const c of g.calls) {
-            assert.ok(c.x >= 10 - 1 && c.x <= 10 + ch.CHIBI_W, `よこに はみ出す ${hair.id}/${acc}`)
-            assert.ok(c.y >= 10 - 6 && c.y <= 10 + ch.CHIBI_H, `たてに はみ出す ${hair.id}/${acc}`)
+          for (const [draw, w, h] of [[ch.drawChibi, ch.CHIBI_W, ch.CHIBI_H], [ch.drawSlim, ch.SLIM_W, ch.SLIM_H]]) {
+            const g = fakeCanvas()
+            draw(g, 10, 10, { hair: hair.id, eyes: eyes.id, acc, top, bottom }, { frame: acc === "cap" ? 1 : 0 })
+            assertClean(g, `${draw.name} ${hair.id}/${eyes.id}/${acc}`)
+            for (const c of g.calls) {
+              assert.ok(c.x >= 10 - 1 && c.x <= 10 + w, `よこに はみ出す ${draw.name} ${hair.id}/${acc}`)
+              assert.ok(c.y >= 10 - 7 && c.y <= 10 + h, `たてに はみ出す ${draw.name} ${hair.id}/${acc}`)
+            }
           }
         }
       }

@@ -241,6 +241,20 @@ const ACCS = {
 }
 
 // ---- 描く ----
+function paletteOf(a) {
+  const skin = CHIBI_SKINS[a.skin] || CHIBI_SKINS[0]
+  const hair = CHIBI_HAIRS[a.hairColor] || CHIBI_HAIRS[0]
+  const top = CHIBI_CLOTHS[a.topColor] || CHIBI_CLOTHS[6]
+  const bottom = CHIBI_CLOTHS[a.bottomColor] || CHIBI_CLOTHS[9]
+  const shoes = CHIBI_CLOTHS[a.shoes] || CHIBI_CLOTHS[9]
+  const inner = a.top === "jacket" ? "#f6f1e7" : a.top === "hoodie" ? lightOf(top) : top
+  return {
+    S: skin, c: mix(skin, "#f28aa8", 0.45), m: shadeOf(shadeOf(skin)),
+    T: top, W: inner, P: bottom, F: shoes, E: INK, o: "#ffffff",
+    H: hair, h: lightOf(hair), r: "#f28aa8"
+  }
+}
+
 // 1まいの 小さな 方眼に 色を おいてから、ふち と かげ を つけて、最後に まとめて 描く
 class Grid {
   constructor() { this.cells = new Map() }
@@ -263,17 +277,7 @@ class Grid {
 // アバターを 描く（opts：{ frame：0|1（歩く）, blink, mood："smile" }）。ox, oy は 16×20 の 左上
 export function drawChibi(g, ox, oy, raw, { frame = 0, blink = false, mood = null } = {}) {
   const a = normalizeAvatar(raw)
-  const skin = CHIBI_SKINS[a.skin] || CHIBI_SKINS[0]
-  const hair = CHIBI_HAIRS[a.hairColor] || CHIBI_HAIRS[0]
-  const top = CHIBI_CLOTHS[a.topColor] || CHIBI_CLOTHS[6]
-  const bottom = CHIBI_CLOTHS[a.bottomColor] || CHIBI_CLOTHS[9]
-  const shoes = CHIBI_CLOTHS[a.shoes] || CHIBI_CLOTHS[9]
-  const inner = a.top === "jacket" ? "#f6f1e7" : a.top === "hoodie" ? lightOf(top) : top
-  const colors = {
-    S: skin, c: mix(skin, "#f28aa8", 0.45), m: shadeOf(shadeOf(skin)),
-    T: top, W: inner, P: bottom, F: shoes, E: INK, o: "#ffffff",
-    H: hair, h: lightOf(hair), r: "#f28aa8"
-  }
+  const colors = paletteOf(a)
   const grid = new Grid()
   const style = HAIR[a.hair] || HAIR.short
   // うしろの かみ → 体 → 顔 → 目 → まえがみ → こもの
@@ -288,7 +292,11 @@ export function drawChibi(g, ox, oy, raw, { frame = 0, blink = false, mood = nul
   const acc = ACCS[a.acc]
   if (acc) grid.put(acc.art, { ...colors, ...acc.colors }, 0, acc.y)
 
-  // かげ（右と 下の はし を 少し こく）と ふち（外がわ に となりの 色を こくした 色）
+  render(g, grid, ox, oy)
+}
+
+// かげ（右と 下の はし を 少し こく）と ふち（外がわ に となりの 色を こくした 色）を つけて 描く
+function render(g, grid, ox, oy) {
   const filled = [...grid.cells.entries()].map(([k, c]) => { const [x, y] = k.split(",").map(Number); return { x, y, c } })
   const shade = []
   for (const p of filled) {
@@ -315,4 +323,227 @@ export function drawChibi(g, ox, oy, raw, { frame = 0, blink = false, mood = nul
     g.fillStyle = c
     g.fillRect(ox + x, oy + y, 1, 1)
   }
+}
+
+// ==== シュッとした 絵柄（見本）：16×26。頭を 小さめ・体を 細く・足を 長く（3頭身くらい） ====
+export const SLIM_W = 16
+export const SLIM_H = 26
+
+const SLIM = {
+  head: [
+    "................",
+    "................",
+    "......SSSS......",
+    "....SSSSSSSS....",
+    "...SSSSSSSSSS...",
+    "...SSSSSSSSSS...",
+    "...SSSSSSSSSS...",
+    "...SSSSSSSSSS...",
+    "...SSSSSSSSSS...",
+    "...ScSSSSSScS...",
+    "....SSSmmSSS....",
+    ".....SSSSSS.....",
+    ".......SS......."
+  ],
+  body: {
+    jacket: [
+      ".....TTWWTT.....",
+      "....TTTWWTTT....",
+      "....TTTWWTTT....",
+      "....TTTWWTTT....",
+      "....STTTTTTS....",
+      ".....TTTTTT....."
+    ],
+    tee: [
+      ".....TTTTTT.....",
+      "....TTTTTTTT....",
+      "....STTTTTTS....",
+      "....STTTTTTS....",
+      "....STTTTTTS....",
+      ".....TTTTTT....."
+    ],
+    hoodie: [
+      "....WWWWWWWW....",
+      "....TTTWWTTT....",
+      "....TTTTTTTT....",
+      "....TTTTTTTT....",
+      "....STWWWWTS....",
+      ".....TTTTTT....."
+    ]
+  },
+  legs: {
+    pants: [
+      [".....PPPPPP.....", ".....PP..PP.....", ".....PP..PP.....", ".....PP..PP.....", ".....PP..PP.....", ".....PP..PP.....", "....FFF..FFF...."],
+      [".....PPPPPP.....", ".....PP..PP.....", ".....PP..PP.....", "....PP....PP....", "....PP....PP....", "....PP....PP....", "...FFF....FFF..."]
+    ],
+    skirt: [
+      [".....PPPPPP.....", "....PPPPPPPP....", "....PPPPPPPP....", ".....SS..SS.....", ".....SS..SS.....", ".....SS..SS.....", "....FFF..FFF...."],
+      [".....PPPPPP.....", "....PPPPPPPP....", "....PPPPPPPP....", ".....SS..SS.....", "....SS....SS....", "....SS....SS....", "...FFF....FFF..."]
+    ]
+  },
+  eyes: {
+    dot: [".....E....E.....", ".....E....E....."],
+    smile: [".....E....E.....", "....E.E..E.E...."],
+    big: [".....oE..oE.....", ".....EE..EE....."],
+    sharp: [".....EE..EE.....", "......E..E......"]
+  },
+  blink: ["................", "....EE....EE...."],
+  hair: {
+    short: { front: [
+      "................",
+      "......HHHH......",
+      "....HHHhhHHH....",
+      "...HHhHHHHHHH...",
+      "..HHHHHHHHHHHH..",
+      "..HHH.HHHH.HHH..",
+      "..HH........HH..",
+      "..H..........H.."
+    ] },
+    bun: { front: [
+      ".......HH.......",
+      "......HhHH......",
+      "....HHHHHHHH....",
+      "...HHhHHHHHHH...",
+      "..HHHHHHHHHHHH..",
+      "..HHHH..HHHHHH..",
+      "..HH........HH..",
+      "..H..........H.."
+    ] },
+    bob: { front: [
+      "................",
+      "......HHHH......",
+      "....HHHhhHHH....",
+      "...HHhHHHHHHH...",
+      "..HHHHHHHHHHHH..",
+      "..HHHHHHHHHHHH..",
+      "..HH........HH..",
+      "..HH........HH..",
+      "..HH........HH..",
+      "..HH........HH..",
+      "..HHH......HHH.."
+    ] },
+    long: {
+      front: [
+        "................",
+        "......HHHH......",
+        "....HHHhhHHH....",
+        "...HHhHHHHHHH...",
+        "..HHHHHHHHHHHH..",
+        "..HHHH.HHH.HHH..",
+        "..HH........HH..",
+        "..HH........HH..",
+        "..HH........HH..",
+        "..HH........HH..",
+        "..HH........HH..",
+        "..HH........HH.."
+      ],
+      back: [
+        "................", "................", "................", "................",
+        "..HHHHHHHHHHHH..", "..HHHHHHHHHHHH..", "..HHHHHHHHHHHH..", "..HHHHHHHHHHHH..", "..HHHHHHHHHHHH..",
+        "..HHHHHHHHHHHH..", "..HHHHHHHHHHHH..", "..HHHHHHHHHHHH..", "..HHHHHHHHHHHH..", "..HHHHHHHHHHHH..",
+        "..HHHHHHHHHHHH..", "..HHHHHHHHHHHH..", "...HHHHHHHHHH...", "...HH.HH.HH.H.."
+      ]
+    },
+    twin: {
+      front: [
+        "................",
+        "......HHHH......",
+        "....HHHhhHHH....",
+        "...HHhHHHHHHH...",
+        "..HHHHHHHHHHHH..",
+        "..HHHHHHHHHHHH..",
+        "..HH........HH..",
+        "..H..........H.."
+      ],
+      back: [
+        "................", "................", "................", "................",
+        ".rr..........rr.", ".HH..........HH.", "HHH..........HHH", "HHH..........HHH", "HHH..........HHH",
+        "HHH..........HHH", "HH............HH", "HH............HH", "HH............HH", "HH............HH",
+        ".H............H.", ".H............H."
+      ]
+    },
+    pony: {
+      front: [
+        "................",
+        "......HHHH......",
+        "....HHHhhHHH....",
+        "...HHhHHHHHHH...",
+        "..HHHHHHHHHHHH..",
+        "..HHHH.HHHHHHH..",
+        "..HH........HH..",
+        "..H..........H.."
+      ],
+      back: [
+        "................", "................", "................",
+        "...........rr...", "............HH..", "............HHH.", ".............HHH", ".............HHH",
+        ".............HH.", ".............HH.", ".............HH.", "............HH..", ".............H.."
+      ]
+    }
+  },
+  accs: {
+    cap: { y: 0, colors: { A: "#e07a7a", a: "#f4a6a6", d: "#b85a66", w: "#f6f1e7" }, art: [
+      "......AwwA......",
+      "....AAaaAAAA....",
+      "...AAaAAAAAAA...",
+      "...dddddddddd...",
+      "..AAAAAAAAAAAA.."
+    ] },
+    headphones: { y: 0, colors: { A: "#5d6aa6", a: "#9ab0e8" }, art: [
+      ".....AAAAAA.....",
+      "....A......A....",
+      "...A........A...",
+      "...A........A...",
+      "...A........A...",
+      "..AA........AA..",
+      "..Aa........aA..",
+      "..AA........AA.."
+    ] },
+    ribbon: { y: 0, colors: { A: "#f28aa8", a: "#ffc6d6" }, art: [
+      "..........A...A.",
+      "..........AaAaA.",
+      "...........AAA..",
+      "..........A...A."
+    ] },
+    nekomimi: { y: -1, colors: { i: "#f4a6c4" }, art: [
+      "...H........H...",
+      "..HiH......HiH..",
+      "..HHHH....HHHH.."
+    ] },
+    usamimi: { y: -5, colors: { A: "#f6f1e7", i: "#f4a6c4" }, art: [
+      ".....AA..AA.....",
+      ".....Ai..Ai.....",
+      ".....Ai..Ai.....",
+      ".....Ai..Ai.....",
+      ".....AA..AA.....",
+      ".....AA..AA....."
+    ] },
+    hanakanmuri: { y: 1, colors: { A: "#f4a6c4", a: "#f2df8c", g: "#8cc589" }, art: [
+      "....A..a..A.....",
+      "...gAggagAggg..."
+    ] },
+    crown: { y: -2, colors: { A: "#eec170", a: "#fff1b8", r: "#e07a7a" }, art: [
+      "......A.AA.A....",
+      "......AArAAA....",
+      "......AAAAaA...."
+    ] }
+  }
+}
+
+// シュッとした 絵柄で 描く（見本）。ox, oy は 16×26 の 左上
+export function drawSlim(g, ox, oy, raw, { frame = 0, blink = false, mood = null } = {}) {
+  const a = normalizeAvatar(raw)
+  const colors = paletteOf(a)
+  const grid = new Grid()
+  const style = SLIM.hair[a.hair] || SLIM.hair.short
+  if (style.back) grid.put(style.back, colors)
+  const legs = SLIM.legs[a.bottom] || SLIM.legs.pants
+  grid.put(legs[frame ? 1 : 0], colors, 0, 19)
+  grid.put(SLIM.body[a.top] || SLIM.body.tee, colors, 0, 13)
+  grid.put(SLIM.head, colors, 0, 0)
+  const eyes = blink ? SLIM.blink : SLIM.eyes[mood === "smile" ? "smile" : a.eyes] || SLIM.eyes.dot
+  grid.put(eyes, colors, 0, 7)
+  grid.put(style.front, colors, 0, 0)
+  const acc = SLIM.accs[a.acc]
+  if (acc) grid.put(acc.art, { ...colors, ...acc.colors }, 0, acc.y)
+  render(g, grid, ox, oy)
 }
