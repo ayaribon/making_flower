@@ -34,7 +34,7 @@
 ## 置き場所
 - 手元：`private_assets/sprout_hair/<髪型>_back.png` と `_front.png`（git には 入れない）
 - 本番：S3 の `game_assets/sprout_hair/` に 同じ 名前で
-- ファイル名と キャラの 髪型 の 対応（`avatar_human.js` の `HAIR_PARTS`）：bob→`short_bob`・blunt→`blunt_bob`・long→`long_straight`・twin→`twin_tails`・pony→`ponytail`・bun→`bun`・braid→`braids`・wolf→`wolf_cut`（short は テンプレートの まま）
+- ファイル名と キャラの 髪型 の 対応（`avatar_human.js` の `HAIR_PARTS`）：bob→`short_bob`・blunt→`blunt_bob`・long→`long_straight`・twin→`twin_tails`・pony→`ponytail`・braid→`braids`（おだんご は やめた。2026-11-18）・wolf→`wolf_cut`（short は テンプレートの まま）
 - **まえ用は 顔を あける**（テンプレートの 肌の ところ）。テンプレートの もとの 髪は アプリが 消して から 重ねる
 
 ## 確かめ方

@@ -15,7 +15,6 @@ export const CLOTH_COLORS = ["#8a5a33", "#e0484d", "#ff8ac6", "#ffb347", "#ffe06
 
 export const HAIRS = [
   { id: "short", name: "ショート" },
-  { id: "bun", name: "おだんご" },
   { id: "bob", name: "ボブ" },
   { id: "long", name: "ロング" },
   { id: "twin", name: "ツインテール" },

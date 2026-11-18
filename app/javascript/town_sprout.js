@@ -22,7 +22,7 @@ export const SPROUT_FILES = {
   human: "../sprout_sorry/Tests/free_character_spritesheet_by-cupnooble.png" // 🧑 人の テンプレート（avatar_human.js。なくても よい）
 }
 // 💇 髪の パーツ（hair_<ファイル名>_back / _front。avatar_human.js の HAIR_PARTS）
-export const HAIR_PART_STEMS = ["short_bob", "blunt_bob", "long_straight", "twin_tails", "ponytail", "bun", "braids", "wolf_cut"]
+export const HAIR_PART_STEMS = ["short_bob", "blunt_bob", "long_straight", "twin_tails", "ponytail", "braids", "wolf_cut"]
 for (const stem of HAIR_PART_STEMS) for (const side of ["back", "front"]) SPROUT_FILES[`hair_${stem}_${side}`] = `../sprout_hair/${stem}_${side}.png`
 // なくても 町を 出せる もの
 export const SPROUT_OPTIONAL = ["chara", "human", ...HAIR_PART_STEMS.flatMap((s) => [`hair_${s}_back`, `hair_${s}_front`])]

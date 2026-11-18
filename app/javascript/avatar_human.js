@@ -11,7 +11,7 @@ import { drawAccessory } from "avatar_teemo"
 
 // 💇 髪型の パーツ画像（docs/town/hair_parts_spec.md。S3 の game_assets/sprout_hair/）。キャラの 髪型 id → ファイル名
 // ない 髪型・画像が ないときは、頭の 大きさに あわせて 髪を 足す（下の hairShapes）
-export const HAIR_PARTS = { bob: "short_bob", blunt: "blunt_bob", long: "long_straight", twin: "twin_tails", pony: "ponytail", bun: "bun", braid: "braids", wolf: "wolf_cut" }
+export const HAIR_PARTS = { bob: "short_bob", blunt: "blunt_bob", long: "long_straight", twin: "twin_tails", pony: "ponytail", braid: "braids", wolf: "wolf_cut" }
 const PART_ROLE = { "#42353a": "line", "#695154": "hairDark", "#97756f": "hairMid", "#be9d89": "hairLight" }
 
 export const HUMAN_W = 14 // あたり判定・ふきだし の ための 体の 大きさ
@@ -240,9 +240,6 @@ function hairShapes(style, dir, head) {
       strand(behind, back ? left - 1 : right + 1, top + 3, tail, back)
       ties.push([back ? left - 2 : right + 1, top + 2])
     }
-  } else if (style === "bun") {
-    strand(front, cx - 1, top - 3, [2, 4, 4])
-    for (const k of [...front]) { const [x, y] = k.split(",").map(Number); if (y === top - 2 || y === top - 1) front.add(`${x - 1},${y}`) }
   }
   return { behind, front, ties }
 }

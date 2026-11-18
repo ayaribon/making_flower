@@ -23,7 +23,7 @@ class GameAsset
     "human" => "sprout_sorry/Tests/free_character_spritesheet_by-cupnooble.png"
   }.merge(
     # 💇 髪の パーツ（docs/town/hair_parts_spec.md。人の テンプレートに 重ねる）
-    %w[short_bob blunt_bob long_straight twin_tails ponytail bun braids wolf_cut].flat_map do |stem|
+    %w[short_bob blunt_bob long_straight twin_tails ponytail braids wolf_cut].flat_map do |stem|
       %w[back front].map { |side| ["hair_#{stem}_#{side}", "sprout_hair/#{stem}_#{side}.png"] }
     end.to_h
   ).freeze
