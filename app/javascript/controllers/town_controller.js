@@ -7,7 +7,8 @@ import { loadSprout, drawSproutBase, drawSproutLive, sproutWindows, SPROUT_LAMPS
 // 🏘️ はじまりのまち（トップページ）。docs/town/requirements.md
 // - 自分の アバター を タップした所へ 歩かせる。建物を タップすると、入口まで 歩いて 入る
 //   入るときは、下の カード（data-town-place）を 押したのと同じ（main_menu_controller.js が 画像を出して 移動する）
-// - ほかの人（事務所の みんな）の アバターが うろうろ。タップすると あいさつ。まだ キャラが ない人は 名前から きまる おまかせの 見た目
+// - ほかの人（キャラを つくった人）の アバターが うろうろ。タップすると ひとこと か あいさつ
+//   （サーバーが キャラの ない人を わたしたときだけ、名前から きまる おまかせの 見た目に する）
 // - 💬 ひとこと：キャラに ひとこと を 書いておくと、ときどき ふきだしで 言う（ほかの人にも 見える）
 // - 📖 はじめて 開いた人には「SiVA へ ようこそ！」からの あんない（見たかどうかは この端末の localStorage だけ）
 // - Dettyan が 事務所の前に 立っている
@@ -427,7 +428,7 @@ export default class extends Controller {
       { title: "あるきかた", text: "地面を タップすると 歩くよ。建物を タップすると 中に 入れるよ。" + (narrow ? "◀ ▶ で 町の はし まで 行けるよ。" : "") }
     ]
     if (this.hasMine) {
-      if (this.hasSayFormTarget) steps.push({ title: "💬 ひとこと", say: true, text: "下の「💬 ひとこと」に 書くと、まちで キャラが 言うよ。みんなにも 見えるよ。" })
+      if (this.hasSayFormTarget) steps.push({ title: "💬 ひとこと", say: true, text: "下の「💬 ひとこと」に 書くと、まちの みんなに ひとこと のこせるよ。" })
       steps.push({ title: "いってらっしゃい！", text: "また 見たく なったら、下の「❓ あんない」を おしてね。" })
     } else {
       steps.push({ title: "さいごに", make: true, text: "じぶんの キャラを つくろう！ そのキャラで まちを 歩けるよ。" })

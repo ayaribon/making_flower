@@ -3,16 +3,14 @@
 # ログイン必須は ApplicationController の require_login がかかる
 # 🏘️ はじまりのまち：自分の アバター で 歩いて、建物（スタジオ・アトリエ・事務所・編集室）に 入る。カードの メニューも のこす
 class HomesController < ApplicationController
-  # 町に 出す ほかの人の かず。事務所の みんな が 出るように：キャラを つくった人 → まだの人 の じゅん
-  # まだ キャラが ない人は、名前から きまる おまかせの 見た目で 出る（avatar_sprite.js の avatarFromName）
+  # 町に 出す ほかの人の かず。キャラを つくった人だけ（つくったら 出る）。さいきん つくった・かえた じゅん
   # Dettyan 本人は、キャラを つくるまでは 町の Dettyan（ドット絵）が かわり
   TOWN_OTHERS = 20
 
   def show
     @town_sprites = sprout_sprites
-    @town_others = User.where.not(id: current_user.id)
-                       .order(Arel.sql("avatar IS NULL"), updated_at: :desc).limit(TOWN_OTHERS)
-                       .reject { |u| u.avatar.nil? && u.dettyan_owner? }
+    @town_others = User.where.not(id: current_user.id).where.not(avatar: nil)
+                       .order(updated_at: :desc).limit(TOWN_OTHERS)
                        .map { |u| { name: u.name, avatar: u.avatar } }
   end
 

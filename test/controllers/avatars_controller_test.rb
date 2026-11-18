@@ -35,7 +35,7 @@ class AvatarsControllerTest < ActionDispatch::IntegrationTest
     assert_nil user.reload.avatar
   end
 
-  test "まち：まだ キャラが ないと「つくろう」、事務所の みんな が 出る（自分と、キャラの ない Dettyan 本人は 出ない）" do
+  test "まち：まだ キャラが ないと「つくろう」、キャラを つくった人だけ 出る（自分・キャラの ない人 は 出ない）" do
     User.create!(name: "neighbor", login_digest: "pending-neighbor", avatar: { "hair" => "bob", "msg" => "うたうよ" })
     User.create!(name: "nochar", login_digest: "pending-nochar")
     User.create!(name: "Dettyan", login_digest: "pending-dettyan")
@@ -50,11 +50,10 @@ class AvatarsControllerTest < ActionDispatch::IntegrationTest
     others = JSON.parse(css_select("[data-controller=town]").first["data-town-others-value"])
     by_name = others.index_by { |o| o["name"] }
     assert_equal "うたうよ", by_name.dig("neighbor", "avatar", "msg")
-    assert by_name.key?("nochar"), "キャラが まだ の人も 出る（見た目は 名前から きまる）"
-    assert_nil by_name["nochar"]["avatar"]
-    assert_equal "neighbor", others.first["name"], "キャラを つくった人が さき"
+    assert_not by_name.key?("nochar"), "キャラが まだ の人は 出ない（つくったら 出る）"
     assert_not by_name.key?("avtown")
-    assert_not by_name.key?("Dettyan"), "Dettyan 本人は 町の Dettyan が かわり"
+    assert_not by_name.key?("Dettyan"), "キャラの ない Dettyan 本人は 町の Dettyan が かわり"
+    assert others.all? { |o| o["avatar"].present? }
     assert_select "a.hm-avatar-link", text: /つくる/
     assert_select "form.hm-say", 0, "キャラが ない人には ひとこと の 入力は 出さない"
   end
