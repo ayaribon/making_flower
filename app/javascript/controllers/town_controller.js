@@ -474,6 +474,7 @@ export default class extends Controller {
   }
 
   // 💬 見えている 人の 中から、ひとこと を 書いた人が 1人 言う（さいしょは 自分）
+  //   ひろばの Dettyan も 本人の ひとこと を ときどき 言う（2026-11-19 に ayaribon）
   chatter() {
     const shown = (a) => a.bubble && !a.bubble.hidden
     const inView = (a) => a.x >= this.camX - 4 && a.x <= this.camX + this.viewW + 4
@@ -482,7 +483,7 @@ export default class extends Controller {
       return this.say(this.me, `${this.nameValue}「${this.me.msg}」`)
     }
     this.chatted = true
-    const list = [this.me, ...this.others].filter((a) => a.msg && !shown(a) && inView(a))
+    const list = [this.me, ...this.others, this.dettyan].filter((a) => a && a.msg && !shown(a) && inView(a))
     if (!list.length) return
     const a = list[Math.floor(Math.random() * list.length)]
     this.say(a, `${a.name}「${a.msg}」`)
