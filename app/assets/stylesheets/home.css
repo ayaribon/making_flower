@@ -294,3 +294,8 @@
 
 /* 画面いっぱい：あんない の 箱は 下の ひとこと の 上に（town_controller.js が --hm-hud-bottom を はかる） */
 .hm-townwrap--full .hm-guide:not(.is-welcome) { bottom: calc(var(--hm-hud-bottom, 90px) + 8px); }
+
+/* 👁 みわたす（town_controller.js の setOverview） */
+.hm-zoom__btn--eye { font-size: 1.1rem; }
+.hm-zoom__btn--eye[aria-pressed="true"] { background: #ff5fa2; }
+.hm-townwrap--full.is-overview { padding-right: 60px; box-sizing: border-box; }
