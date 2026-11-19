@@ -67,3 +67,12 @@
   .av-tool { padding: 7px 10px; font-size: 0.8rem; }
   .av-swatch { width: 32px; height: 32px; }
 }
+
+/* 👤 右上の 小さい 見本（上の 見本が 見えない とき） */
+.av-mini {
+  position: fixed; top: calc(10px + env(safe-area-inset-top)); right: 10px; z-index: 30;
+  width: 72px; height: 104px; padding: 4px; border-radius: 16px;
+  background: radial-gradient(circle at 50% 75%, #fff6e4 0%, #e6d6b8 75%); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  image-rendering: crisp-edges; image-rendering: pixelated; pointer-events: none;
+}
+.av-mini[hidden] { display: none; }

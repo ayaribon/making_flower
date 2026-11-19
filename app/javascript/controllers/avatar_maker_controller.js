@@ -20,7 +20,7 @@ const OX = 2
 const OY = 6
 
 export default class extends Controller {
-  static targets = ["preview", "groups", "save", "status", "msg", "displayName", "nameLabel", "turn", "spinButton"]
+  static targets = ["preview", "groups", "save", "status", "msg", "displayName", "nameLabel", "turn", "spinButton", "mini"]
   static values = { avatar: Object, url: String, back: String, account: String, humanUrl: String, hairUrls: Object, layerUrls: Object }
 
   connect() {
@@ -59,6 +59,14 @@ export default class extends Controller {
 
   disconnect() {
     cancelAnimationFrame(this.raf)
+    this.miniObserver?.disconnect()
+  }
+
+  // 👤 上の 見本が 画面から 出たら 右上に 小さく 出す（2026-11-19 に ayaribon）
+  watchMini() {
+    if (!this.hasMiniTarget || this.miniObserver || !window.IntersectionObserver) return
+    this.miniObserver = new IntersectionObserver(([e]) => { this.miniTarget.hidden = e.isIntersecting })
+    this.miniObserver.observe(this.previewTarget)
   }
 
   // ---- 🔄 むきを かえる（2026-11-19 に ayaribon が「まわし、こちらでも できるように」） ----
@@ -131,6 +139,7 @@ export default class extends Controller {
 
   useHumanPreview() {
     if (this.hasTurnTarget) this.turnTarget.hidden = false
+    this.watchMini()
     const c = this.previewTarget
     c.width = 24
     c.height = 40
@@ -152,6 +161,12 @@ export default class extends Controller {
       const dir = DIRS[((this.dirIndex || 0) % DIRS.length + DIRS.length) % DIRS.length]
       const walking = this.spinning !== false && this.t % 6 > 3
       drawHuman(g, this.human, 12, 37, this.avatar, { dir, walking, t: this.t, parts: this.hairParts, layers: this.layers })
+      // 右上の 小さい 見本（まえ むき。えらんだ ものが すぐ わかる ように）
+      if (this.hasMiniTarget && !this.miniTarget.hidden) {
+        const m = this.miniTarget.getContext("2d")
+        m.clearRect(0, 0, 18, 26)
+        drawHuman(m, this.human, 9, 25, this.avatar, { dir: "down", parts: this.hairParts, layers: this.layers })
+      }
       return
     }
   }
