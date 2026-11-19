@@ -1,8 +1,9 @@
 class ApplicationController < ActionController::Base
-  # 🌱 買った 素材の 画像の URL（さしかえが ブラウザにも とどく ように しるし v を つける。GameAsset.version）
+  # 🌱 買った 素材の 画像の URL
+  #   GAME_ASSETS_DIRECT=1 なら S3 から じかに（期限つき URL。はやい）。それ いがいは サーバー経由（しるし v で さしかえが とどく）
   helper_method :game_asset_path
   def game_asset_path(key)
-    sprout_asset_path(key, v: GameAsset.version)
+    GameAsset.direct_url(key) || sprout_asset_path(key, v: GameAsset.version)
   end
 
   # どの画面もログインが必要（ログイン画面だけは SessionsController で外す）

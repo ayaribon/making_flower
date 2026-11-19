@@ -132,8 +132,8 @@ export default class extends Controller {
     document.addEventListener("visibilitychange", this.onVisibility)
 
     // 🧑 Dettyan の 新しい 絵 と 🌱 けしきの 素材 を 読みおわるまで（成功・失敗 どちらでも）ステージを 描かない
-    //   読みおわる まえに 前の 絵が 一瞬 出ないように。読めなければ 前の 絵で 遊べる。6秒で あきらめる
-    const giveUp = () => new Promise((resolve) => setTimeout(resolve, 6000))
+    //   読みおわる まえに 前の 絵が 一瞬 出ないように。読めなければ 前の 絵で 遊べる。20秒で あきらめる
+    const giveUp = () => new Promise((resolve) => setTimeout(resolve, 20000))
     const art = Promise.race([Promise.allSettled([
       enableDettyanHuman(this.layersValue),
       // 🌱 けしきの 素材（そろえば 新しい 絵。なければ 前の 絵）

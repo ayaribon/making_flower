@@ -98,13 +98,32 @@ class GameAsset
     def present_keys
       @lock.synchronize do
         if @checked_at.nil? || Time.current - @checked_at > CHECK_EVERY
-          @present = SPROUT.select { |_key, path| exist_local?(path) || exist_s3?(path) }.keys.to_set
+          on_s3 = s3_paths # S3 は 1回の 一覧で しらべる（1まいずつ 聞くと おそい）
+          @present = SPROUT.select { |_key, path| exist_local?(path) || on_s3&.include?(S3_PREFIX + path) || (on_s3.nil? && exist_s3?(path)) }.keys.to_set
           @checked_at = Time.current
           # 画像を さしかえた ときに 古い ものを 出しつづけない ように、おぼえた 中身も わすれる
           @bytes = Concurrent::Map.new
         end
         @present
       end
+    end
+
+    # 🚀 ブラウザが S3 から じかに とる URL（期限つき。バケットは ひみつの まま）。GAME_ASSETS_DIRECT=1 の ときだけ（S3 の CORS が いる）
+    #   6時間ごとの 区切りで 同じ URL に なる（ブラウザの キャッシュが きく）。12時間 つかえる
+    DIRECT_WINDOW = 6.hours
+    def direct_url(key)
+      return nil unless ENV["GAME_ASSETS_DIRECT"] == "1"
+      path = SPROUT[key.to_s]
+      service = s3
+      return nil unless path && service.respond_to?(:bucket)
+      return nil if exist_local?(path) # 手元の ファイルは サーバーから
+
+      start = Time.at((Time.now.to_i / DIRECT_WINDOW.to_i) * DIRECT_WINDOW.to_i)
+      Aws::S3::Presigner.new(client: service.client.client)
+                        .presigned_url(:get_object, bucket: service.bucket.name, key: S3_PREFIX + path, expires_in: (DIRECT_WINDOW * 2).to_i, time: start)
+    rescue StandardError => e
+      Rails.logger.warn("[GameAsset] S3 direct url #{key}: #{e.class}")
+      nil
     end
 
     # 画像の URL に つける しるし（確かめなおす たびに かわる → ブラウザも 新しい 画像を とりに くる）
@@ -144,6 +163,17 @@ class GameAsset
       @s3 ||= ActiveStorage::Blob.services.fetch(:amazon)
     rescue StandardError => e
       Rails.logger.warn("[GameAsset] S3: #{e.class}")
+      nil
+    end
+
+    # S3 の game_assets/ に ある もの（1回の 一覧。読めなければ nil）
+    def s3_paths
+      service = s3
+      return nil unless service.respond_to?(:bucket)
+
+      service.bucket.objects(prefix: S3_PREFIX).map(&:key).to_set
+    rescue StandardError => e
+      Rails.logger.warn("[GameAsset] S3 list: #{e.class}")
       nil
     end
 

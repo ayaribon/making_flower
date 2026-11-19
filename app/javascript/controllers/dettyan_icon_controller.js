@@ -27,7 +27,7 @@ export default class extends Controller {
     this.reduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
     // 新しい 絵（Dettyan の 素体＋レイヤー）を 読みおわってから 描く。読めなければ 描かない（前の 絵は 出さない）
     this.ready = false
-    Promise.race([enableDettyanHuman(this.layersValue), new Promise((r) => setTimeout(r, 6000))]).finally(() => {
+    Promise.race([enableDettyanHuman(this.layersValue), new Promise((r) => setTimeout(r, 20000))]).finally(() => {
       this.ready = usingHumanDraw()
       if (this.g) this.draw()
     })

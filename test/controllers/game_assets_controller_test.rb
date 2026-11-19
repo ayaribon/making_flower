@@ -125,4 +125,9 @@ class GameAssetsControllerTest < ActionDispatch::IntegrationTest
       assert_not_equal v1, GameAsset.version
     end
   end
+
+  test "🚀 S3 から じかに：GAME_ASSETS_DIRECT が ない ときは サーバー経由の URL" do
+    ENV.delete("GAME_ASSETS_DIRECT")
+    assert_nil GameAsset.direct_url("grass")
+  end
 end

@@ -8,6 +8,7 @@ import { timeOfDay, glow } from "dettyan_room"
 import { FIRE } from "dettyan_camp"
 import { TOWN_W, TOWN_H } from "town_world"
 import { drawSproutBase, drawSproutLive, drawSproutForest } from "town_sprout"
+import { allowCors } from "avatar_sprite"
 
 const T = 16
 // 町（town_sprout.js）と 同じ 色の きまり：ふちは こい 赤むらさき
@@ -17,11 +18,12 @@ export const LINE = "#754c60"
 export const NEEDED = ["grass", "soil", "trees", "flowers", "fences", "well", "signs", "chicken"]
 
 // urls：{ キー: URL }。NEEDED が そろえば { キー: 画像 }、そろわなければ null
-export function loadDettyanSheets(urls, timeoutMs = 6000) {
+export function loadDettyanSheets(urls, timeoutMs = 20000) {
   if (!urls || NEEDED.some((k) => !urls[k])) return Promise.resolve(null)
+  const got = {}
   const one = ([key, url]) => new Promise((resolve) => {
-    const img = new Image()
-    img.onload = () => resolve([key, img])
+    const img = allowCors(new Image(), url)
+    img.onload = () => { got[key] = img; resolve([key, img]) }
     img.onerror = () => resolve(null)
     img.src = url
   })
@@ -29,7 +31,8 @@ export function loadDettyanSheets(urls, timeoutMs = 6000) {
     const sheets = Object.fromEntries(pairs.filter(Boolean))
     return NEEDED.every((k) => sheets[k]) ? sheets : null
   })
-  const timer = new Promise((resolve) => setTimeout(() => resolve(null), timeoutMs))
+  // まっても ぜんぶ そろわない ときは、NEEDED が そろって いれば その ぶん で
+  const timer = new Promise((resolve) => setTimeout(() => resolve(NEEDED.every((k) => got[k]) ? { ...got } : null), timeoutMs))
   return Promise.race([all, timer])
 }
 

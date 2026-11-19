@@ -3,6 +3,7 @@
 // そうびの 枠：あたま→hat・からだ→costume・て→hand_main・せなか→back・あし→shoes（id は dettyan_gear.js の GEAR と 同じ）
 import { drawHuman, avatarLayersOf, DETTYAN_LOOK } from "avatar_human"
 import { setHumanDraw } from "dettyan_gear"
+import { allowCors } from "avatar_sprite"
 
 let loading = null
 
@@ -10,7 +11,7 @@ let loading = null
 export function enableDettyanHuman(urls) {
   if (!urls || !Object.keys(urls).length) return Promise.resolve(false)
   loading ||= Promise.all(Object.entries(urls).map(([key, url]) => new Promise((resolve) => {
-    const img = new Image()
+    const img = allowCors(new Image(), url)
     img.onload = () => resolve([key, img])
     img.onerror = () => resolve(null)
     img.src = url
