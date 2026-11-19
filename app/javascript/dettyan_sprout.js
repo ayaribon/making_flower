@@ -423,7 +423,7 @@ export function drawBattleTool(g, tools, name, x, feet, p) {
 // ---- 👾 モンスター（Sprout Sorry pack の Early Access。2026-11-19 に ayaribon） ----
 // key：画像（GameAsset）、cell：1コマの 大きさ、row：使う だん（ふわふわ・ぴょこぴょこ する だん）
 // tint：スライムは みどりの 絵を あかるさ で その モンスターの 色（colors の O・B・L）に ぬりかえる
-// ない モンスター（カラス・キノコ・ゴーレム・ゆきおとこ・ちびドラゴン）は 前の 絵（docs/dettyan/monster_request.md で 依頼中）
+// 画像が ない ときは 前の 絵（dettyan_battle.js の sprite）
 export const MONSTER_ART = {
   green: { key: "mon_slime", cell: 38, row: 5, tint: true },
   blue: { key: "mon_slime", cell: 38, row: 5, tint: true },
@@ -436,7 +436,13 @@ export const MONSTER_ART = {
   frog: { key: "mon_frog", cell: 16, row: 2 },
   spider: { key: "mon_spider_green", cell: 16, row: 0 },
   goldspider: { key: "mon_spider_gold", cell: 16, row: 0 },
-  ghost: { key: "mon_ghost", cell: 16, row: 0 }
+  ghost: { key: "mon_ghost", cell: 16, row: 0 },
+  // 2026-11-19 に 別の セッションが 描いた もの（docs/dettyan/monster_request.md）。2だん目は やられた コマ。32×32 は そのままの 大きさ
+  crow: { key: "mon_crow", cell: 16, row: 0, dieRow: 1 },
+  mushroom: { key: "mon_mushroom", cell: 16, row: 0, dieRow: 1 },
+  golem: { key: "mon_golem", cell: 32, row: 0, dieRow: 1, scale: 1 },
+  yeti: { key: "mon_yeti", cell: 32, row: 0, dieRow: 1, scale: 1 },
+  wyvern: { key: "mon_wyvern", cell: 32, row: 0, dieRow: 1, scale: 1 }
 }
 
 const rgbOf = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))
@@ -449,26 +455,30 @@ export function makeMonsterArt(sheets, monsters) {
     const img = sheets?.[art.key]
     if (!img || !monsters[id]) continue
     const n = Math.floor(img.width / art.cell)
+    const rows = art.dieRow === undefined ? [art.row] : [art.row, art.dieRow]
+    // 使う だんを たてに ならべて 1まいに（0：くりかえし、1：やられた）
     const src = document.createElement("canvas")
     src.width = img.width
-    src.height = art.cell
+    src.height = art.cell * rows.length
     const sg = src.getContext("2d")
-    sg.drawImage(img, 0, art.row * art.cell, img.width, art.cell, 0, 0, img.width, art.cell)
+    rows.forEach((r, k) => sg.drawImage(img, 0, r * art.cell, img.width, art.cell, 0, k * art.cell, img.width, art.cell))
     const data = sg.getImageData(0, 0, src.width, src.height)
     const d = data.data
-    // コマの 中の 絵の はんい（ぜんぶの コマを あわせた もの）
+    // コマの 中の 絵の はんい（ぜんぶの コマを あわせた もの。やられた コマも 同じ 場所に そろう）
     let x0 = 99, y0 = 99, x1 = -1, y1 = -1
-    const used = []
-    for (let f = 0; f < n; f++) {
-      let any = false
-      for (let y = 0; y < art.cell; y++) for (let x = 0; x < art.cell; x++) {
-        if (!d[(y * src.width + f * art.cell + x) * 4 + 3]) continue
-        any = true
-        x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y)
+    const used = rows.map(() => [])
+    rows.forEach((_, k) => {
+      for (let f = 0; f < n; f++) {
+        let any = false
+        for (let y = 0; y < art.cell; y++) for (let x = 0; x < art.cell; x++) {
+          if (!d[((k * art.cell + y) * src.width + f * art.cell + x) * 4 + 3]) continue
+          any = true
+          x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y)
+        }
+        if (any) used[k].push(f)
       }
-      if (any) used.push(f)
-    }
-    if (!used.length) continue
+    })
+    if (!used[0].length) continue
     if (art.tint) {
       // あかるさ → O（くらい）・B・L（あかるい）
       const c = monsters[id].colors
@@ -484,21 +494,28 @@ export function makeMonsterArt(sheets, monsters) {
     }
     const w = x1 - x0 + 1
     const h = y1 - y0 + 1
-    const frames = used.map((f) => {
+    const cut = (k, f) => {
       const c = document.createElement("canvas")
       c.width = w
       c.height = h
-      c.getContext("2d").drawImage(src, f * art.cell + x0, y0, w, h, 0, 0, w, h)
+      c.getContext("2d").drawImage(src, f * art.cell + x0, k * art.cell + y0, w, h, 0, 0, w, h)
       return c
-    })
-    out[id] = { frames, w, h }
+    }
+    out[id] = { frames: used[0].map((f) => cut(0, f)), die: (used[1] || []).map((f) => cut(1, f)), w, h, scale: art.scale || 2 }
   }
   return out
 }
 
 // モンスターを 描く（x：まんなか、feet：足もと、t：秒、scale：大きさ）。おうかん は キングスライム
-export function drawMonsterArt(g, art, monster, x, feet, t, scale = 2) {
-  const f = art.frames[Math.floor(t * 8) % art.frames.length]
+// dying：0〜1（やられた）。やられた コマが あれば じゅんに つぶれて、さいごに うすく 消える
+export function drawMonsterArt(g, art, monster, x, feet, t, scale = art.scale || 2, dying = 0) {
+  let f = art.frames[Math.floor(t * 8) % art.frames.length]
+  if (dying > 0 && art.die?.length) {
+    f = art.die[Math.min(art.die.length - 1, Math.floor(dying * art.die.length * 1.5))]
+    g.globalAlpha = dying < 0.7 ? 1 : Math.max(0, (1 - dying) / 0.3)
+  } else if (dying > 0) {
+    g.globalAlpha = 1 - dying
+  }
   const w = art.w * scale
   const h = art.h * scale
   const left = Math.round(x - w / 2)

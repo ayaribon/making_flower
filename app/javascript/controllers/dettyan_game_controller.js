@@ -1843,8 +1843,8 @@ export default class extends Controller {
       if (art && !(v.flashFoe > 0 && Math.floor(v.flashFoe * 30) % 2)) {
         // 新しい 絵（Sprout）。2ばい
         g.save()
-        g.globalAlpha = 1 - v.dying
-        drawMonsterArt(g, art, v.foe, BATTLE_FOE_X - fl, BATTLE_FEET - lift, v.bob, 2)
+        // やられた コマが ある ものは 地面に おちて つぶれる
+        drawMonsterArt(g, art, v.foe, BATTLE_FOE_X - fl, BATTLE_FEET - (v.dying > 0 && art.die.length ? 0 : lift), v.bob, art.scale, v.dying)
         g.restore()
       } else if (!(v.flashFoe > 0 && Math.floor(v.flashFoe * 30) % 2)) {
         g.save()

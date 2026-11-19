@@ -36,7 +36,13 @@ class GameAsset
     "mon_ghost" => "sprout_sorry/Early Access/halloween/mobs/chost_spritesheet.png",
     "mon_spider_green" => "sprout_sorry/Early Access/halloween/mobs/lil_green_spider_spritesheet.png",
     "mon_spider_gold" => "sprout_sorry/Early Access/halloween/mobs/lil_golden_spider_spritesheet.png",
-    "mon_mouse" => "sprout_sorry/Early Access/halloween/mobs/little_grey_mouse.png"
+    "mon_mouse" => "sprout_sorry/Early Access/halloween/mobs/little_grey_mouse.png",
+    # 👾 別の セッションが 描いた モンスター（Sprout の 絵柄。公開リポジトリには 入れない。S3 の game_assets/sprout_monsters/）
+    "mon_crow" => "sprout_monsters/mon_crow.png",
+    "mon_mushroom" => "sprout_monsters/mon_mushroom.png",
+    "mon_golem" => "sprout_monsters/mon_golem.png",
+    "mon_yeti" => "sprout_monsters/mon_yeti.png",
+    "mon_wyvern" => "sprout_monsters/mon_wyvern.png"
   }.merge(
     # 💇 髪の パーツ（docs/town/hair_parts_spec.md。人の テンプレートに 重ねる）
     %w[short_bob blunt_bob long_straight twin_tails ponytail braids wolf_cut].flat_map do |stem|
@@ -62,7 +68,8 @@ class GameAsset
   AVATAR_LAYER_KEYS = SPROUT.keys.grep(/\Aavatar_/).freeze
   # なくても 町を 出せる もの（なければ アバターは 前の 絵）
   # 育成ゲームの けしきに 使う もの（町の もの ＋ 上の 5つ）
-  MONSTER_KEYS = %w[mon_slime mon_bat mon_bee mon_frog mon_ghost mon_spider_green mon_spider_gold mon_mouse].freeze
+  MONSTER_KEYS = %w[mon_slime mon_bat mon_bee mon_frog mon_ghost mon_spider_green mon_spider_gold mon_mouse
+                    mon_crow mon_mushroom mon_golem mon_yeti mon_wyvern].freeze
   DETTYAN_KEYS = (%w[grass soil trees flowers fences walls furniture stone grass_dark paths actions] + MONSTER_KEYS).freeze
   OPTIONAL = (%w[chara human walls furniture stone grass_dark paths actions] + MONSTER_KEYS + HAIR_KEYS + AVATAR_LAYER_KEYS).freeze
   # そろっているか を 確かめなおす 間かく（S3 に 上げてから 町に 出るまで、長くて この 時間）
