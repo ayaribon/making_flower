@@ -4,7 +4,7 @@ import {
 } from "avatar_sprite"
 import { drawHuman, avatarLayersOf, USE_HAIR_VARIANTS, USE_ACCESSORIES } from "avatar_human"
 import { HUMAN_HAIRSTYLES, AVATAR_EQUIP, AVATAR_SAVE_KEYS, AVATAR_FACE_SLOTS } from "avatar_sprite"
-import { drawChibi as drawAvatar, CHIBI_SKINS as SKINS, CHIBI_HAIRS as HAIR_COLORS, CHIBI_CLOTHS as CLOTH_COLORS } from "avatar_chibi"
+import { CHIBI_SKINS as SKINS, CHIBI_HAIRS as HAIR_COLORS, CHIBI_CLOTHS as CLOTH_COLORS } from "avatar_chibi"
 import { findGear } from "dettyan_gear"
 
 // 👤 キャラメイク。docs/town/requirements.md
@@ -33,9 +33,13 @@ export default class extends Controller {
     this.g = c.getContext("2d")
     this.renderGroups()
     // 🧑 人の テンプレートが あれば、町と 同じ 絵で 見本を 出す（色と こもの を えらぶ）
+    // 🧑 人の テンプレートで 見本を 出す。読めなければ「よみこめなかった」（前の 2頭身の 絵は 2026-11-19 に やめた）
+    const artError = () => { this.statusTarget.textContent = "キャラの 絵を よみこめなかったよ… ページを ひらきなおしてね" }
+    if (!this.humanUrlValue) artError()
     if (this.humanUrlValue) {
       const img = new Image()
       img.onload = () => { this.human = img; this.useHumanPreview(); this.renderGroups() }
+      img.onerror = artError
       img.src = this.humanUrlValue
       this.loadHairParts()
       this.loadLayers()
@@ -158,6 +162,7 @@ export default class extends Controller {
 
   drawPreview() {
     const g = this.g
+    if (!this.human) return // 絵を 読むまでは からっぽ
     if (this.human) {
       // ぐるっと 回って 見せる（2秒ごとに 向きを かえて、ときどき 歩く）
       g.clearRect(0, 0, 24, 40)
@@ -170,19 +175,13 @@ export default class extends Controller {
       drawHuman(g, this.human, 12, 37, this.avatar, { dir, walking, t: this.t, parts: this.hairParts, layers: this.layers })
       return
     }
-    g.clearRect(0, 0, PW, PH)
-    g.fillStyle = "rgba(0, 0, 0, 0.18)"
-    g.fillRect(OX + 3, OY + 19, 10, 2)
-    const t = this.t
-    const blink = t % 3.2 > 3.05
-    const frame = t % 6 > 4.5 ? Math.floor(t * 5) % 2 : 0 // ときどき 足ぶみ
-    drawAvatar(this.g, OX, OY - frame, this.avatar, { frame, blink })
   }
 
   // ---- えらぶところ ----
   renderGroups() {
     const box = this.groupsTarget
     box.replaceChildren()
+    if (!this.human) return // 絵を 読むまでは 出さない
     const a = this.avatar
     if (this.human) {
       // 人の テンプレートで 変えられる のは 色 と こもの
@@ -224,14 +223,6 @@ export default class extends Controller {
       if (USE_ACCESSORIES) this.group(box, "こもの", this.choices("acc", ACCESSORIES.map((id) => ({ id, label: id === "none" ? "なし" : findGear(id)?.name || ACC_NAMES[id] || id, preview: { ...a, acc: id } }))))
       return
     }
-    this.group(box, "はだ", this.swatches("skin", SKINS))
-    this.group(box, "かみがた", this.choices("hair", HAIRS.map((h) => ({ id: h.id, label: h.name, preview: { ...a, hair: h.id } }))))
-    this.group(box, "かみの いろ", this.swatches("hairColor", HAIR_COLORS))
-    this.group(box, "め", this.choices("eyes", EYES.map((e) => ({ id: e.id, label: e.name, preview: { ...a, eyes: e.id }, face: true }))))
-    this.group(box, "ふく", this.choices("top", TOPS.map((x) => ({ id: x.id, label: x.name, preview: { ...a, top: x.id } }))), this.swatches("topColor", CLOTH_COLORS))
-    this.group(box, "した", this.choices("bottom", BOTTOMS.map((x) => ({ id: x.id, label: x.name, preview: { ...a, bottom: x.id } }))), this.swatches("bottomColor", CLOTH_COLORS))
-    this.group(box, "くつ", this.swatches("shoes", CLOTH_COLORS))
-    this.group(box, "こもの", this.choices("acc", ACCESSORIES.map((id) => ({ id, label: id === "none" ? "なし" : findGear(id)?.name || id, preview: { ...a, acc: id } }))))
   }
 
   group(box, title, ...parts) {
@@ -277,22 +268,20 @@ export default class extends Controller {
       c.className = "av-choice__img" + (item.face ? " av-choice__img--face" : "")
       c.width = item.face ? 14 : 22
       c.height = item.face ? 7 : 26
-      const g = c.getContext("2d")
-      if (this.human && item.zoom) {
+      if (item.zoom) {
         // 顔の パーツは 顔の まわり だけ 大きく
         c.width = 14
         c.height = 11
         c.style.width = "56px"
         c.style.height = "44px"
         drawHuman(c.getContext("2d"), this.human, 7, 15, item.preview, { dir: "down", parts: this.hairParts, layers: this.layers })
-      } else if (this.human) {
+      } else {
         c.width = 22
         c.height = 34
         c.style.width = "53px"
         c.style.height = "82px"
         drawHuman(c.getContext("2d"), this.human, 11, 32, item.preview, { dir: "down", parts: this.hairParts, layers: this.layers })
-      } else if (item.face) drawAvatar(g, -1, -4, item.preview) // 目のあたりだけ
-      else drawAvatar(g, 3, 5, item.preview)
+      }
       const label = document.createElement("span")
       label.textContent = item.label
       b.append(c, label)

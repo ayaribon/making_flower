@@ -278,8 +278,9 @@
 .dt-sheet { inset: var(--dt-top) 8px var(--dt-bottom) 8px; max-width: 720px; margin: 0 auto; border-radius: 14px; }
 .dt-toast { top: calc(var(--dt-top) + 4px); }
 .dt-stage.is-battle .dt-toast { top: calc(var(--scene-y) + var(--scene-h) * 0.19); }
-.dt-story__box { max-width: 720px; margin-left: auto; margin-right: auto; }
-.dt-story { padding-bottom: var(--dt-bottom); }
+/* おはなし：ことばの 箱は 下の ボタンの 上、スキップは 上の 表示の 下 */
+.dt-story__box { max-width: 720px; margin-left: auto; margin-right: auto; bottom: calc(var(--dt-bottom) + 6px); }
+.dt-story__skip { top: calc(var(--dt-top) + 4px); }
 .dt-actions, .dt-cmd { margin-top: 0; }
 .dt-hud { margin-bottom: 4px; }
 .dt-goal { margin: 0; }

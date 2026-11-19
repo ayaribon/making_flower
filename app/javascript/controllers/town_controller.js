@@ -1,10 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 import { normalizeAvatar, avatarFromName, cleanMsg } from "avatar_sprite"
-import { drawChibi, CHIBI_W as AV_W, CHIBI_H as AV_H } from "avatar_chibi"
-import { drawDettyan, SPRITE_W, SPRITE_H } from "dettyan_sprite"
-import { TOWN_W, TOWN_H, VIEW_NARROW, BUILDINGS, BUILDING_W, WALK, doorOf, clampWalk, drawTownBase, drawTownSky, drawTownLive, drawTownNight } from "town_world"
+import { TOWN_W, TOWN_H, VIEW_NARROW, BUILDINGS, BUILDING_W, WALK, doorOf, clampWalk, drawTownNight } from "town_world"
 import { loadSprout, drawSproutBase, drawSproutLive, drawSproutForest, sproutWindows, SPROUT_LAMPS, hairPartsOf } from "town_sprout"
-import { drawTeemo, facing, DETTYAN_TEEMO, TEEMO_W, TEEMO_H } from "avatar_teemo"
+import { facing } from "avatar_teemo"
 import { drawHuman, facing8, avatarLayersOf, HUMAN_W, HUMAN_H, DETTYAN_LOOK } from "avatar_human"
 // 🧑 町の Dettyan（人の テンプレート）：黒い 髪・マンバン・茶色の ジャケット
 
@@ -28,11 +26,6 @@ const CHAT_FIRST = 1.4 // ひらいてから 最初の ひとこと まで（秒
 const GUIDE_KEY = "town:guide:v1" // あんない を 見たか（+ ":呼び名"）。中身を かえたら v2 に して もう一度 見せる
 const GREETINGS = ["やっほー！", "こんにちは！", "いい天気だね", "歌ってきた！", "サムネ つくってる", "がんばろ〜", "またね！"]
 const DETTYAN_LINES = ["ようこそ、はじまりのまち へ！", "事務所で まってるよ", "じゅんさい たべたいな"]
-// Sprout Lands の 町では、Dettyan の ふちを 黒ではなく やわらかい 色に する（アバターは avatar_chibi.js が もともと やわらかい）
-// 🐱 Teemo 型（人の 形に した もの）は いったん やめ（2026-11-18 ayaribon）。true に すると 町で 使う
-const USE_TEEMO = false
-const SOFT_LINE = "#4e3448"
-const SOFT_DETTYAN = { K: SOFT_LINE, E: SOFT_LINE }
 
 // 🔍 画面いっぱい の とき
 const FOREST = 64 // 町の 上と 下に 描く 森の 高さ（ドット）
@@ -72,22 +65,22 @@ export default class extends Controller {
     this.base.width = TOWN_W
     this.base.height = TOWN_H
     const urls = this.spritesValue
+    // 素材の 絵（Sprout Lands）が とどくまで まつ。とどかなければ「よみこめなかった」（前の 絵は 2026-11-19 に やめた）
+    this.baseReady = false
+    const fail = () => this.showArtError()
     if (urls && Object.keys(urls).length) {
-      // 素材の 絵が とどくまで 少し まつ（とどかなければ コードで描く 町）
-      this.baseReady = false
       loadSprout(urls).then((sheets) => {
+        if (!sheets.human) return fail() // 人の 絵が ないと 町を 歩けない
         this.sprout = sheets
         this.hairParts = hairPartsOf(sheets)
         this.avatarLayers = avatarLayersOf(sheets)
         drawSproutBase(this.base.getContext("2d"), sheets)
         this.drawForest((g) => drawSproutForest(g, sheets, FOREST))
         this.drawGuideFace() // あんない の 顔も 新しい 絵に
-      }).catch(() => {
-        drawTownBase(this.base.getContext("2d"))
-      }).finally(() => { this.baseReady = true })
+        this.baseReady = true
+      }).catch(fail)
     } else {
-      drawTownBase(this.base.getContext("2d"))
-      this.baseReady = true
+      fail()
     }
     this.reduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
 
@@ -364,10 +357,10 @@ export default class extends Controller {
     const y = Math.round(this.camY) + ((event.clientY - rect.top) / rect.height) * this.viewH
     // ほかの人・Dettyan を タップしたら あいさつ
     const hit = (a, w, h) => x >= a.x - w / 2 - 2 && x <= a.x + w / 2 + 2 && y >= a.y - h - 2 && y <= a.y + 2
-    const [w, h] = this.sprout?.human ? [HUMAN_W, HUMAN_H] : USE_TEEMO && this.sprout?.chara ? [TEEMO_W, TEEMO_H] : [AV_W, AV_H]
+    const [w, h] = [HUMAN_W, HUMAN_H]
     const other = this.others.find((o) => hit(o, w, h))
     if (other) return this.say(other, `${other.name}「${this.lineOf(other)}」`)
-    if (this.dettyan && hit(this.dettyan, SPRITE_W, SPRITE_H)) {
+    if (this.dettyan && hit(this.dettyan, HUMAN_W, HUMAN_H)) {
       // 案内の ことば → そのあと 本人の ひとこと（書いて いれば）
       const d = this.dettyan
       this.say(d, `${d.name}「${DETTYAN_LINES[Math.floor(Math.random() * DETTYAN_LINES.length)]}」`)
@@ -469,48 +462,26 @@ export default class extends Controller {
         g.fillRect(0, -FOREST, TOWN_W, TOWN_H + FOREST * 2)
       }
     }
-    if (this.sprout) {
-      g.drawImage(this.base, 0, 0)
-      drawSproutLive(g, this.t, this.sprout)
-    } else {
-      drawTownSky(g, now, this.t)
-      g.drawImage(this.base, 0, 0)
-      drawTownLive(g, this.t)
-    }
+    g.drawImage(this.base, 0, 0)
+    drawSproutLive(g, this.t, this.sprout)
     const actors = [...this.others, this.me, ...(this.dettyan ? [{ ...this.dettyan, npc: true }] : [])].sort((a, b) => a.y - b.y)
     for (const a of actors) {
       g.fillStyle = "rgba(0, 0, 0, 0.18)"
       g.fillRect(Math.round(a.x) - 6, Math.round(a.y) - 1, 12, 2)
-      if (this.sprout?.human) {
-        // 🧑 人の テンプレート（8方向。色・こもの は その人の キャラ）
-        g.globalAlpha = a.self && this.entering ? 0.4 : 1
-        // ひろばの Dettyan は 本人の キャラ（まだ なければ いつもの 見た目）
-        const npcLook = a.npc && !a.avatar ? DETTYAN_LOOK : null
-        drawHuman(g, this.sprout.human, a.x, a.y, a.avatar, { dir: a.dir8 || "down", walking: !!a.walking, t: this.t + (a.phase || 0), look: npcLook, parts: this.hairParts, layers: this.avatarLayers })
-        g.globalAlpha = 1
-      } else if (USE_TEEMO && this.sprout?.chara) {
-        // 🐱 Teemo 型（素材の キャラ画像。毛の 色・首の 色・こもの は その人の キャラ）
-        const fade = a.self && this.entering ? 0.4 : 1
-        g.globalAlpha = fade
-        drawTeemo(g, this.sprout.chara, a.x, a.y, a.npc ? null : a.avatar, { dir: a.dir || "down", walking: !!a.walking, t: this.t + (a.phase || 0), look: a.npc ? DETTYAN_TEEMO : null })
-        g.globalAlpha = 1
-      } else if (a.npc) {
-        drawDettyan(g, Math.round(a.x - SPRITE_W / 2), Math.round(a.y - SPRITE_H), { eyes: a.blink > 0 ? "blink" : "open", colors: this.sprout ? SOFT_DETTYAN : null })
-      } else {
-        const fade = a.self && this.entering ? 0.4 : 1
-        g.globalAlpha = fade
-        drawChibi(g, Math.round(a.x - AV_W / 2), Math.round(a.y - AV_H) - (a.frame === 1 ? 1 : 0), a.avatar, { frame: a.frame, blink: a.blink > 0 })
-        g.globalAlpha = 1
-      }
+      // 🧑 人の テンプレート（8方向。色・こもの は その人の キャラ）
+      g.globalAlpha = a.self && this.entering ? 0.4 : 1
+      // ひろばの Dettyan は 本人の キャラ（まだ なければ いつもの 見た目）
+      const npcLook = a.npc && !a.avatar ? DETTYAN_LOOK : null
+      drawHuman(g, this.sprout.human, a.x, a.y, a.avatar, { dir: a.dir8 || "down", walking: !!a.walking, t: this.t + (a.phase || 0), look: npcLook, parts: this.hairParts, layers: this.avatarLayers })
+      g.globalAlpha = 1
     }
     const area = outside ? [0, -FOREST, TOWN_W, TOWN_H + FOREST * 2] : undefined
-    if (this.sprout) drawTownNight(g, now, sproutWindows(), SPROUT_LAMPS, area)
-    else drawTownNight(g, now, null, undefined, area)
+    drawTownNight(g, now, sproutWindows(), SPROUT_LAMPS, area)
     g.restore()
     this.placeBuildings(cam, camY)
     // 名前・ふきだし（画面の ことば）
     this.place(this.nameTag, this.me.x, this.me.y + 1)
-    for (const a of [this.me, ...this.others, this.dettyan].filter(Boolean)) if (a.bubble && !a.bubble.hidden) this.placeBubble(a.bubble, a.x, a.y - (this.sprout?.human ? HUMAN_H + 1 : USE_TEEMO && this.sprout?.chara ? TEEMO_H + 4 : AV_H) - 2)
+    for (const a of [this.me, ...this.others, this.dettyan].filter(Boolean)) if (a.bubble && !a.bubble.hidden) this.placeBubble(a.bubble, a.x, a.y - HUMAN_H - 3)
   }
 
   // ふきだし は 町の はし で はみ出さないように よせる
@@ -691,22 +662,34 @@ export default class extends Controller {
   }
 
   // あんない の 顔（Dettyan の 頭 だけ）
-  // あんない の 顔（Dettyan の 頭）。新しい 絵が あれば 人の 絵（ひろばの Dettyan と 同じ 見た目）の 顔の まわり、なければ 前の ドット絵
-  drawGuideFace() {
-    if (!this.hasGuideFaceTarget) return
-    const c = this.guideFaceTarget
-    if (this.sprout?.human) {
-      c.width = 20
-      c.height = 16
-      const g = c.getContext("2d")
-      g.clearRect(0, 0, c.width, c.height)
-      // ひろばの Dettyan（本人の キャラ）。本人が 見ているときは 自分の キャラ
-      const avatar = this.dettyan ? this.dettyan.avatar : this.me?.avatar
-      drawHuman(g, this.sprout.human, 10, 23, avatar, { dir: "down", look: avatar ? null : DETTYAN_LOOK, parts: this.hairParts, layers: this.avatarLayers })
-      return
-    }
-    c.width = SPRITE_W
-    c.height = 16
-    drawDettyan(c.getContext("2d"), 0, 0, { eyes: "open" })
+  // 絵が 読めなかった：町の 上に 知らせ と「もう一度」
+  showArtError() {
+    if (this.artError) return
+    const box = document.createElement("div")
+    box.className = "hm-town__error"
+    box.setAttribute("role", "alert")
+    const p = document.createElement("p")
+    p.textContent = "まちの 絵を よみこめなかったよ…"
+    const b = document.createElement("button")
+    b.type = "button"
+    b.textContent = "🔄 もう一度"
+    b.addEventListener("click", () => window.location.reload())
+    box.append(p, b)
+    this.canvasTarget.parentElement.append(box)
+    this.artError = box
   }
+
+  // あんない の 顔（Dettyan の 頭）。人の 絵（ひろばの Dettyan と 同じ 見た目）の 顔の まわり。絵を 読むまでは からっぽ
+  drawGuideFace() {
+    if (!this.hasGuideFaceTarget || !this.sprout?.human) return
+    const c = this.guideFaceTarget
+    c.width = 20
+    c.height = 16
+    const g = c.getContext("2d")
+    g.clearRect(0, 0, c.width, c.height)
+    // ひろばの Dettyan（本人の キャラ）。本人が 見ているときは 自分の キャラ
+    const avatar = this.dettyan ? this.dettyan.avatar : this.me?.avatar
+    drawHuman(g, this.sprout.human, 10, 23, avatar, { dir: "down", look: avatar ? null : DETTYAN_LOOK, parts: this.hairParts, layers: this.avatarLayers })
+  }
+
 }

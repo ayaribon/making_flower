@@ -70,7 +70,7 @@ class GameAsset
   # 育成ゲームの けしきに 使う もの（町の もの ＋ 上の 5つ）
   MONSTER_KEYS = %w[mon_slime mon_bat mon_bee mon_frog mon_ghost mon_spider_green mon_spider_gold mon_mouse
                     mon_crow mon_mushroom mon_golem mon_yeti mon_wyvern].freeze
-  DETTYAN_KEYS = (%w[grass soil trees flowers fences walls furniture stone grass_dark paths actions] + MONSTER_KEYS).freeze
+  DETTYAN_KEYS = (%w[grass soil trees flowers fences well signs chicken walls furniture stone grass_dark paths actions] + MONSTER_KEYS).freeze
   OPTIONAL = (%w[chara human walls furniture stone grass_dark paths actions] + MONSTER_KEYS + HAIR_KEYS + AVATAR_LAYER_KEYS).freeze
   # そろっているか を 確かめなおす 間かく（S3 に 上げてから 町に 出るまで、長くて この 時間）
   CHECK_EVERY = 10.minutes

@@ -282,3 +282,12 @@
 
 /* 素材の 絵を 読んでいる あいだ（town_controller.js）：建物の 名前・人の 名前・ふきだし・◀ ▶ を かくす */
 .hm-town.is-loading .hm-town__building, .hm-town.is-loading .hm-town__edge, .hm-town.is-loading .hm-town__layer { visibility: hidden; }
+
+/* 絵が 読めなかった とき（town_controller.js の showArtError） */
+.hm-town__error {
+  position: absolute; left: 50%; top: 50%; z-index: 6; transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px 20px; border-radius: 14px;
+  background: rgba(14, 26, 51, 0.88); color: #fff; text-align: center;
+}
+.hm-town__error p { margin: 0; font-weight: 700; }
+.hm-town__error button { padding: 8px 16px; border: 0; border-radius: 999px; background: #ff5fa2; color: #fff; font: inherit; font-weight: 800; cursor: pointer; }

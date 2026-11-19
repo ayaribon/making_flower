@@ -6,13 +6,15 @@
 
 import { timeOfDay, glow } from "dettyan_room"
 import { FIRE } from "dettyan_camp"
+import { TOWN_W, TOWN_H } from "town_world"
+import { drawSproutBase, drawSproutLive, drawSproutForest } from "town_sprout"
 
 const T = 16
 // 町（town_sprout.js）と 同じ 色の きまり：ふちは こい 赤むらさき
 export const LINE = "#754c60"
 
 // ---- 読みこみ ----
-export const NEEDED = ["grass", "soil", "trees", "flowers", "fences"]
+export const NEEDED = ["grass", "soil", "trees", "flowers", "fences", "well", "signs", "chicken"]
 
 // urls：{ キー: URL }。NEEDED が そろえば { キー: 画像 }、そろわなければ null
 export function loadDettyanSheets(urls, timeoutMs = 6000) {
@@ -530,5 +532,48 @@ export function drawMonsterArt(g, art, monster, x, feet, t, scale = art.scale ||
     px(g, "#ffd84d", cx - 1, cy - 3, 2, 3)
     px(g, "#ffd84d", cx + 2, cy - 2, 2, 2)
     px(g, "#e0484d", cx - 1, cy + 1, 2, 1)
+  }
+}
+
+// ---- 📖 おはなし の けしき（新しい 絵） ----
+// はじまりのまち：町の 絵（town_sprout.js）の ひろばの あたりを まんなかに。まわりは 森
+const TOWN_OX = -64 // 町の 絵の 左上（128×96 の 座標）
+const TOWN_OY = -14
+export function createStoryTownWide(s, area) {
+  const town = document.createElement("canvas")
+  town.width = TOWN_W
+  town.height = TOWN_H
+  drawSproutBase(town.getContext("2d"), s)
+  return wideCanvas(area, (g) => {
+    eachTile(area, (x, y) => grassTile(g, s, x, y, 5))
+    g.save()
+    g.translate(TOWN_OX, TOWN_OY)
+    drawSproutForest(g, s, 80)
+    g.restore()
+    g.drawImage(town, TOWN_OX, TOWN_OY)
+  })
+}
+
+export function drawStoryTownLive(g, s, t) {
+  g.save()
+  g.translate(TOWN_OX, TOWN_OY)
+  drawSproutLive(g, t, s)
+  g.restore()
+}
+
+// 画面が ひかる（広く）
+export function drawFlashWide(g, area, t) {
+  g.fillStyle = "#fffbe8"
+  g.fillRect(area.x, area.y, area.w, area.h)
+  const cx = 64, cy = 48
+  const R = Math.max(area.w, area.h)
+  g.fillStyle = "rgba(255, 220, 130, 0.5)"
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2 + t * 0.6
+    for (let r = 6; r < R; r += 2) g.fillRect(Math.round(cx + Math.cos(a) * r), Math.round(cy + Math.sin(a) * r), 2, 2)
+  }
+  for (let i = 0; i < 14; i++) {
+    const a = i * 2.4 + t
+    px(g, "#ffd84d", cx + Math.cos(a) * (20 + i * 4), cy + Math.sin(a) * (14 + i * 3), 2, 2)
   }
 }

@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import { equipped, drawDressed } from "dettyan_gear"
+import { equipped, drawDressed, usingHumanDraw } from "dettyan_gear"
 import { peekCachedState } from "dettyan_save"
 import { enableDettyanHuman } from "dettyan_human"
 
@@ -25,15 +25,12 @@ export default class extends Controller {
     this.n = 0
     this.happy = false
     this.reduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
-    // 新しい 絵を 読みおわってから 描く（前の 絵を 一瞬 出さない）。読めなければ 前の 絵
+    // 新しい 絵（Dettyan の 素体＋レイヤー）を 読みおわってから 描く。読めなければ 描かない（前の 絵は 出さない）
     this.ready = false
-    const layers = this.layersValue && Object.keys(this.layersValue).length
-    if (layers) {
-      Promise.race([enableDettyanHuman(this.layersValue), new Promise((r) => setTimeout(r, 6000))]).finally(() => { this.ready = true; if (this.g) this.draw() })
-    } else {
-      this.ready = true
-      this.draw()
-    }
+    Promise.race([enableDettyanHuman(this.layersValue), new Promise((r) => setTimeout(r, 6000))]).finally(() => {
+      this.ready = usingHumanDraw()
+      if (this.g) this.draw()
+    })
     if (this.reduced) return
 
     this.timer = setInterval(() => { this.n += 1; this.draw() }, TICK_MS)
