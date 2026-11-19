@@ -1,0 +1,4 @@
+<%# 🔧 メンテナンス中：管理者だけに 出す しるし（ほかの人には メンテナンスの 画面が 出ている） %>
+<% if maintenance? && current_user&.admin? %>
+  <div class="maintenance-banner" role="status">🔧 メンテナンス中です（いま 入れるのは 管理者だけ）</div>
+<% end %>

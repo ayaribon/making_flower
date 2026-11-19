@@ -1,8 +1,11 @@
 class ApplicationController < ActionController::Base
+  # 🔧 メンテナンス中（環境変数 MAINTENANCE が 入っている あいだ）は、管理者だけ 入れる
+  #    ログイン画面だけは だれでも 開ける（管理者が ログインできるように）
+  before_action :maintenance_gate
   # どの画面もログインが必要（ログイン画面だけは SessionsController で外す）
   before_action :require_login
 
-  helper_method :current_user, :logged_in?, :login_id
+  helper_method :current_user, :logged_in?, :login_id, :maintenance?
 
   private
 
@@ -23,6 +26,20 @@ class ApplicationController < ActionController::Base
   def require_login
     return if logged_in?
     redirect_to login_path
+  end
+
+  # Heroku の Config Vars に MAINTENANCE（なんでも よい。例：1）を 入れると メンテナンス中。消すと もどる
+  def maintenance?
+    ENV["MAINTENANCE"].present?
+  end
+
+  def maintenance_gate
+    return unless maintenance?
+    return if current_user&.admin?
+    respond_to do |format|
+      format.html { render "shared/maintenance", layout: "auth", status: :service_unavailable }
+      format.any { render json: { error: "メンテナンス中です" }, status: :service_unavailable }
+    end
   end
 
   # 素材を「キー => 画像の場所など」の表にする（編集画面とテンプレ保存で使う）

@@ -1,5 +1,7 @@
 class SessionsController < ApplicationController
   skip_before_action :require_login, only: [:new, :create]
+  # メンテナンス中でも、ログイン・ログアウトは できる（入れるのは 管理者だけ）
+  skip_before_action :maintenance_gate, only: [:new, :create, :destroy]
   layout "auth"
 
   # 同じ場所（IPアドレス）から、この回数まちがえたら、しばらく試せなくする

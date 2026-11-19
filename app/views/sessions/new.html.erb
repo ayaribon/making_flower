@@ -2,6 +2,9 @@
   <div class="auth-card">
     <h1 class="auth-logo">Koto<span>Bouquet</span> <small>✦</small></h1>
     <p class="auth-lead">ログインIDを入れてね</p>
+    <% if maintenance? %>
+      <p class="auth-alert">🔧 ただいま メンテナンス中です（入れるのは 管理者だけ）</p>
+    <% end %>
 
     <% if flash[:alert] %>
       <p class="auth-alert"><%= flash[:alert] %></p>

@@ -1,0 +1,10 @@
+<main class="auth-page">
+  <div class="auth-card">
+    <h1 class="auth-logo">Koto<span>Bouquet</span> <small>✦</small></h1>
+    <p class="auth-lead">🔧 ただいま メンテナンス中です</p>
+    <p class="auth-note">終わるまで、少し まっててね。<br>終わったら、このページを 読みこみ直すと 使えます。</p>
+    <% if current_user %>
+      <p class="auth-note"><%= button_to "ログアウト", logout_path, method: :delete, class: "auth-submit" %></p>
+    <% end %>
+  </div>
+</main>

@@ -2227,3 +2227,11 @@ ul.auth-alert { padding-left: 28px; }
   .studio-history-button .studio-label-long { display: none; }
   .studio-history-button .studio-label-short { display: inline; }
 }
+
+/* 🔧 メンテナンス中（管理者だけに 見える しるし。画面の いちばん上に 固定） */
+.maintenance-banner {
+  position: fixed; top: 0; left: 50%; transform: translateX(-50%); z-index: 9999;
+  padding: 4px 14px; border-radius: 0 0 12px 12px;
+  background: #ffb347; color: #2a1c12; font-size: 0.8rem; font-weight: 700;
+  pointer-events: none; white-space: nowrap;
+}
