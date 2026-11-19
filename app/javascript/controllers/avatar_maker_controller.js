@@ -196,15 +196,14 @@ export default class extends Controller {
         // 画像が ある もの（目の「ふつう」は 素体の 目なので 画像なし）
         const have = s.items.filter((it) => it.maker && (!it.file || this.layers.items[slot][it.id]))
         if (!have.some((it) => it.file)) continue
+        if (slot === "brows" && !browsShow) continue // 前髪で かくれる 髪型
         // 顔の 見本は めがね・ぼうし を はずして 見せる
         const base = face ? { ...a, hat: "none", accessory: "none" } : a
         const items = [
           ...(s.def === "none" ? [{ id: "none", label: "なし", preview: { ...base, [key]: "none" }, zoom: face }] : []),
           ...have.map((it) => ({ id: it.id, label: it.name, preview: { ...base, [key]: it.id }, zoom: face }))
         ]
-        // まゆげ は いつも えらべる（2026-11-19 に ayaribon）。前髪で かくれる 髪型 の ときは ひとこと
-        const note = slot === "brows" && !browsShow ? this.note("この かみがた では 前髪で かくれるよ（マンバン・短髪パーマ・ハゲ だと 見える）") : null
-        this.group(box, s.name, this.choices(key, items), ...(note ? [note] : []))
+        this.group(box, s.name, this.choices(key, items))
         if (slot === "costume" && costume === "default") {
           this.group(box, "ふくの いろ", this.swatches("topColor", CLOTH_COLORS))
           this.group(box, "ズボンの いろ", this.swatches("bottomColor", CLOTH_COLORS))
@@ -218,13 +217,6 @@ export default class extends Controller {
       if (USE_ACCESSORIES) this.group(box, "こもの", this.choices("acc", ACCESSORIES.map((id) => ({ id, label: id === "none" ? "なし" : findGear(id)?.name || ACC_NAMES[id] || id, preview: { ...a, acc: id } }))))
       return
     }
-  }
-
-  note(text) {
-    const p = document.createElement("p")
-    p.className = "av-group__note"
-    p.textContent = text
-    return p
   }
 
   group(box, title, ...parts) {
