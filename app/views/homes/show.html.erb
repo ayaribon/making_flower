@@ -74,6 +74,8 @@
       </header>
       <%# 🔍 拡大・縮小（スマホは 2本指でも。PC は ホイールでも） %>
       <div class="hm-zoom" role="group" aria-label="まちの 大きさ">
+        <%# 👁 みわたす：町 ぜんぶ を 1画面に。建物を タップすると 歩かずに すぐ 入る %>
+        <button type="button" class="hm-zoom__btn hm-zoom__btn--eye" data-town-target="overviewBtn" data-action="town#toggleOverview" aria-pressed="false" aria-label="まち ぜんぶ を みわたす" title="みわたす">👁</button>
         <button type="button" class="hm-zoom__btn" data-town-target="zoomIn" data-action="town#zoomInBtn" aria-label="大きく する">＋</button>
         <button type="button" class="hm-zoom__btn" data-town-target="zoomOut" data-action="town#zoomOutBtn" aria-label="小さく する">−</button>
       </div>
@@ -90,7 +92,7 @@
           </form>
           <p class="hm-say__status" data-town-target="sayStatus" role="status" aria-live="polite"></p>
         <% end %>
-        <p class="hm-town__help">建物を タップすると 入れるよ（もう1回 おすと すぐ 入る）。地面を タップすると そこへ 歩くよ。</p>
+        <p class="hm-town__help">建物を タップすると 入れるよ（もう1回 おすと すぐ 入る）。👁 で まち ぜんぶ を みわたせるよ。</p>
       </div>
     </div>
 
