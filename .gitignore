@@ -10,6 +10,8 @@
 # Ignore all environment files (except templates).
 /.env*
 !/.env*.erb
+# 設定の ひながた（値は 空。メンバーが .env に コピーして 使う）
+!/.env.example
 
 # Ignore all logfiles and tempfiles.
 /log/*
