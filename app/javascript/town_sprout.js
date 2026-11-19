@@ -7,7 +7,7 @@
 // Assets - From: Sprout Lands - By: Cup Nooble（https://cupnooble.itch.io/sprout-lands-asset-pack）
 
 import { TOWN_W, TOWN_H, GROUND, BUILDINGS, FOUNTAIN, drawSign } from "town_world"
-import { AVATAR_EQUIP, avatarAssetKey, allowCors } from "avatar_sprite"
+import { AVATAR_EQUIP, avatarAssetKey, loadAssetImage } from "avatar_sprite"
 
 // 使う 素材（キー → 素材パックの 中の 場所）。サーバー（GameAsset::SPROUT）と そろえる。URL は キーごとに サーバーが わたす
 export const SPROUT_FILES = {
@@ -57,12 +57,10 @@ export function loadSprout(urls, timeoutMs = 20000) {
   if (!urls || keys.some((k) => !urls[k])) return Promise.reject(new Error("no sprout urls"))
   const extra = SPROUT_OPTIONAL.filter((k) => urls[k])
   const got = {}
-  const one = (k) => new Promise((resolve, reject) => {
-    const img = allowCors(new Image(), urls[k])
-    img.decoding = "async"
-    img.onload = () => { got[k] = img; resolve([k, img]) }
-    img.onerror = () => reject(new Error(`load ${k}`))
-    img.src = urls[k]
+  const one = (k) => loadAssetImage(k, urls[k]).then((img) => {
+    if (!img) throw new Error(`load ${k}`)
+    got[k] = img
+    return [k, img]
   })
   // なくても よい もの は、読めなければ 入れない
   const maybe = (k) => one(k).catch(() => null)

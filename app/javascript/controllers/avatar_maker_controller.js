@@ -3,7 +3,7 @@ import {
   normalizeAvatar, randomAvatar, cleanMsg, DEFAULT_AVATAR, HAIRS, EYES, TOPS, BOTTOMS, ACCESSORIES
 } from "avatar_sprite"
 import { drawHuman, avatarLayersOf, USE_HAIR_VARIANTS, USE_ACCESSORIES } from "avatar_human"
-import { HUMAN_HAIRSTYLES, AVATAR_EQUIP, AVATAR_SAVE_KEYS, AVATAR_FACE_SLOTS, allowCors } from "avatar_sprite"
+import { HUMAN_HAIRSTYLES, AVATAR_EQUIP, AVATAR_SAVE_KEYS, AVATAR_FACE_SLOTS, loadAssetImage } from "avatar_sprite"
 import { CHIBI_SKINS as SKINS, CHIBI_HAIRS as HAIR_COLORS, CHIBI_CLOTHS as CLOTH_COLORS } from "avatar_chibi"
 import { findGear } from "dettyan_gear"
 
@@ -37,11 +37,13 @@ export default class extends Controller {
     const artError = () => { this.statusTarget.textContent = "キャラの 絵を よみこめなかったよ… ページを ひらきなおしてね" }
     if (!this.humanUrlValue) artError()
     if (this.humanUrlValue) {
-      const img = allowCors(new Image(), this.humanUrlValue)
-      img.onload = () => { this.human = img; this.useHumanPreview(); this.renderGroups() }
-      img.onerror = artError
-      img.src = this.humanUrlValue
-      this.loadHairParts()
+      loadAssetImage("human", this.humanUrlValue).then((img) => {
+        if (!img) return artError()
+        this.human = img
+        this.useHumanPreview()
+        this.renderGroups()
+      })
+      this.hairParts = {} // 前の 髪パーツ（USE_HAIR_VARIANTS）は 使わない ので 読まない
       this.loadLayers()
     }
     this.t = 0
@@ -116,38 +118,15 @@ export default class extends Controller {
     return this.avatarValue && Object.keys(this.avatarValue).length > 0
   }
 
-  // 💇 髪の パーツ（hair_<ファイル名>_back / _front）を 読んで、そろった ものから 使う
-  loadHairParts() {
-    this.hairParts = {}
-    for (const [key, url] of Object.entries(this.hairUrlsValue || {})) {
-      const m = key.match(/^hair_(.+)_(back|front)$/)
-      if (!m) continue
-      const img = allowCors(new Image(), url)
-      img.onload = () => {
-        this.hairParts[m[1]] = { ...(this.hairParts[m[1]] || {}), [m[2]]: img }
-        if (this.human) this.renderGroups()
-      }
-      img.src = url
-    }
-  }
-
   // 💇 素体＋髪レイヤー（ぜんぶ 読めたら 使う）
   loadLayers() {
     const entries = Object.entries(this.layerUrlsValue || {})
     if (!entries.find(([k]) => k === "avatar_base")) return
     const images = {}
-    let left = entries.length
-    for (const [key, url] of entries) {
-      const img = allowCors(new Image(), url)
-      const done = () => {
-        if (--left > 0) return
-        this.layers = avatarLayersOf(images)
-        if (this.human) this.renderGroups()
-      }
-      img.onload = () => { images[key] = img; done() }
-      img.onerror = done
-      img.src = url
-    }
+    Promise.all(entries.map(([key, url]) => loadAssetImage(key, url).then((img) => { if (img) images[key] = img }))).then(() => {
+      this.layers = avatarLayersOf(images)
+      if (this.human) this.renderGroups()
+    })
   }
 
   useHumanPreview() {
