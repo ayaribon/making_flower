@@ -36,6 +36,17 @@ export function loadDettyanSheets(urls, timeoutMs = 20000) {
   return Promise.race([all, timer])
 }
 
+// 画像を 読む（読めない ものは 入れない）。{ キー: 画像 }
+export function loadImages(urls) {
+  const out = {}
+  return Promise.all(Object.entries(urls || {}).map(([key, url]) => new Promise((resolve) => {
+    const img = allowCors(new Image(), url)
+    img.onload = () => { out[key] = img; resolve() }
+    img.onerror = () => resolve()
+    img.src = url
+  }))).then(() => out)
+}
+
 // ---- 道具 ----
 const px = (g, color, x, y, w = 1, h = 1) => { g.fillStyle = color; g.fillRect(Math.round(x), Math.round(y), w, h) }
 const tile = (g, img, col, row, x, y) => g.drawImage(img, col * T, row * T, T, T, x, y, T, T)

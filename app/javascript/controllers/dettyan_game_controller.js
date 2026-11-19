@@ -7,7 +7,7 @@ import { applyIdle, claimDailyReward, doCare, buyFood, feedFood, dirtCount, maxG
 import { PLACES, MONSTERS, canGo, startAdventure, grantEvents, finishAdventure, drawMonster, monsterSprite, findFriend } from "dettyan_adventure"
 import { STATS, JOBS, SKILLS, POINTS_PER_LEVEL, JOB_CHANGE_LEVEL, HP_PER_VIT, findJob, findSkill, dettyanStats, expToNext, addPoint, removePoint, resetPoints, autoAllocate, setJob, canChangeJob, applyLevelUps, takeTurn, autoAction, runAuto } from "dettyan_battle"
 import { enableDettyanHuman } from "dettyan_human"
-import { loadDettyanSheets, createCampWide, drawCampNightWide, createBattleStrip, drawBattleWide, makeBattleTools, drawBattleTool, makeMonsterArt, drawMonsterArt, createStoryTownWide, drawStoryTownLive, drawFlashWide } from "dettyan_sprout"
+import { loadDettyanSheets, createCampWide, drawCampNightWide, createBattleStrip, drawBattleWide, makeBattleTools, drawBattleTool, makeMonsterArt, drawMonsterArt, createStoryTownWide, drawStoryTownLive, drawFlashWide, loadImages } from "dettyan_sprout"
 import { usingHumanDraw } from "dettyan_gear"
 import { facing8 } from "avatar_human"
 import { GEAR, SLOTS, slotName, findGear, equipped, gearBonus, toggleGear, drawGearIcon, drawDressed, drawHeldMic, shopGear, buyGear } from "dettyan_gear"
@@ -137,12 +137,16 @@ export default class extends Controller {
     const art = Promise.race([Promise.allSettled([
       enableDettyanHuman(this.layersValue),
       // 🌱 けしきの 素材（そろえば 新しい 絵。なければ 前の 絵）
-      loadDettyanSheets(this.spritesValue).then((sheets) => {
+      // 🚀 モンスター・こうげきの うごき（バトルで だけ 使う）は あとから うらで 読む
+      loadDettyanSheets(this.splitSprites().now).then((sheets) => {
         if (!sheets) return
         this.sprout = sheets
         this.wideCache = {}
-        this.tools = makeBattleTools(sheets.actions) // ⚔️ 農作業の 道具を こうげきの うごきに
-        this.monsterArt = makeMonsterArt(sheets, MONSTERS) // 👾 モンスター（ある ものだけ）
+        loadImages(this.splitSprites().later).then((more) => {
+          Object.assign(this.sprout, more)
+          this.tools = makeBattleTools(this.sprout.actions) // ⚔️ 農作業の 道具を こうげきの うごきに
+          this.monsterArt = makeMonsterArt(this.sprout, MONSTERS) // 👾 モンスター（ある ものだけ）
+        })
       })
     ]), giveUp()]).then(() => {
       this.artLoaded = true
@@ -458,6 +462,14 @@ export default class extends Controller {
   // けしきの 中の 場所（128×96 の 座標）→ canvas の 中の わりあい（%）
   pctX(x) { return ((x + this.view.ox) / this.view.VW) * 100 }
   pctY(y) { return ((y + this.view.oy) / this.view.VH) * 100 }
+
+  // さきに 読む もの（けしき）と あとで 読む もの（モンスター・こうげきの うごき）
+  splitSprites() {
+    const now = {}
+    const later = {}
+    for (const [k, url] of Object.entries(this.spritesValue || {})) (k.startsWith("mon_") || k === "actions" ? later : now)[k] = url
+    return { now, later }
+  }
 
   // 新しい 絵（Sprout Lands）だけで 描く（前の 絵は 2026-11-19 に やめた。読めないときは「よみこめなかった」）
   draw() {
