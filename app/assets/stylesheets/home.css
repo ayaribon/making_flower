@@ -10,7 +10,8 @@
   color: #fff;
   font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
 }
-.hm-inner { width: 100%; max-width: 880px; }
+.hm-inner { width: 100%; max-width: 1100px; }
+.hm-menu { max-width: 880px; margin: 0 auto; }
 
 .hm-header { text-align: center; margin-bottom: 28px; }
 .hm-eyebrow { margin: 0; letter-spacing: 0.2em; font-size: 0.85rem; opacity: 0.75; }
@@ -18,6 +19,127 @@
 .hm-hello { margin: 8px 0 0; opacity: 0.85; }
 
 .hm-menu { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+
+/* 🏘️ はじまりのまち（controllers/town_controller.js・town_world.js。160×120 ドット） */
+.hm-avatar-link {
+  display: inline-block; margin-left: 4px; padding: 2px 10px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16); color: #fff; font-size: 0.85rem; text-decoration: none; white-space: nowrap;
+}
+.hm-townwrap { width: 100%; max-width: 1100px; margin: 0 auto; }
+.hm-town {
+  position: relative; width: 100%; max-width: 1100px; margin: 0 auto 8px;
+  border-radius: 18px; overflow: hidden; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  border: 3px solid rgba(255, 255, 255, 0.25);
+}
+.hm-town__canvas {
+  display: block; width: 100%; height: auto; aspect-ratio: 4 / 3;
+  image-rendering: crisp-edges; image-rendering: pixelated; touch-action: manipulation; cursor: pointer;
+}
+/* 建物（すきとおった ボタン。名前の ふだ を 屋根の上に） */
+.hm-town__building {
+  position: absolute; top: 15%; width: 25%; height: 37%; padding: 0; border: 0; cursor: pointer;
+  background: transparent; touch-action: manipulation;
+}
+/* 名前 と、その下に 何が できるか */
+.hm-town__tag {
+  position: absolute; left: 50%; top: 0; transform: translate(-50%, -104%);
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 2px 8px 3px; border-radius: 10px; white-space: nowrap; line-height: 1.2;
+  background: rgba(14, 26, 51, 0.82); color: #fff; font: inherit; font-size: clamp(0.62rem, 2.4vw, 0.85rem);
+}
+.hm-town__tag b { font-weight: 800; }
+.hm-town__tag small { font-size: 0.82em; font-weight: 600; opacity: 0.85; }
+.hm-town__building:hover .hm-town__tag, .hm-town__building:focus-visible .hm-town__tag { background: #ff5fa2; }
+/* あんない の とき：その 建物を 光らせる */
+.hm-town__building.is-guide { border-radius: 8px; box-shadow: inset 0 0 0 3px #ffe066, 0 0 18px 4px rgba(255, 224, 102, 0.55); animation: hm-guide-glow 1.1s ease-in-out infinite alternate; }
+.hm-town__building.is-guide .hm-town__tag { background: #ff5fa2; }
+@keyframes hm-guide-glow { from { box-shadow: inset 0 0 0 3px #ffe066, 0 0 8px 2px rgba(255, 224, 102, 0.35); } to { box-shadow: inset 0 0 0 3px #ffe066, 0 0 22px 6px rgba(255, 224, 102, 0.7); } }
+.hm-town__building:focus-visible { outline: 3px solid #fff; outline-offset: -3px; border-radius: 8px; }
+.hm-town__layer { position: absolute; inset: 0; pointer-events: none; }
+/* ◀ ▶（スマホ：町が 横に つづく） */
+.hm-town__edge {
+  position: absolute; top: 72%; z-index: 2; width: 34px; height: 44px; border: 0; cursor: pointer;
+  background: rgba(14, 26, 51, 0.6); color: #fff; font-size: 1rem; touch-action: manipulation;
+}
+.hm-town__edge[hidden] { display: none; }
+.hm-town__edge--left { left: 0; border-radius: 0 12px 12px 0; }
+.hm-town__edge--right { right: 0; border-radius: 12px 0 0 12px; }
+.hm-town__name, .hm-town__bubble {
+  position: absolute; transform: translate(-50%, 0); white-space: nowrap;
+  padding: 1px 6px; border-radius: 6px; font-size: clamp(0.58rem, 2vw, 0.75rem); font-weight: 700;
+}
+.hm-town__name { background: rgba(255, 255, 255, 0.85); color: #1b2f5c; }
+.hm-town__bubble {
+  transform: translate(-50%, -100%); width: max-content; max-width: min(70%, 320px); white-space: normal; text-align: center; line-height: 1.3;
+  background: #fff; color: #1b2f5c; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+}
+.hm-town__bubble[hidden] { display: none; }
+/* まだ キャラを つくっていない人へ */
+.hm-town__intro {
+  position: absolute; left: 50%; bottom: 8%; transform: translateX(-50%); width: min(90%, 360px);
+  padding: 12px 14px; border-radius: 14px; text-align: center;
+  background: rgba(14, 26, 51, 0.92); color: #fff; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.hm-town__intro[hidden] { display: none; }
+.hm-town__intro p { margin: 0 0 8px; font-weight: 700; }
+.hm-town__intro-go {
+  display: inline-block; padding: 8px 16px; border-radius: 999px; background: #ff5fa2; color: #fff;
+  font-weight: 800; text-decoration: none;
+}
+.hm-town__intro-later { margin-left: 8px; padding: 8px 12px; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.16); color: #fff; font: inherit; cursor: pointer; }
+.hm-town__help { margin: 0 0 22px; text-align: center; font-size: 0.82rem; }
+.hm-town__guide-btn {
+  margin-left: 6px; padding: 3px 10px; border: 0; border-radius: 999px; cursor: pointer;
+  background: rgba(255, 255, 255, 0.16); color: #fff; font: inherit; font-weight: 700; white-space: nowrap;
+}
+
+/* 💬 ひとこと */
+.hm-say {
+  display: flex; align-items: center; gap: 8px; max-width: 640px; margin: 0 auto; padding: 6px 8px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1); border: 2px solid transparent;
+}
+.hm-say.is-guide { border-color: #ffe066; box-shadow: 0 0 16px 4px rgba(255, 224, 102, 0.5); }
+.hm-say__label { padding-left: 6px; font-size: 0.85rem; font-weight: 800; white-space: nowrap; }
+.hm-say__input {
+  flex: 1; min-width: 0; padding: 8px 12px; border: 0; border-radius: 999px;
+  background: #fff; color: #1b2f5c; font: inherit; font-size: 16px; /* 16px：iPhone で 入力するときに 画面が 大きく ならない */
+}
+.hm-say__btn { padding: 8px 16px; border: 0; border-radius: 999px; background: #ff5fa2; color: #fff; font: inherit; font-weight: 800; cursor: pointer; white-space: nowrap; touch-action: manipulation; }
+.hm-say__btn:disabled { opacity: 0.6; cursor: default; }
+.hm-say__status { min-height: 1.3em; margin: 4px 0 2px; text-align: center; font-size: 0.8rem; opacity: 0.85; }
+
+/* 📖 あんない（町の 下の ほうに 出る まど） */
+.hm-guide {
+  position: absolute; left: 50%; bottom: 4%; transform: translateX(-50%); z-index: 3; width: min(94%, 560px);
+  display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 14px;
+  background: rgba(14, 26, 51, 0.94); color: #fff; border: 2px solid rgba(255, 255, 255, 0.5); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.hm-guide[hidden] { display: none; }
+.hm-guide__face { flex: none; width: 52px; height: 52px; border-radius: 12px; background: #f6ecd8; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.hm-guide__siva { width: 100%; height: 100%; object-fit: cover; }
+.hm-guide__siva[hidden], .hm-guide__dettyan[hidden] { display: none; }
+.hm-guide__dettyan { width: 45px; height: 36px; image-rendering: crisp-edges; image-rendering: pixelated; }
+.hm-guide__body { flex: 1; min-width: 0; }
+.hm-guide__title { margin: 0 0 2px; font-weight: 800; font-size: 0.95rem; color: #ffe066; }
+.hm-guide__text { margin: 0; font-size: clamp(0.78rem, 2.6vw, 0.95rem); line-height: 1.45; }
+.hm-guide__btns { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.hm-guide__count { margin-right: auto; font-size: 0.75rem; opacity: 0.7; }
+.hm-guide__skip { padding: 6px 10px; border: 0; border-radius: 999px; background: transparent; color: rgba(255, 255, 255, 0.75); font: inherit; font-size: 0.8rem; cursor: pointer; }
+.hm-guide__skip[hidden], .hm-guide__make[hidden] { display: none; }
+.hm-guide__next, .hm-guide__make {
+  padding: 7px 14px; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.18); color: #fff;
+  font: inherit; font-size: 0.85rem; font-weight: 800; cursor: pointer; text-decoration: none; touch-action: manipulation;
+}
+.hm-guide__make { background: #ff5fa2; }
+.hm-guide__next:focus-visible, .hm-guide__make:focus-visible, .hm-guide__skip:focus-visible { outline: 3px solid #ffe066; outline-offset: 2px; }
+/* さいしょの「SiVA へ ようこそ！」は 大きく まんなかに */
+.hm-guide.is-welcome { top: 50%; bottom: auto; transform: translate(-50%, -50%); flex-direction: column; align-items: center; text-align: center; width: min(90%, 420px); padding: 16px; }
+.hm-guide.is-welcome .hm-guide__face { width: 76px; height: 76px; border-radius: 50%; }
+.hm-guide.is-welcome .hm-guide__title { font-size: clamp(1.1rem, 4.5vw, 1.5rem); }
+.hm-guide.is-welcome .hm-guide__btns { justify-content: center; }
+.hm-guide.is-welcome .hm-guide__count { margin-right: 0; }
+@media (prefers-reduced-motion: reduce) { .hm-town__building.is-guide { animation: none; } }
+.hm-menu-title { margin: 0 0 12px; font-size: 1rem; text-align: center; opacity: 0.85; }
 .hm-card {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
   min-height: 220px; padding: 24px 16px; border-radius: 24px;
@@ -102,3 +224,73 @@
 
 /* 歌ってみた画面の左上の「🏠 メニュー」 */
 .sg .sg-home-link { color: inherit; text-decoration: none; margin-right: 8px; padding: 2px 8px; border-radius: 999px; background: rgba(79, 182, 255, 0.15); }
+
+
+/* ==== 🏘️ 画面いっぱいの まち（homes/show）==== */
+.hm--town { position: fixed; inset: 0; display: block; padding: 0; overflow: hidden; background: linear-gradient(#2f5a34, #3d6b3a); }
+/* 町から 押す ための カード（見せない） */
+.hm-menu[hidden] { display: none !important; }
+.hm-townwrap--full { position: absolute; inset: 0; max-width: none; display: flex; align-items: center; justify-content: center; overflow: hidden; touch-action: none; }
+/* 🔍 拡大・縮小 */
+.hm-zoom { position: absolute; right: 10px; top: 50%; z-index: 5; display: flex; flex-direction: column; gap: 6px; transform: translateY(-50%); }
+.hm-zoom__btn {
+  width: 40px; height: 40px; border: 0; border-radius: 12px; cursor: pointer; touch-action: manipulation;
+  background: rgba(14, 26, 51, 0.78); color: #fff; font: inherit; font-size: 1.3rem; font-weight: 800; line-height: 1;
+}
+.hm-zoom__btn:disabled { opacity: 0.35; cursor: default; }
+@media (max-height: 480px) { .hm-zoom__btn { width: 34px; height: 34px; font-size: 1.1rem; } }
+.hm-townwrap--full .hm-town { margin: 0; max-width: none; border: 0; border-radius: 0; box-shadow: none; flex: none; }
+.hm-townwrap--full .hm-town__canvas { width: 100%; height: 100%; }
+/* 町の 上に 重ねる ところ（まわりは 町を さわれる） */
+.hm-hud { position: absolute; left: 0; right: 0; z-index: 5; pointer-events: none; padding: 8px 10px; }
+.hm-hud > * { pointer-events: auto; }
+.hm-hud--top { top: 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; padding-top: calc(8px + env(safe-area-inset-top)); }
+.hm-hud--bottom { bottom: 0; padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+.hm-hud__left { padding: 6px 12px; border-radius: 14px; background: rgba(14, 26, 51, 0.72); }
+.hm-hud__title { margin: 0; font-weight: 800; font-size: clamp(0.95rem, 3vw, 1.2rem); }
+.hm-hud .hm-hello { margin: 2px 0 0; font-size: 0.8rem; opacity: 0.85; }
+.hm-hud__right { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; }
+.hm-hud__btn {
+  display: inline-block; margin: 0; padding: 7px 12px; border: 0; border-radius: 999px; cursor: pointer; white-space: nowrap;
+  background: rgba(14, 26, 51, 0.78); color: #fff; font: inherit; font-size: 0.85rem; font-weight: 700; text-decoration: none; list-style: none;
+}
+.hm-hud__btn::-webkit-details-marker { display: none; }
+.hm-hud__form { display: inline; margin: 0; }
+.hm-hud__more { position: relative; }
+.hm-hud__menu {
+  position: absolute; right: 0; top: calc(100% + 6px); display: flex; flex-direction: column; gap: 10px; align-items: flex-start;
+  padding: 12px 14px; border-radius: 12px; background: rgba(14, 26, 51, 0.94); white-space: nowrap;
+}
+.hm-hud--bottom .hm-say { background: rgba(14, 26, 51, 0.78); }
+.hm-hud--bottom .hm-town__help { margin: 4px 0 0; font-size: 0.75rem; opacity: 0.8; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
+.hm-hud--bottom .hm-say__status:empty { display: none; }
+@media (max-width: 640px) {
+  .hm-hud__btn { padding: 6px 10px; font-size: 0.78rem; }
+  .hm-hud .hm-hello { display: none; }
+}
+/* 📋 かんたんメニュー の 画面 */
+.hm-mode-form { display: inline-block; margin: 12px 0 0; }
+.hm-mode-back { border: 0; cursor: pointer; font: inherit; }
+/* よこ向きの スマホ（高さが ひくい）：上下の ボタンを 小さく、町を かくさない */
+@media (max-height: 480px) {
+  .hm-hud { padding: 4px 8px; }
+  .hm-hud .hm-hello, .hm-hud--bottom .hm-town__help { display: none; }
+  .hm-hud__left { padding: 4px 10px; }
+  .hm-hud__btn { padding: 5px 9px; font-size: 0.75rem; }
+  .hm-hud--bottom .hm-say { max-width: 420px; margin: 0 auto; padding: 4px 8px; }
+}
+
+/* 素材の 絵を 読んでいる あいだ（town_controller.js）：建物の 名前・人の 名前・ふきだし・◀ ▶ を かくす */
+.hm-town.is-loading .hm-town__building, .hm-town.is-loading .hm-town__edge, .hm-town.is-loading .hm-town__layer { visibility: hidden; }
+
+/* 絵が 読めなかった とき（town_controller.js の showArtError） */
+.hm-town__error {
+  position: absolute; left: 50%; top: 50%; z-index: 6; transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px 20px; border-radius: 14px;
+  background: rgba(14, 26, 51, 0.88); color: #fff; text-align: center;
+}
+.hm-town__error p { margin: 0; font-weight: 700; }
+.hm-town__error button { padding: 8px 16px; border: 0; border-radius: 999px; background: #ff5fa2; color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+
+/* 画面いっぱい：あんない の 箱は 下の ひとこと の 上に（town_controller.js が --hm-hud-bottom を はかる） */
+.hm-townwrap--full .hm-guide:not(.is-welcome) { bottom: calc(var(--hm-hud-bottom, 90px) + 8px); }

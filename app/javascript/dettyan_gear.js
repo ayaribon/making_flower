@@ -726,10 +726,17 @@ export function drawArt(g, art, colors, ox, oy, scale = 1) {
   })
 }
 
+// 🧑 新しい 絵（町の アバターと 同じ 素体＋レイヤー）。dettyan_human.js が 画像を 読んだら セットする
+let humanDraw = null
+export function setHumanDraw(fn) { humanDraw = fn }
+export function usingHumanDraw() { return !!humanDraw }
+
 // そうびした Dettyan を描く（部屋・バトル・メニューのアイコンで同じ絵になる）
+//   新しい 絵が あれば そちら（opts.classic で 前の 絵）
 //   set：equipped(state) の形。opts は drawDettyan と同じ（eyes・frame・mouth・view）
 //   hideHand：手に持っているものを描かない（歌うときに マイクを持つため）
 export function drawDressed(g, left, top, set = {}, opts = {}) {
+  if (humanDraw && !opts.classic) return humanDraw(g, left, top, set, opts)
   const view = opts.view || "front"
   const palette = dettyanPalette(set.outfit?.colors, set.feet?.colors)
   const back = set.back
@@ -831,6 +838,7 @@ const HELD_MIC = { x: 11, y: 11, rows: [
 const DEFAULT_MIC = { m: "#4a4a58", M: "#9aa0b0", s: "#2b2b35" }
 
 export function drawHeldMic(g, left, top, set = {}) {
+  if (humanDraw) return // 新しい 絵では 手の マイクも いっしょに 描く（dettyan_human.js）
   const palette = dettyanPalette(set.outfit?.colors, set.feet?.colors)
   const mic = set.weapon && /mic/.test(set.weapon.id) ? set.weapon.colors : DEFAULT_MIC
   // 下ろしていた手は、そでで かくす

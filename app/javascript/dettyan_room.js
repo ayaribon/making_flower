@@ -32,13 +32,14 @@ export const SEAT = { left: CHAIR.cx - 10, top: 25, x: CHAIR.cx, y: 49 }
 export const WORK_SPOT = { x: CHAIR.cx, y: 63 }
 export const SING_SPOT = { x: STAGE.cx, y: STAGE.cy + 3 }
 
+// 色は Sprout Lands（町）に よせた（2026-11-19。ふちは こい 赤むらさき、木は あかるい 茶）
 const C = {
-  K: "#1a1414",
+  K: "#5e4250",
   wall: "#efe3c8", wallStripe: "#e7d8b9", wallDot: "#dccaa5",
   molding: "#fff6e4", moldingShade: "#d9c7a2",
-  wainscot: "#b98a5c", wainscotLight: "#cf9f6d", wainscotDark: "#93683f",
-  base: "#6e4423", baseLight: "#8a5a33",
-  floor: ["#c08a55", "#b8814c", "#c6915c", "#bb854f"], floorSeam: "#9a6a3a", floorShine: "#d3a06a",
+  wainscot: "#c49a6c", wainscotLight: "#d8b483", wainscotDark: "#a07655",
+  base: "#8f6150", baseLight: "#aa7959",
+  floor: ["#d8a873", "#d2a06a", "#dcae7a", "#cf9c66"], floorSeam: "#a8744f", floorShine: "#e9c393",
   wood: "#6e4423", woodLight: "#8a5a33", woodDark: "#4a2c14",
   white: "#f4f1ea", whiteShade: "#d8d2c4",
   curtain: "#6fa3b8", curtainDark: "#4f8296", curtainLight: "#93c2d2",
@@ -94,16 +95,18 @@ function text(g, str, x, y, color) {
 }
 
 // ---- 動かないところ ----
-export function createRoom(f = null) {
+// area：画面いっぱい の とき の 広さ（128×96 の 座標。かべ と ゆか が まわりにも つづく）。なければ 128×96
+export function createRoom(f = null, area = null) {
+  const a = area || { x: 0, y: 0, w: ROOM_W, h: ROOM_H }
   const c = document.createElement("canvas")
-  c.width = ROOM_W
-  c.height = ROOM_H
+  c.width = a.w
+  c.height = a.h
   const g = c.getContext("2d")
-  const rand = seededRandom(20261117)
+  g.translate(-a.x, -a.y)
   const has = (id) => !f || !!f[id]
 
-  drawWall(g)
-  drawFloor(g, rand)
+  drawWall(g, a)
+  drawFloor(g, a)
   drawWindowFrame(g, { curtain: has("curtain"), cactus: has("plant") })
   if (has("poster")) drawPoster(g)
   if (has("clock")) drawClockFace(g)
@@ -114,53 +117,69 @@ export function createRoom(f = null) {
   return c
 }
 
-function drawWall(g) {
-  px(g, C.wall, 0, 0, ROOM_W, WALL_BOTTOM)
+function drawWall(g, a) {
+  const x0 = Math.floor(a.x / 16) * 16
+  const x1 = a.x + a.w
+  const W2 = x1 - x0
+  // 天井（上に すきまが あるとき）：こい 木の はり
+  if (a.y < -4) {
+    px(g, C.base, x0, a.y, W2, -4 - a.y)
+    for (let x = x0; x < x1; x += 24) px(g, C.baseLight, x, a.y, 2, -4 - a.y)
+    px(g, C.K, x0, -5, W2, 1)
+  }
+  px(g, C.wall, x0, Math.max(a.y, -4), W2, WALL_BOTTOM - Math.max(a.y, -4))
   // たてじま と 小さな花もよう
-  for (let x = 0; x < ROOM_W; x += 8) px(g, C.wallStripe, x, 3, 3, 28)
+  for (let x = x0; x < x1; x += 8) px(g, C.wallStripe, x, 3, 3, 28)
   for (let y = 7; y < 30; y += 8) {
-    for (let x = (y % 16 === 7 ? 5 : 1); x < ROOM_W; x += 8) {
+    for (let x = x0 + (y % 16 === 7 ? 5 : 1); x < x1; x += 8) {
       px(g, C.wallDot, x + 1, y, 1, 1)
       px(g, C.wallDot, x, y + 1, 3, 1)
       px(g, C.wallDot, x + 1, y + 2, 1, 1)
     }
   }
   // 天井の かざり
-  px(g, C.molding, 0, 0, ROOM_W, 2)
-  px(g, C.moldingShade, 0, 2, ROOM_W, 1)
+  px(g, C.molding, x0, 0, W2, 2)
+  px(g, C.moldingShade, x0, 2, W2, 1)
   // こしかべ（板ばり）
-  px(g, C.wainscot, 0, 31, ROOM_W, 7)
-  px(g, C.wainscotLight, 0, 31, ROOM_W, 1)
-  px(g, C.wainscotDark, 0, 30, ROOM_W, 1)
-  for (let x = 0; x < ROOM_W; x += 16) {
+  px(g, C.wainscot, x0, 31, W2, 7)
+  px(g, C.wainscotLight, x0, 31, W2, 1)
+  px(g, C.wainscotDark, x0, 30, W2, 1)
+  for (let x = x0; x < x1; x += 16) {
     px(g, C.wainscotDark, x + 2, 33, 12, 1)
     px(g, C.wainscotDark, x + 2, 33, 1, 4)
     px(g, C.wainscotLight, x + 3, 36, 11, 1)
     px(g, C.wainscotLight, x + 13, 34, 1, 3)
   }
   // はばき
-  px(g, C.base, 0, 38, ROOM_W, 3)
-  px(g, C.baseLight, 0, 38, ROOM_W, 1)
+  px(g, C.base, x0, 38, W2, 3)
+  px(g, C.baseLight, x0, 38, W2, 1)
 }
 
-function drawFloor(g, rand) {
-  // 板（1まいずつ少し色をかえる）
-  for (let y = WALL_BOTTOM, row = 0; y < ROOM_H; y += 6, row++) {
-    let x = row % 2 ? -14 : -2
-    while (x < ROOM_W) {
-      const len = 22 + Math.floor(rand() * 14)
-      px(g, C.floor[Math.floor(rand() * C.floor.length)], x, y, len, 6)
+// 板の 長さ・色は 場所で きまる（広さが かわっても まんなかは 同じ）
+function plank(x, row, k) {
+  let h = (Math.imul(x | 0, 374761393) + Math.imul(row, 668265263) + Math.imul(k, 2246822519)) | 0
+  h = Math.imul(h ^ (h >>> 13), 1274126177)
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296
+}
+
+function drawFloor(g, a) {
+  // 板（1まいずつ少し色をかえる）。1だん 6ドット、板は 30ドット（だん ごとに ずらす）
+  const x0 = Math.floor(a.x / 30) * 30 - 30
+  const x1 = a.x + a.w
+  for (let y = WALL_BOTTOM, row = 0; y < a.y + a.h; y += 6, row++) {
+    for (let x = x0 + (row % 2 ? 15 : 0); x < x1; x += 30) {
+      const len = 30
+      px(g, C.floor[Math.floor(plank(x, row, 1) * C.floor.length)], x, y, len, 6)
       px(g, C.floorShine, x + 1, y, len - 2, 1)
       px(g, C.floorSeam, x, y, 1, 6)
       // 木目
-      if (rand() < 0.6) px(g, C.floorSeam, x + 4 + Math.floor(rand() * (len - 10)), y + 2 + Math.floor(rand() * 3), 3 + Math.floor(rand() * 3), 1)
-      x += len
+      if (plank(x, row, 2) < 0.6) px(g, C.floorSeam, x + 4 + Math.floor(plank(x, row, 3) * (len - 10)), y + 2 + Math.floor(plank(x, row, 4) * 3), 3 + Math.floor(plank(x, row, 5) * 3), 1)
     }
-    px(g, C.floorSeam, 0, y + 5, ROOM_W, 1)
+    px(g, C.floorSeam, x0, y + 5, x1 - x0, 1)
   }
   // かべぎわの かげ
   g.fillStyle = "rgba(60, 30, 10, 0.18)"
-  g.fillRect(0, WALL_BOTTOM, ROOM_W, 2)
+  g.fillRect(x0, WALL_BOTTOM, x1 - x0, 2)
 }
 
 function drawWindowFrame(g, { curtain = true, cactus = true } = {}) {
@@ -591,11 +610,12 @@ export function drawSpeaker(g, singing, t) {
 }
 
 // 夜は 部屋を少し暗くして、デスクライトと PC の あかり をつける
-export function drawNightLight(g, now, working, f = null) {
+export function drawNightLight(g, now, working, f = null, area = null) {
   if (timeOfDay(now) !== "night") return
   const has = (id) => !f || !!f[id]
+  const a = area || { x: 0, y: 0, w: ROOM_W, h: ROOM_H }
   g.fillStyle = "rgba(16, 20, 56, 0.28)"
-  g.fillRect(0, 0, ROOM_W, ROOM_H)
+  g.fillRect(a.x, a.y, a.w, a.h)
   // デスクライトの光
   if (has("desk") && has("lamp")) {
     glow(g, LAMP.x + 2, DESK.top - 2, 22, "255, 220, 140", 0.09)

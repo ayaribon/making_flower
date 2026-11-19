@@ -108,8 +108,9 @@ test("たたかうと、ときどき ぶき・いしょう が落ちる。持っ
     s.stats.genki = 100
     const r = goAuto(s, "park", seed)
     if (r.gear) got++
+    got += r.battle.found.gear.length // 宝箱から 出た そうび
   }
-  // 公園で落ちるのは5つ（あたま・からだ・て・せなか・あし）。どれも1回ずつしか落ちない
+  // 公園で落ちるのは5つ（あたま・からだ・て・せなか・あし）。どれも1回ずつしか落ちない（宝箱も おなじ）
   const park = adv.findPlace("park").gear
   assert.equal(got, park.length)
   for (const id of park) assert.ok(s.gear.owned[id], id)

@@ -1,15 +1,21 @@
 /* 🧑‍💼 Dettyan 育成ゲーム（dettyans#show）。.dt の中だけ */
+/* 画面いっぱい：けしき（.dt-stage の canvas）が 画面ぜんぶ。上（.dt-top）と 下（.dt-bottom）を 重ねる
+   けしきの まんなか（128×96）の 場所は JS が --scene-x/y/w/h（px）に、上と下の 高さは --dt-top / --dt-bottom に 入れる */
 .dt {
-  min-height: 100vh;
-  min-height: 100dvh;
-  display: flex;
-  justify-content: center;
-  padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
-  background: linear-gradient(160deg, #2a1c12 0%, #5a3a22 55%, #8a5a33 100%);
+  position: fixed; inset: 0; overflow: hidden;
+  --dt-top: 120px; --dt-bottom: 90px; --scene-x: 0px; --scene-y: 120px; --scene-w: 100vw; --scene-h: 75vw;
+  background: #2a1c12;
   color: #fff;
   font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
 }
-.dt-inner { width: 100%; max-width: 640px; }
+.dt-top, .dt-bottom {
+  position: absolute; left: 0; right: 0; z-index: 12; pointer-events: none;
+  padding: calc(8px + env(safe-area-inset-top)) max(10px, env(safe-area-inset-left)) 8px;
+}
+.dt-top > *, .dt-bottom > * { pointer-events: auto; max-width: 1100px; margin-left: auto; margin-right: auto; }
+.dt-top { top: 0; background: linear-gradient(rgba(20, 12, 6, 0.72), rgba(20, 12, 6, 0.45) 75%, rgba(20, 12, 6, 0)); }
+.dt-bottom { bottom: 0; padding: 8px max(10px, env(safe-area-inset-left)) calc(10px + env(safe-area-inset-bottom)); background: linear-gradient(rgba(20, 12, 6, 0), rgba(20, 12, 6, 0.55) 30%, rgba(20, 12, 6, 0.75)); }
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .dt-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .dt-home-link {
@@ -45,9 +51,9 @@
 .dt-meter__fill--genki { background: #7ed957; }
 .dt-meter__fill--gokigen { background: #ff9ec4; }
 
-.dt-stage { position: relative; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); }
+.dt-stage { position: absolute; inset: 0; overflow: hidden; }
 .dt-room {
-  display: block; width: 100%; height: auto; aspect-ratio: 4 / 3;
+  display: block; position: absolute; left: 0; top: 0;
   image-rendering: crisp-edges; image-rendering: pixelated;
   touch-action: manipulation; cursor: pointer;
 }
@@ -264,3 +270,29 @@
 @media (max-width: 640px) { .dt-story__text { font-size: 0.88rem; } }
 @media (prefers-reduced-motion: reduce) { .dt-story__next { animation: none; } }
 
+
+/* ==== 画面いっぱい の ときの 重ねかた ==== */
+/* おせわ の メニュー：けしきの はば で、下の ボタンの すぐ 上 */
+.dt-care { left: calc(var(--scene-x) + 8px); right: auto; width: calc(var(--scene-w) - 16px); bottom: calc(var(--dt-bottom) + 6px); max-width: 640px; }
+/* ショップ など：上と 下の あいだに まんなか よせ */
+.dt-sheet { inset: var(--dt-top) 8px var(--dt-bottom) 8px; max-width: 720px; margin: 0 auto; border-radius: 14px; }
+.dt-toast { top: calc(var(--dt-top) + 4px); }
+.dt-stage.is-battle .dt-toast { top: calc(var(--scene-y) + var(--scene-h) * 0.19); }
+/* おはなし：ことばの 箱は 下の ボタンの 上、スキップは 上の 表示の 下 */
+.dt-story__box { max-width: 720px; margin-left: auto; margin-right: auto; bottom: calc(var(--dt-bottom) + 6px); }
+.dt-story__skip { top: calc(var(--dt-top) + 4px); }
+.dt-actions, .dt-cmd { margin-top: 0; }
+.dt-hud { margin-bottom: 4px; }
+.dt-goal { margin: 0; }
+.dt-bar { margin-bottom: 6px; }
+/* 高さが ひくい 画面（よこ向きの スマホ）：上を 1行に つめる */
+@media (max-height: 520px) {
+  .dt-title { display: none; }
+  .dt-top { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding-top: calc(4px + env(safe-area-inset-top)); padding-bottom: 4px; }
+  .dt-top > * { margin: 0; max-width: none; }
+  .dt-bar { order: 0; margin: 0; }
+  .dt-hud { margin: 0; font-size: 0.8rem; }
+  .dt-goal { font-size: 0.75rem; padding: 2px 8px; }
+  .dt-actions button, .dt-cmd__btn { min-height: 40px; padding-top: 4px; padding-bottom: 4px; }
+  .dt-bottom { padding-top: 4px; padding-bottom: calc(4px + env(safe-area-inset-bottom)); }
+}

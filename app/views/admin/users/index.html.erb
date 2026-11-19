@@ -9,6 +9,7 @@
       <li class="admin-row">
         <div class="admin-row-name">
           <strong><%= user.name %></strong>
+          <% if user.display_name.present? %><span class="admin-row-sub">（<%= user.display_name %>）</span><% end %>
           <% if user.admin? %><span class="admin-badge">管理者</span><% end %>
           <% if user == current_user %><span class="admin-badge is-me">あなた</span><% end %>
         </div>

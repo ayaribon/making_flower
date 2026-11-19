@@ -4,13 +4,16 @@ import { DettyanStore } from "dettyan_save"
 import { DettyanSound } from "dettyan_sound"
 import { FOODS, findFood, foodGokigen, drawFood } from "dettyan_foods"
 import { applyIdle, claimDailyReward, doCare, buyFood, feedFood, dirtCount, maxGenki } from "dettyan_care"
-import { PLACES, MONSTERS, canGo, startAdventure, grantEvents, finishAdventure, drawSlime, findFriend } from "dettyan_adventure"
+import { PLACES, MONSTERS, canGo, startAdventure, grantEvents, finishAdventure, drawMonster, monsterSprite, findFriend } from "dettyan_adventure"
 import { STATS, JOBS, SKILLS, POINTS_PER_LEVEL, JOB_CHANGE_LEVEL, HP_PER_VIT, findJob, findSkill, dettyanStats, expToNext, addPoint, removePoint, resetPoints, autoAllocate, setJob, canChangeJob, applyLevelUps, takeTurn, autoAction, runAuto } from "dettyan_battle"
+import { enableDettyanHuman } from "dettyan_human"
+import { loadDettyanSheets, createCampWide, drawCampNightWide, createBattleStrip, drawBattleWide, makeBattleTools, drawBattleTool, makeMonsterArt, drawMonsterArt, createStoryTownWide, drawStoryTownLive, drawFlashWide } from "dettyan_sprout"
+import { usingHumanDraw } from "dettyan_gear"
+import { facing8 } from "avatar_human"
 import { GEAR, SLOTS, slotName, findGear, equipped, gearBonus, toggleGear, drawGearIcon, drawDressed, drawHeldMic, shopGear, buyGear } from "dettyan_gear"
 import { ROOM_W, ROOM_H, createRoom, drawRoomLive, drawChair, drawSpeaker, drawNightLight, drawWindowLight, CHAIR, SPEAKER, SEAT, WORK_SPOT, SING_SPOT } from "dettyan_room"
-import { drawScene } from "dettyan_scenes"
 import { HOUSE, FURNITURE, findFurniture, hasHouse, hasFurniture, canWork, buyHouse, buyFurniture } from "dettyan_home"
-import { createCamp, drawCampSky, drawCampfire, drawCampNight, drawLeaf, createTown, drawTownLive, drawFlash, FIRE, CAMP_SING_SPOT, LEAF_SPOTS } from "dettyan_camp"
+import { drawCampfire, drawLeaf, FIRE, CAMP_SING_SPOT, LEAF_SPOTS } from "dettyan_camp"
 import { CLEAR_TEXT, currentGoal, checkStory, SCENES } from "dettyan_story"
 
 // 🧑‍💼 Dettyan 育成ゲーム：事務所の部屋の中を Dettyan がちょこちょこ歩く。タップでおせわ、ショップでごはん
@@ -85,8 +88,8 @@ const OWNER_IDLE_CHANCE = 0.08 // 止まったとき、ひとりで「俺やん�
 
 export default class extends Controller {
   static targets = ["canvas", "start", "startText", "startNote", "money", "genki", "gokigen", "soundButton", "soundPanel", "bgmToggle", "seToggle", "bubble",
-    "menu", "sheet", "sheetTitle", "sheetMoney", "sheetList", "toast", "level", "genkiNum", "cmd", "cmdStatus", "cmdButtons", "statusButton", "goal", "story", "storyWho", "storyText"]
-  static values = { userId: Number, owner: Boolean } // owner：Dettyan 本人のアカウント
+    "menu", "sheet", "sheetTitle", "sheetMoney", "sheetList", "toast", "level", "genkiNum", "cmd", "cmdStatus", "cmdButtons", "statusButton", "goal", "story", "storyWho", "storyText", "top", "bottom"]
+  static values = { userId: Number, owner: Boolean, layers: Object, sprites: Object } // owner：Dettyan 本人のアカウント。layers：素体＋レイヤーの 画像（あれば 町と 同じ 絵）
 
   connect() {
     this.store = new DettyanStore({ userId: this.userIdValue })
@@ -94,12 +97,14 @@ export default class extends Controller {
     this.ready = false
     this.started = false
 
-    const c = this.canvasTarget
-    c.width = W
-    c.height = H
-    this.g = c.getContext("2d")
-    this.room = createRoom({}) // セーブを読んだら 持っている家具で 描きなおす（rebuildHome）
-    this.camp = createCamp()
+    // 画面いっぱい：画面の canvas（this.screen）に、まんなか 128×96 の けしきを おき、まわりも 同じ けしきの つづきを 広く 描く
+    this.screen = this.canvasTarget.getContext("2d")
+    this.view = { ox: 0, oy: 0, VW: W, VH: H, scale: 1 }
+    this.layout()
+    this.resizeObserver = new ResizeObserver(() => this.layout())
+    this.resizeObserver.observe(this.element)
+    this.resizeObserver.observe(this.topTarget)
+    this.resizeObserver.observe(this.bottomTarget)
     // mode："idle" | "walk" | "look" | "work"（PC で作業）| "sing"（歌う）。plan：歩いた先で始めること
     this.chara = { x: W / 2, y: 74, tx: W / 2, ty: 74, mode: "idle", until: 1.5, stepT: 0, frame: 0, blink: 0, nextBlink: 3, hop: 0, plan: null, act: null, lastActAt: -ACT_GAP_SEC }
     this.t = 0 // 開いてからの秒（部屋の動くところに使う）
@@ -108,13 +113,16 @@ export default class extends Controller {
     this.battle = null  // モンスター退治の再生中
 
     this.last = performance.now()
+    // dt は 0 より 小さく しない（さいしょの コマは now が this.last より 前の ことが あり、t が マイナスに なると
+    // たき火の 絵が えらべず 止まって Dettyan が 消えていた。2026-11-19）
+    // 次の コマを 先に たのむ：1コマ 描けなくても 止まらない
     this.loop = (now) => {
-      const dt = Math.min(0.1, (now - this.last) / 1000)
+      this.raf = requestAnimationFrame(this.loop)
+      const dt = Math.max(0, Math.min(0.1, (now - this.last) / 1000))
       this.last = now
       this.t += dt
       this.tick(dt)
       this.draw()
-      this.raf = requestAnimationFrame(this.loop)
     }
     this.raf = requestAnimationFrame(this.loop)
 
@@ -123,11 +131,30 @@ export default class extends Controller {
     window.addEventListener("pagehide", this.onHide)
     document.addEventListener("visibilitychange", this.onVisibility)
 
-    this.store.load({ onCache: (s) => this.renderHud(s) }).then((s) => this.afterLoad(s))
+    // 🧑 Dettyan の 新しい 絵 と 🌱 けしきの 素材 を 読みおわるまで（成功・失敗 どちらでも）ステージを 描かない
+    //   読みおわる まえに 前の 絵が 一瞬 出ないように。読めなければ 前の 絵で 遊べる。6秒で あきらめる
+    const giveUp = () => new Promise((resolve) => setTimeout(resolve, 6000))
+    const art = Promise.race([Promise.allSettled([
+      enableDettyanHuman(this.layersValue),
+      // 🌱 けしきの 素材（そろえば 新しい 絵。なければ 前の 絵）
+      loadDettyanSheets(this.spritesValue).then((sheets) => {
+        if (!sheets) return
+        this.sprout = sheets
+        this.wideCache = {}
+        this.tools = makeBattleTools(sheets.actions) // ⚔️ 農作業の 道具を こうげきの うごきに
+        this.monsterArt = makeMonsterArt(sheets, MONSTERS) // 👾 モンスター（ある ものだけ）
+      })
+    ]), giveUp()]).then(() => {
+      this.artLoaded = true
+      // 新しい 絵（けしき と Dettyan）が そろわなければ 遊べない（前の 絵は もう 出さない）
+      this.artOK = !!this.sprout && usingHumanDraw()
+    })
+    Promise.all([this.store.load({ onCache: (s) => this.renderHud(s) }), art]).then(([s]) => this.afterLoad(s))
   }
 
   disconnect() {
     cancelAnimationFrame(this.raf)
+    this.resizeObserver?.disconnect()
     clearTimeout(this.bubbleTimer)
     clearTimeout(this.toastTimer)
     clearInterval(this.idleTimer)
@@ -139,6 +166,13 @@ export default class extends Controller {
   }
 
   afterLoad(state) {
+    if (!this.artOK) {
+      // 絵が 読めなかった：タップで もう一度 ひらく
+      this.artFailed = true
+      this.startTextTarget.textContent = "絵を よみこめなかったよ… タップで もう一度"
+      this.startNoteTarget.hidden = true
+      return
+    }
     this.ready = true
     this.rebuildHome()
     Object.assign(this.chara, { x: this.homeSpot.x, y: this.homeSpot.y, tx: this.homeSpot.x, ty: this.homeSpot.y })
@@ -159,6 +193,7 @@ export default class extends Controller {
 
   // 「はじめる」画面をタップ
   start() {
+    if (this.artFailed) return window.location.reload()
     if (!this.ready || this.started) return
     this.sound.unlock()
     this.sound.se("tap")
@@ -390,31 +425,96 @@ export default class extends Controller {
     if (this.chara.act) this.endActivity(false)
   }
 
+  // ---- 画面いっぱい ----
+  // まんなか 128×96 を 上と 下の あいだに おさめる 大きさ を きめて、canvas を 画面 ぜんぶ に する
+  layout() {
+    const Wp = this.element.clientWidth || W
+    const Hp = this.element.clientHeight || H
+    const top = this.hasTopTarget ? this.topTarget.offsetHeight : 0
+    const bottom = this.hasBottomTarget ? this.bottomTarget.offsetHeight : 0
+    const safeH = Math.max(H, Hp - top - bottom - 6)
+    const scale = Math.max(1, Math.min(Wp / W, safeH / H))
+    const VW = Math.ceil(Wp / scale)
+    const VH = Math.ceil(Hp / scale)
+    const ox = Math.round((VW - W) / 2)
+    const oy = Math.max(0, Math.min(VH - H, Math.round((top + (safeH - H * scale) / 2) / scale)))
+    const c = this.canvasTarget
+    if (c.width !== VW) c.width = VW
+    if (c.height !== VH) c.height = VH
+    c.style.width = `${VW * scale}px`
+    c.style.height = `${VH * scale}px`
+    const st = this.element.style
+    st.setProperty("--dt-top", `${top}px`)
+    st.setProperty("--dt-bottom", `${bottom}px`)
+    st.setProperty("--scene-x", `${ox * scale}px`)
+    st.setProperty("--scene-y", `${oy * scale}px`)
+    st.setProperty("--scene-w", `${W * scale}px`)
+    st.setProperty("--scene-h", `${H * scale}px`)
+    const changed = VW !== this.view.VW || VH !== this.view.VH || ox !== this.view.ox || oy !== this.view.oy
+    this.view = { ox, oy, VW, VH, scale }
+    if (changed) this.wideCache = {}
+  }
+
+  // けしきの 中の 場所（128×96 の 座標）→ canvas の 中の わりあい（%）
+  pctX(x) { return ((x + this.view.ox) / this.view.VW) * 100 }
+  pctY(y) { return ((y + this.view.oy) / this.view.VH) * 100 }
+
+  // 新しい 絵（Sprout Lands）だけで 描く（前の 絵は 2026-11-19 に やめた。読めないときは「よみこめなかった」）
   draw() {
-    const g = this.g
+    const sg = this.screen
+    const v = this.view
+    sg.setTransform(1, 0, 0, 1, 0, 0)
+    sg.imageSmoothingEnabled = false
+    // 絵を 読んでいる あいだ・読めなかった ときは 色だけ
+    if (!this.artLoaded || !this.artOK || !this.store.state) {
+      sg.fillStyle = "#2a1c12"
+      sg.fillRect(0, 0, v.VW, v.VH)
+      return
+    }
+    sg.save()
+    sg.translate(v.ox, v.oy)
+    this.drawStage(sg, this.wideArea())
+    sg.restore()
+  }
+
+  // 動かない ところ（広く 描いた もの）を とっておく
+  //   画面の 大きさが かわると layout() が wideCache を からに する
+  wide(key, make) {
+    this.wideCache ||= {}
+    this.wideCache[key] ||= make(this.wideArea())
+    return this.wideCache[key]
+  }
+
+  // 広く 描く ところ（128×96 の 座標で）
+  wideArea() {
+    const v = this.view
+    return { x: -v.ox, y: -v.oy, w: v.VW, h: v.VH }
+  }
+
+  // area：広く 描く 広さ（128×96 の 座標）
+  drawStage(g, area) {
     const ch = this.chara
-    if (this.story) return this.drawStory(g)
-    if (this.battle) return this.drawBattle(g)
+    if (this.story) return this.drawStory(g, area)
+    if (this.battle) return this.drawBattle(g, area)
     const now = this.store.now()
     const act = ch.act
     const s = this.store.state
     const dirt = s ? dirtCount(s, now) : 0
     if (this.inTent) {
-      // ⛺ テント：空・遠くの まち・たき火（Dettyan と前後が入れかわる）
-      drawCampSky(g, now, this.t)
-      g.drawImage(this.camp, 0, 0)
+      // ⛺ テント：空・遠くの まち・たき火（Dettyan と前後が入れかわる）。新しい 絵は 森の 中の ひろば
+      g.drawImage(this.wide("camp", (a) => createCampWide(this.sprout, a)), area.x, area.y)
       for (let i = 0; i < dirt; i++) drawLeaf(g, ...LEAF_SPOTS[i])
       const layers = [
         { y: FIRE.y, draw: () => drawCampfire(g, now, this.t) },
         { y: ch.y + 0.5, draw: () => this.drawChara(g) }
       ]
       layers.sort((a, b) => a.y - b.y).forEach((l) => l.draw())
-      drawCampNight(g, now)
+      drawCampNightWide(g, now, area)
       this.drawParticles(g)
       return
     }
     const f = s?.home.furniture || {}
-    g.drawImage(this.room, 0, 0)
+    g.drawImage(this.wide("room", (a) => createRoom(f, a)), area.x, area.y)
     drawWindowLight(g, now)
     drawRoomLive(g, { now, t: this.t, mode: act?.kind, workT: act?.kind === "work" ? act.t : 0, f })
     for (let i = 0; i < dirt; i++) drawDust(g, ...DIRT_SPOTS[i])
@@ -423,7 +523,7 @@ export default class extends Controller {
     if (f.chair) layers.push({ y: CHAIR.base, draw: () => drawChair(g) })
     if (f.speaker) layers.push({ y: SPEAKER.base, draw: () => drawSpeaker(g, act?.kind === "sing", this.t) })
     layers.sort((a, b) => a.y - b.y).forEach((l) => l.draw())
-    drawNightLight(g, now, act?.kind === "work", f)
+    drawNightLight(g, now, act?.kind === "work", f, area)
     this.drawParticles(g)
   }
 
@@ -445,7 +545,7 @@ export default class extends Controller {
   // 家具が かわったら、へや の絵を 描きなおす
   rebuildHome() {
     const s = this.store.state
-    this.room = createRoom(s?.home.furniture || {})
+    if (this.wideCache) delete this.wideCache.room
   }
 
   drawChara(g) {
@@ -476,7 +576,9 @@ export default class extends Controller {
     }
     // もぐもぐ：食べている間は口のあたりで小さく上下する
     const munch = this.eating ? Math.round(Math.abs(Math.sin(this.eating.t * 10))) : 0
-    this.drawMe(g, left, top + munch, { eyes: ch.blink > 0 || this.eating ? "blink" : "open", frame: ch.frame })
+    // 歩く ときは 行く ほうを むく（新しい 絵。前の 絵は まえ だけ）
+    const dir = ch.mode === "walk" ? facing8(ch.tx - ch.x, ch.ty - ch.y, "down") : "down"
+    this.drawMe(g, left, top + munch, { eyes: ch.blink > 0 || this.eating ? "blink" : "open", frame: ch.frame, dir })
     if (this.eating) this.drawEating(g, left, top)
   }
 
@@ -566,8 +668,8 @@ export default class extends Controller {
     if (!this.started || this.story) return
     if (this.battle) return // バトル中は 下の コマンド で えらぶ
     const rect = this.canvasTarget.getBoundingClientRect()
-    const x = ((event.clientX - rect.left) / rect.width) * W
-    const y = ((event.clientY - rect.top) / rect.height) * H
+    const x = ((event.clientX - rect.left) / rect.width) * this.view.VW - this.view.ox
+    const y = ((event.clientY - rect.top) / rect.height) * this.view.VH - this.view.oy
     const ch = this.chara
     const hit = x >= ch.x - SPRITE_W / 2 - 2 && x <= ch.x + SPRITE_W / 2 + 2 && y >= ch.y - SPRITE_H - 2 && y <= ch.y + 2
     if (hit && this.eating) return
@@ -1002,35 +1104,33 @@ export default class extends Controller {
   }
 
   // おはなし の けしき と Dettyan
-  drawStory(g) {
+  // 📖 おはなし の けしき（新しい 絵。広く）
+  drawStory(g, area) {
     const p = this.story.pages[this.story.i]
     const t = this.story.t
     const now = this.store.now()
     const s = this.store.state
     let at = { x: 64, y: 64 } // 足もと（下の ことば の箱に かくれない高さ）
-    if (p.bg === "flash") return drawFlash(g, t)
+    if (p.bg === "flash") return drawFlashWide(g, area, t)
     if (p.bg === "stream") {
       // もとの世界の へや（ぜんぶ ある）。うしろすがたで 配信中
-      if (!this.streamRoom) this.streamRoom = createRoom(null)
-      g.drawImage(this.streamRoom, 0, 0)
+      g.drawImage(this.wide("streamRoom", (a) => createRoom(null, a)), area.x, area.y)
       drawRoomLive(g, { now, t, mode: "work", workT: t, f: null })
       this.drawMe(g, SEAT.left, SEAT.top + (Math.floor(t * 4) % 2), { view: "back" })
       drawChair(g)
       return
     }
     if (p.bg === "town") {
-      if (!this.town) this.town = createTown()
-      g.drawImage(this.town, 0, 0)
-      drawTownLive(g, t)
-      at = { x: 40, y: 66 }
+      g.drawImage(this.wide("storyTown", (a) => createStoryTownWide(this.sprout, a)), area.x, area.y)
+      drawStoryTownLive(g, this.sprout, t)
+      at = { x: 40, y: 70 }
     } else if (p.bg === "camp") {
-      drawCampSky(g, now, t)
-      g.drawImage(this.camp, 0, 0)
+      g.drawImage(this.wide("camp", (a) => createCampWide(this.sprout, a)), area.x, area.y)
       drawCampfire(g, now, t)
-      at = { x: 88, y: 64 }
+      at = { x: 88, y: 70 }
     } else {
       const f = s?.home.furniture || {}
-      g.drawImage(this.room, 0, 0)
+      g.drawImage(this.wide("room", (a) => createRoom(f, a)), area.x, area.y)
       drawRoomLive(g, { now, t, mode: p.pose === "back" ? "work" : null, workT: t, f })
       if (p.pose === "back" && f.chair) {
         this.drawMe(g, SEAT.left, SEAT.top, { view: "back" })
@@ -1042,6 +1142,7 @@ export default class extends Controller {
     const blink = t % 3 > 2.85
     this.drawMe(g, at.x - SPRITE_W / 2, at.y - SPRITE_H, { eyes: blink ? "blink" : "open" })
   }
+
 
   // ---- 📊 つよさ（ステータスの ふりわけ・職業・スキル） ----
   openStatus() {
@@ -1286,6 +1387,7 @@ export default class extends Controller {
     const v = B.view
     v.bob += dt
     v.lunge = Math.max(0, v.lunge - dt)
+    if (v.swing) { v.swing.t -= dt; if (v.swing.t <= 0) v.swing = null }
     v.foeLunge = Math.max(0, v.foeLunge - dt)
     v.flashMe = Math.max(0, v.flashMe - dt)
     v.flashFoe = Math.max(0, v.flashFoe - dt)
@@ -1377,6 +1479,7 @@ export default class extends Controller {
     } else if (e.t === "appear") {
       v.thing = null
       v.foe = MONSTERS[e.foe]
+      v.foeId = e.foe
       v.foeHp = e.hp
       v.foeMax = e.maxHp
       v.dying = 0
@@ -1391,9 +1494,12 @@ export default class extends Controller {
         this.sound.se("pet")
         this.popAt(`+${e.heal}`, BATTLE_ME_X, BATTLE_FEET - 30)
         this.sparkle(BATTLE_ME_X, BATTLE_FEET - 14)
+        v.swing = { tool: "can", t: 0.45, dur: 0.45, still: true } // じょうろを かたむける
         return
       }
       v.lunge = 0.3
+      // おの を ふる（まほう は じょうろ）
+      v.swing = { tool: skill?.type === "magic" ? "can" : "axe", t: 0.3, dur: 0.3 }
       v.flashFoe = 0.25
       v.foeHp = e.foeHp
       this.sound.se("hit")
@@ -1641,11 +1747,12 @@ export default class extends Controller {
     list.append(back)
   }
 
-  drawBattle(g) {
+  drawBattle(g, area = null) {
     const B = this.battle
     const v = B.view
-    // けしき（dettyan_scenes.js。くも・ほたる・たいまつ・雪 などが動く）
-    drawScene(g, B.place, v.bob, v.scroll)
+    // けしき（dettyan_scenes.js。くも・ほたる・たいまつ・雪 などが動く）。新しい 絵は dettyan_sprout.js（広く）
+    const id = B.place.id
+    drawBattleWide(g, this.wide(`battle:${id}`, (a) => createBattleStrip(this.sprout, id, a)), id, area, v.bob, v.scroll)
     // Dettyan（左）
     const lunge = v.lunge > 0 ? Math.round(Math.sin((v.lunge / 0.3) * Math.PI) * 10) : 0
     const hop = v.hop > 0 ? Math.round(Math.abs(Math.sin(v.hop * Math.PI * 3)) * 5) : 0
@@ -1654,7 +1761,11 @@ export default class extends Controller {
     g.fillStyle = "rgba(0, 0, 0, 0.2)"
     g.fillRect(BATTLE_ME_X - 6 + lunge, BATTLE_FEET - 1, 12, 2)
     const walkFrame = v.walk > 0 ? Math.floor(v.bob * 8) % 2 : lunge > 0 ? 1 : 0
-    if (!(v.flashMe > 0 && Math.floor(v.flashMe * 30) % 2)) this.drawMe(g, meLeft, meTop, { frame: walkFrame, eyes: v.myHp <= 0 ? "blink" : "open" })
+    const swing = v.swing && this.tools && usingHumanDraw() ? v.swing : null
+    if (!(v.flashMe > 0 && Math.floor(v.flashMe * 30) % 2)) {
+      this.drawMe(g, meLeft, meTop, { frame: swing ? 0 : walkFrame, eyes: v.myHp <= 0 ? "blink" : "open", dir: "downright", noHand: !!swing })
+      if (swing) drawBattleTool(g, this.tools, swing.tool, BATTLE_ME_X + lunge, BATTLE_FEET - hop, 1 - swing.t / swing.dur)
+    }
     // ❗ みつけた！
     if (v.find > 0) {
       g.fillStyle = "#ffffff"
@@ -1687,18 +1798,27 @@ export default class extends Controller {
       }
       g.restore()
     }
-    // スライム（右）。2倍の大きさ
+    // モンスター（右）。2倍の大きさ。とぶ モンスター は 少し 上で ふわふわ
     if (v.foe && v.dying < 1) {
       const fl = v.foeLunge > 0 ? Math.round(Math.sin((v.foeLunge / 0.3) * Math.PI) * 10) : 0
       const squash = (Math.sin(v.bob * 6) + 1) / 2
+      const rows = monsterSprite(v.foe).length
+      const lift = v.foe.fly ? 10 + Math.round(Math.sin(v.bob * 5) * 2) : 0
       g.fillStyle = "rgba(0, 0, 0, 0.2)"
       g.fillRect(BATTLE_FOE_X - 10 - fl, BATTLE_FEET - 1, 20, 2)
-      if (!(v.flashFoe > 0 && Math.floor(v.flashFoe * 30) % 2)) {
+      const art = area && this.monsterArt?.[v.foeId]
+      if (art && !(v.flashFoe > 0 && Math.floor(v.flashFoe * 30) % 2)) {
+        // 新しい 絵（Sprout）。2ばい
+        g.save()
+        // やられた コマが ある ものは 地面に おちて つぶれる
+        drawMonsterArt(g, art, v.foe, BATTLE_FOE_X - fl, BATTLE_FEET - (v.dying > 0 && art.die.length ? 0 : lift), v.bob, art.scale, v.dying)
+        g.restore()
+      } else if (!(v.flashFoe > 0 && Math.floor(v.flashFoe * 30) % 2)) {
         g.save()
         g.globalAlpha = 1 - v.dying
-        g.translate(BATTLE_FOE_X - 12 - fl, BATTLE_FEET - 20)
+        g.translate(BATTLE_FOE_X - 12 - fl, BATTLE_FEET - rows * 2 - lift)
         g.scale(2, 2)
-        drawSlime(g, v.foe, 0, 0, squash * 0.5 + v.dying)
+        drawMonster(g, v.foe, 0, 0, squash * 0.5 + v.dying)
         g.restore()
       }
     }
@@ -1725,8 +1845,8 @@ export default class extends Controller {
 
   popAt(text, x, y) {
     const p = el("div", "dt-pop", text)
-    p.style.left = `${(x / W) * 100}%`
-    p.style.top = `${(y / H) * 100}%`
+    p.style.left = `${this.pctX(x)}%`
+    p.style.top = `${this.pctY(y)}%`
     this.canvasTarget.parentElement.append(p)
     setTimeout(() => p.remove(), 1500)
   }
@@ -1741,8 +1861,8 @@ export default class extends Controller {
     const b = this.bubbleTarget
     const ch = this.chara
     b.textContent = text
-    b.style.left = `${(ch.x / W) * 100}%`
-    b.style.top = `${((ch.y - SPRITE_H - 2) / H) * 100}%`
+    b.style.left = `${this.pctX(ch.x)}%`
+    b.style.top = `${this.pctY(ch.y - SPRITE_H - 2)}%`
     b.hidden = false
     clearTimeout(this.bubbleTimer)
     this.bubbleTimer = setTimeout(() => this.hideBubble(), 2600)

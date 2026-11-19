@@ -1,13 +1,13 @@
 // 🗺️ ぼうけん（モンスター退治）の 行き先・行って帰ってくるまで（docs/dettyan/requirements.md の4章）
 // げんき を使って出かけて、スライムと たたかう（手動 か オート）。バトルの計算は dettyan_battle.js
-// 行き先を増やすときは PLACES に1つ足す。スライムは dettyan_battle.js の MONSTERS
+// 行き先を増やすときは PLACES に1つ足す。モンスターは dettyan_battle.js の MONSTERS
 // ここは「セーブの state をどう変えるか」だけを書く。保存は呼んだ側が store.update(...) の中で行う
 
 import { FOODS } from "dettyan_foods"
 import { GEAR } from "dettyan_gear"
-import { MONSTERS, FRIENDS, findFriend, createBattle, rnd, applyLevelUps, expToNext, dettyanStats } from "dettyan_battle"
+import { MONSTERS, FRIENDS, findFriend, createBattle, rnd, applyLevelUps, expToNext, dettyanStats, monsterSprite, SLIME_ROWS } from "dettyan_battle"
 
-export { MONSTERS, FRIENDS, findFriend, expToNext, dettyanStats }
+export { MONSTERS, FRIENDS, findFriend, expToNext, dettyanStats, monsterSprite }
 
 // 行き先ごとに落ちる そうび（あたま・からだ・て・せなか・あし が1つずつ）
 const PARK_GEAR = ["stick", "jersey", "cap", "backpack", "sneakers"]
@@ -21,33 +21,21 @@ const MOUNTAIN_GEAR = ["goldmic", "kira", "crown", "wings", "kirashoes"]
 // chests：宝箱の数 [少ない, 多い]、chest.coins：宝箱の お金 [少ない, 多い]、friend：友達に 会う確率
 // けしきの絵は dettyan_scenes.js（id ごと）。sky / ground は絵がないときの色
 export const PLACES = [
-  { id: "park",   name: "公園",   icon: "🌳", level: 1, genki: 15, power: 0.97, count: [2, 3], monsters: ["green", "green", "blue"], drop: 0.1, gear: PARK_GEAR, gearDrop: 0.2,
+  { id: "park",   name: "公園",   icon: "🌳", level: 1, genki: 15, power: 0.97, count: [2, 3], monsters: ["green", "crow", "green", "blue", "mouse", "frog"], drop: 0.1, gear: PARK_GEAR, gearDrop: 0.2,
     chests: [0, 1], chest: { coins: [30, 60] }, friend: 0.3,
     sky: "#9fd6ff", ground: "#7cc46a", line: "#5aa24c" },
-  { id: "forest", name: "森",     icon: "🌲", level: 3, genki: 25, power: 1.25, count: [3, 4], monsters: ["blue", "blue", "green", "purple"], drop: 0.2, gear: [...FOREST_GEAR, ...PARK_GEAR], gearDrop: 0.2,
+  { id: "forest", name: "森",     icon: "🌲", level: 3, genki: 25, power: 1.25, count: [3, 4], monsters: ["blue", "mushroom", "bee", "blue", "green", "purple", "frog", "spider"], drop: 0.2, gear: [...FOREST_GEAR, ...PARK_GEAR], gearDrop: 0.2,
     chests: [0, 2], chest: { coins: [60, 110] }, friend: 0.3,
     sky: "#5f8f6a", ground: "#3f6e3a", line: "#2f5a2c" },
-  { id: "cave",   name: "どうくつ", icon: "🪨", level: 6, genki: 40, power: 1.47, count: [3, 5], monsters: ["purple", "purple", "blue", "red", "king"], drop: 0.3, gear: [...CAVE_GEAR, ...FOREST_GEAR], gearDrop: 0.2,
+  { id: "cave",   name: "どうくつ", icon: "🪨", level: 6, genki: 40, power: 1.47, count: [3, 5], monsters: ["purple", "bat", "purple", "golem", "blue", "red", "king", "ghost"], drop: 0.3, gear: [...CAVE_GEAR, ...FOREST_GEAR], gearDrop: 0.2,
     chests: [1, 2], chest: { coins: [100, 180] }, friend: 0.3,
     sky: "#3a3440", ground: "#5a5260", line: "#46404c" },
-  { id: "mountain", name: "山", icon: "🏔️", level: 10, genki: 60, power: 1.85, count: [3, 5], monsters: ["red", "red", "purple", "king"], drop: 0.4, gear: [...MOUNTAIN_GEAR, ...CAVE_GEAR], gearDrop: 0.2,
+  { id: "mountain", name: "山", icon: "🏔️", level: 10, genki: 60, power: 1.85, count: [3, 5], monsters: ["red", "yeti", "wyvern", "red", "purple", "king", "goldspider", "ghost"], drop: 0.4, gear: [...MOUNTAIN_GEAR, ...CAVE_GEAR], gearDrop: 0.2,
     chests: [1, 2], chest: { coins: [160, 260] }, friend: 0.3,
     sky: "#c9d8ec", ground: "#8a8a7a", line: "#6e6e60" }
 ]
 
-// スライムのドット絵（12×10）。O：ふち、B：からだ、L：ひかり、E：目
-export const SLIME_SPRITE = [
-  "....OOOO....",
-  "..OOBBBBOO..",
-  ".OBLLBBBBBO.",
-  ".OBLBBBBBBO.",
-  "OBBBEBBEBBBO",
-  "OBBBEBBEBBBO",
-  "OBBBBBBBBBBO",
-  "OBBBBBBBBBBO",
-  ".OBBBBBBBBO.",
-  "..OOOOOOOO.."
-]
+export const SLIME_SPRITE = SLIME_ROWS // 前からの名前
 
 export function findPlace(id) {
   return PLACES.find((p) => p.id === id) || null
@@ -119,18 +107,19 @@ export function finishAdventure(s, b) {
   return { drop, gear, levelUps }
 }
 
-// スライムを描く（squash：0〜1。ぷよんとつぶれる）
-export function drawSlime(g, monster, ox, oy, squash = 0) {
+// モンスターを描く（squash：0〜1。スライムは ぷよんと つぶれる、とぶ モンスター は ふわふわ）
+export function drawMonster(g, monster, ox, oy, squash = 0) {
   const c = monster.colors
-  const rows = SLIME_SPRITE.length
-  const shrink = Math.round(squash * 2)
-  for (let y = 0; y < rows; y++) {
+  const rows = monsterSprite(monster)
+  const slime = !monster.sprite
+  const shrink = slime ? Math.round(squash * 2) : 0
+  for (let y = 0; y < rows.length; y++) {
     if (y < shrink) continue
-    const row = SLIME_SPRITE[y]
+    const row = rows[y]
     for (let x = 0; x < row.length; x++) {
       const ch = row[x]
       if (ch === ".") continue
-      g.fillStyle = ch === "E" ? "#1a1414" : c[ch]
+      g.fillStyle = ch === "E" && !c.E ? "#1a1414" : c[ch]
       g.fillRect(ox + x, oy + y, 1, 1)
     }
   }
@@ -143,3 +132,5 @@ export function drawSlime(g, monster, ox, oy, squash = 0) {
     g.fillRect(ox + 5, oy - 2 + shrink, 2, 1)
   }
 }
+
+export const drawSlime = drawMonster // 前からの名前

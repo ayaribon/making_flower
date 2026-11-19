@@ -153,7 +153,7 @@ export function drawCampfire(g, now, t) {
   px(g, "#6e4423", x - 5, y - 4, 11, 1)
   px(g, "#5e3a1f", x - 2, y - 6, 5, 2)
   // ほのお
-  const f = Math.floor(t * 9) % 3
+  const f = ((Math.floor(t * 9) % 3) + 3) % 3 // t が マイナスでも 0〜2
   const flame = [
     ["...r...", "..ror..", ".rooor.", "royyyor", ".ryyyr."],
     ["..r....", "..rr.r.", ".roorr.", "royyyor", ".ryyyr."],

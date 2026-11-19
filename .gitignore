@@ -36,3 +36,7 @@
 /var/log/operation-logs/
 .env
 /public/mediapipe/
+
+# 🔒 買った素材（Sprout Lands など）。配布禁止なので リポジトリ（公開）には 入れない
+# 手元では private_assets/sprout_lands/ に 置く。本番は S3 の game_assets/sprout_lands/ に 同じ形で 置く
+/private_assets/

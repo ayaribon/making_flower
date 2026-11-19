@@ -1,6 +1,8 @@
 <%# 🧑‍💼 Dettyan 育成ゲーム。動きは controllers/dettyan_game_controller.js、見た目は app/assets/stylesheets/dettyan.css %>
-<div class="dt" data-controller="dettyan-game" data-dettyan-game-user-id-value="<%= current_user.id %>" data-dettyan-game-owner-value="<%= current_user.dettyan_owner? %>">
-  <div class="dt-inner">
+<%# 画面いっぱい：けしき（canvas）が 画面ぜんぶ。上（メニュー・Lv・お金・げんき・目標）と 下（ボタン）を 重ねる。
+    けしきの まんなか 128×96 が 上と 下の あいだに 入り、まわりは 同じ けしきの つづき（docs/dettyan/requirements.md） %>
+<div class="dt" data-controller="dettyan-game" data-dettyan-game-user-id-value="<%= current_user.id %>" data-dettyan-game-owner-value="<%= current_user.dettyan_owner? %>" data-dettyan-game-layers-value="<%= avatar_layer_urls.to_json %>" data-dettyan-game-sprites-value="<%= dettyan_sprite_urls.to_json %>">
+  <div class="dt-top" data-dettyan-game-target="top">
     <header class="dt-bar">
       <a class="dt-home-link" href="<%= root_path %>" data-turbo="false">🏠 メニュー</a>
       <h1 class="dt-title">Dettyan 育成ゲーム</h1>
@@ -21,6 +23,7 @@
     </div>
     <%# 📖 いまの目標（dettyan_story.js の GOALS） %>
     <p class="dt-goal" data-dettyan-game-target="goal"></p>
+  </div>
 
     <div class="dt-stage">
       <canvas class="dt-room" data-dettyan-game-target="canvas" data-action="pointerdown->dettyan-game#tap" role="img" aria-label="事務所の部屋を歩く Dettyan"></canvas>
@@ -62,6 +65,7 @@
       </button>
     </div>
 
+  <div class="dt-bottom" data-dettyan-game-target="bottom">
     <%# ⚔️ バトル中だけ、下のボタンの代わりに出る コマンド（中身は renderCmd） %>
     <div class="dt-cmd" data-dettyan-game-target="cmd" hidden>
       <div class="dt-cmd__status" data-dettyan-game-target="cmdStatus" role="status"></div>
@@ -76,6 +80,7 @@
       <button type="button" data-action="dettyan-game#openStatus" data-dettyan-game-target="statusButton">📊<span>つよさ</span></button>
     </div>
 
-    <p class="dt-help">Dettyan をタップすると、おせわができるよ。<br>🗺️ ぼうけん は げんき を使うよ。歩いて、たからばこ・スライム・ともだち に であうよ（🤖オート・⏭スキップ・⏩はやおくり も あるよ）。<br>見ていると、PC で作業したり 歌ったりするよ。</p>
   </div>
+
+    <p class="dt-help visually-hidden">Dettyan をタップすると、おせわができるよ。<br>🗺️ ぼうけん は げんき を使うよ。歩いて、たからばこ・スライム・ともだち に であうよ（🤖オート・⏭スキップ・⏩はやおくり も あるよ）。<br>見ていると、PC で作業したり 歌ったりするよ。</p>
 </div>

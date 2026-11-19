@@ -29,9 +29,17 @@ pin "dettyan_foods" # 🍽️ Dettyan のごはん（ショップの商品の表
 pin "dettyan_care" # 🤚 おせわ・ショップ・放置の計算
 pin "dettyan_adventure" # ⚔️ モンスター退治（行き先・スライム・バトルの計算）
 pin "dettyan_gear" # 🗡️ そうび（あたま・からだ・て・せなか・あし）
+pin "dettyan_human" # 🧑‍💼 Dettyan を 町の アバターと 同じ 絵で（素体＋レイヤー）
+pin "dettyan_sprout" # 🌱 育成ゲームの けしき（Sprout Lands の 絵柄。画面いっぱい）
 pin "dettyan_room" # 🏢 Dettyan の事務所の部屋の絵
 pin "dettyan_scenes" # 🌳 モンスター退治の けしき
 pin "dettyan_battle" # ⚔️ バトル（手動・オート）・ステータス・職業・スキル
 pin "dettyan_home" # 🏠 テント → マイホーム・家具
 pin "dettyan_camp" # ⛺ テントと おはなしの けしき
 pin "dettyan_story" # 📖 おはなし（目標と ページ）
+pin "avatar_sprite" # 👤 みんなの アバター（キャラメイクの 部品と 絵）
+pin "town_world" # 🏘️ はじまりのまち（トップページの 町）の 絵
+pin "avatar_chibi" # 👤 アバターの 絵（16×20 の 2頭身。Sprout Lands の 町に なじむ）
+pin "avatar_teemo" # 🐱 Teemo 型の アバター（Sprout Lands の キャラ画像を もとに）
+pin "avatar_human" # 🧑 人の アバター（Cup Nooble の 人の テンプレート。8方向）
+pin "town_sprout" # 🌱 はじまりのまち を Sprout Lands の 素材で 描く 版

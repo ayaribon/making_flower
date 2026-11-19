@@ -18,13 +18,69 @@ class User < ApplicationRecord
   # ✂️ 切り抜き動画の依頼（ひとり1回1依頼）
   has_many :clip_requests, dependent: :destroy
 
+  # 👤 はじまりのまち の アバター（キャラメイク）。{ "hair" => "bob", "skin" => 1, ... }。まだ作っていないときは nil
+  # 中身の形は app/javascript/avatar_sprite.js（えらべる値は そちらで そろえる。ここでは 知らない項目・へんな値を すてるだけ）
+  # 💬 "msg" は まちで みんなに 見える ひとこと（20文字まで）。同じ 列の 中に 入れる（列は 増やさない）
+  serialize :avatar, coder: JSON
+  # costume・hat・accessory：装備の 枠（avatar_sprite.js の AVATAR_EQUIP。"none" は なし）
+  #   eye_style・brows・mouth・cheeks・beard：顔の パーツ（目は 前から ある eyes と かぶるので eye_style）
+  AVATAR_LOOK_KEYS = %w[v skin hair hairColor eyes top topColor bottom bottomColor shoes acc hs costume hat accessory eye_style brows mouth cheeks beard].freeze
+  AVATAR_KEYS = (AVATAR_LOOK_KEYS + %w[msg]).freeze
+  AVATAR_MSG_MAX = 20
+  # 見えない 文字（改行・タブ・ゼロはば・向きを かえる 文字）は すきまに する
+  AVATAR_MSG_HIDDEN = /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/
+
+  def self.clean_avatar(raw)
+    return nil unless raw.respond_to?(:to_h)
+    hash = raw.to_h.stringify_keys
+    out = hash.slice(*AVATAR_LOOK_KEYS).each_with_object({}) do |(key, value), look|
+      case value
+      when Integer then look[key] = value if value.between?(0, 99)
+      when String
+        if value.match?(/\A\d{1,2}\z/) then look[key] = value.to_i
+        elsif value.match?(/\A[a-z][a-z_]{0,19}\z/) then look[key] = value
+        end
+      end
+    end
+    msg = clean_avatar_msg(hash["msg"])
+    out["msg"] = msg if msg
+    out.presence
+  end
+
+  def self.clean_avatar_msg(value)
+    return nil unless value.is_a?(String)
+    value.gsub(AVATAR_MSG_HIDDEN, " ").squish.each_char.first(AVATAR_MSG_MAX).join.presence
+  end
+
+  # 🏷️ 表示名（まち・あいさつ・キャラメイク に 出る なまえ）。みんな 自分で かえられる（キャラメイク の 画面）
+  # ログインの 呼び名（name）は ログインID の 頭に 入るので かえない。表示名が 空なら 呼び名を 出す
+  DISPLAY_NAME_MAX = 12
+  before_validation { self.display_name = self.class.clean_display_name(display_name) }
+
+  def self.clean_display_name(value)
+    return nil unless value.is_a?(String)
+    value.gsub(AVATAR_MSG_HIDDEN, " ").squish.each_char.first(DISPLAY_NAME_MAX).join.presence
+  end
+
+  def display_label
+    display_name.presence || name
+  end
+
   # 🧑‍💼 Dettyan 本人のアカウントか（育成ゲームのドット絵の Dettyan が「俺やん」と言う）
   # 呼び名（name）で決める。ふだんは dettyan。変えたいときは ENV["DETTYAN_OWNER_NAMES"] にカンマ区切りで書く
   DETTYAN_OWNER_NAMES = "dettyan"
 
+  def self.dettyan_owner_names
+    ENV.fetch("DETTYAN_OWNER_NAMES", DETTYAN_OWNER_NAMES).split(",").map { |n| n.strip.downcase }.reject(&:empty?)
+  end
+
+  # Dettyan 本人の アカウント（なければ nil）。町の ひろばの Dettyan は この人の キャラ
+  def self.dettyan_owner
+    where("LOWER(name) IN (?)", dettyan_owner_names).order(:id).first
+  end
+
   def dettyan_owner?
-    names = ENV.fetch("DETTYAN_OWNER_NAMES", DETTYAN_OWNER_NAMES).split(",").map { |n| n.strip.downcase }.reject(&:empty?)
-    names.include?(name.to_s.downcase)
+    self.class.dettyan_owner_names.include?(name.to_s.downcase)
   end
 
   # いま作業中の切り抜きの依頼（なければ nil）

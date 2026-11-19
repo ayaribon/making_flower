@@ -19,6 +19,11 @@ services:
     environment:
       # ✂️ 切り抜きの依頼の送り先（Discord のウェブフック）。値は .env に書く（.env はコミットしない）
       DISCORD_CLIP_WEBHOOK_URL: ${DISCORD_CLIP_WEBHOOK_URL:-}
+      # 🌱 町の 素材（Sprout Lands）を 開発でも S3 から 読む。本番（Heroku の Config Vars）と 同じ 値を .env に 書く
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_REGION: ${AWS_REGION:-}
+      S3_BUCKET: ${S3_BUCKET:-}
     command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails s -b '0.0.0.0'"
     volumes:
       - ".:/app"
