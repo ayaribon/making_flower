@@ -135,7 +135,8 @@ export default class extends Controller {
       // 👕 装備の 枠（画像が ある ものだけ）。ふくの いろ・ズボンの いろ は ふだん着 の ときだけ
       // 😊 顔の パーツ → 👕 いしょう・あたま・アクセサリー（画像が ある ものだけ）
       const order = [...AVATAR_FACE_SLOTS, "costume", "hat", "accessory"]
-      const slots = this.layers?.body ? order.map((slot) => [slot, AVATAR_EQUIP[slot]]) : []
+      // いしょう は 体だけの 画像（body_base）が あるときだけ（ないと 前の ふく と かさなる）
+      const slots = this.layers ? order.filter((slot) => slot !== "costume" || this.layers.body).map((slot) => [slot, AVATAR_EQUIP[slot]]) : []
       const costume = slots.length && this.layers.items.costume[a.costume] ? a.costume : "default"
       const browsShow = HUMAN_HAIRSTYLES.find((h) => h.id === a.hs)?.showsBrows
       for (const [slot, s] of slots) {
@@ -157,7 +158,7 @@ export default class extends Controller {
           this.group(box, "ズボンの いろ", this.swatches("bottomColor", CLOTH_COLORS))
         }
       }
-      if (!slots.length) {
+      if (!this.layers?.body) {
         this.group(box, "ふくの いろ", this.swatches("topColor", CLOTH_COLORS))
         this.group(box, "ズボンの いろ", this.swatches("bottomColor", CLOTH_COLORS))
       }

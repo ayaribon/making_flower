@@ -300,7 +300,7 @@ function eyeTops(layers) {
   c.width = FW * 8
   c.height = FH * 3
   const g = c.getContext("2d")
-  g.drawImage(layers.body, 0, 0)
+  g.drawImage(layers.body || layers.base, 0, 0)
   const d = g.getImageData(0, 0, c.width, c.height).data
   const tops = {}
   for (let row = 0; row < 3; row++) for (let col = 0; col < 8; col++) {
@@ -379,7 +379,9 @@ function drawSlots(g, layers, a, look, spec, pal, dir, sx, sy, left, top) {
   const put = (img) => g.drawImage(img, sx, sy, FW, FH, left, top, FW, FH)
   for (const slot of AVATAR_DRAW_ORDER[FACING_AWAY.has(dir) ? "facingAway" : "default"]) {
     if (hidden.has(slot)) continue
-    if (slot === "body") put(recolorLayer(layers.body, BASE_ROLE, pal, `body|${colorKey}`))
+    // 体だけの 画像（body_base）が まだ ないときは base_bald（体＋ふく＋くつ）を 体として、いしょう・くつ は 描かない
+    if (slot === "body") put(layers.body ? recolorLayer(layers.body, BASE_ROLE, pal, `body|${colorKey}`) : recolorLayer(layers.base, BASE_ROLE, pal, `base|${colorKey}`))
+    else if ((slot === "shoes" || slot === "costume") && !layers.body) continue
     else if (slot === "shoes") {
       const id = pick("shoes")
       put(id === "default" ? recolorLayer(layers.items.shoes.default, BASE_ROLE, pal, `shoes|${colorKey}`) : layers.items.shoes[id])
@@ -425,7 +427,8 @@ export function drawHuman(g, sheet, x, y, raw, { dir = "down", walking = false, 
     const hs = look?.hs || a.hs || DEFAULT_HAIRSTYLE
     const colorKey = JSON.stringify(spec)
     pal.topMid = mix(rgb(spec.top), WHITE, 0.15)
-    if (layers.body) return drawSlots(g, layers, a, look, spec, pal, dir, col * FW, row * FH, left, top)
+    // 枠の じゅんに 重ねる（顔の パーツ・あたま・アクセサリー は 体だけの 画像が なくても 出る）
+    return drawSlots(g, layers, a, look, spec, pal, dir, col * FW, row * FH, left, top)
     const base = recolorLayer(layers.base, BASE_ROLE, pal, `base|${colorKey}`)
     g.drawImage(base, col * FW, row * FH, FW, FH, left, top, FW, FH)
     const hairImg = layers.hairs[hs] || (hs === "bald" ? null : layers.hairs[DEFAULT_HAIRSTYLE])
