@@ -286,7 +286,41 @@ const BASE_ROLE = {
 const HAIR_LAYER_ROLE = { "#705f5b": "line", "#7b6762": "hairDark", "#8c7369": "hair", "#9d866f": "hairMid", "#b2a486": "hairLight", "#645552": "eye" }
 
 // 🧑‍💼 Dettyan（町・育成ゲーム）：黒髪 マンバン・いつもの服（costume_dettyan）。そうびは equip（枠 → id）で かさねる
-export const DETTYAN_LOOK = { skin: "#f7e0cf", hair: "#3a3242", top: "#8a5a33", bottom: "#3a3a4a", shoes: "#4a3a32", acc: "manbun", hs: "manbun", equip: { costume: "dettyan" } }
+//   brows：まゆげ（2026-11-19 に ayaribon が「Dettyan は まゆげ つけといて」。髪の 画像に なくても 描く）
+export const DETTYAN_LOOK = { skin: "#f7e0cf", hair: "#3a3242", top: "#8a5a33", bottom: "#3a3a4a", shoes: "#4a3a32", acc: "manbun", hs: "manbun", brows: true, equip: { costume: "dettyan" } }
+
+// まゆげの 場所（向き の 列 → 立ちの コマ での 場所。hair_manbun.png の まゆげ と 同じ）。歩く コマは 目の 高さに あわせて ずらす
+const BROWS = { 2: [[10, 18]], 3: [[7, 17], [8, 17]], 4: [[4, 18], [5, 18], [9, 18], [10, 18]], 5: [[6, 17], [7, 17]], 6: [[4, 18]] }
+const EYE_RGB = [0x64, 0x55, 0x52]
+
+// コマ ごとの 目の いちばん上（素体の 画像から 1回だけ しらべる）
+function eyeTops(layers) {
+  if (layers.eyeTops) return layers.eyeTops
+  const c = document.createElement("canvas")
+  c.width = FW * 8
+  c.height = FH * 3
+  const g = c.getContext("2d")
+  g.drawImage(layers.body, 0, 0)
+  const d = g.getImageData(0, 0, c.width, c.height).data
+  const tops = {}
+  for (let row = 0; row < 3; row++) for (let col = 0; col < 8; col++) {
+    for (let y = 0; y < FH && tops[`${col},${row}`] === undefined; y++) for (let x = 0; x < FW; x++) {
+      const i = ((row * FH + y) * c.width + col * FW + x) * 4
+      if (d[i + 3] && d[i] === EYE_RGB[0] && d[i + 1] === EYE_RGB[1] && d[i + 2] === EYE_RGB[2]) { tops[`${col},${row}`] = y; break }
+    }
+  }
+  layers.eyeTops = tops
+  return tops
+}
+
+function drawBrows(g, layers, col, row, left, top, color) {
+  const pos = BROWS[col]
+  if (!pos) return
+  const tops = eyeTops(layers)
+  const dy = (tops[`${col},${row}`] ?? 0) - (tops[`${col},1`] ?? 0)
+  g.fillStyle = `rgb(${color.join(",")})`
+  for (const [x, y] of pos) g.fillRect(left + x, top + y + dy, 1, 1)
+}
 
 const layerCache = new Map()
 function recolorLayer(img, roles, pal, key) {
@@ -352,6 +386,7 @@ function drawSlots(g, layers, a, look, spec, pal, dir, sx, sy, left, top) {
       const hs = look?.hs || a.hs || DEFAULT_HAIRSTYLE
       const img = layers.hairs[hs] || (hs === "bald" ? null : layers.hairs[DEFAULT_HAIRSTYLE])
       if (img) put(recolorLayer(img, HAIR_LAYER_ROLE, pal, `hair|${hs}|${spec.hair}`))
+      if (look?.brows) drawBrows(g, layers, sx / FW, sy / FH, left, top, pal.eye)
     } else if (slot === "costume") {
       // ふだん着 だけ 色が かわる（ほかは 色が きまった 画像）
       const id = pick("costume")
