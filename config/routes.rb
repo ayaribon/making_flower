@@ -77,4 +77,7 @@ Rails.application.routes.draw do
   # 💾 ミックス設定のテンプレート（アカウントに保存・本人のものだけ・K42）
   resources :mix_templates, only: [:index, :create, :update, :destroy], defaults: { format: :json }
   get "up" => "rails/health#show", as: :rails_health_check
+
+  # 🧪 /lab：メンバーの 練習・試作の 場所（本体とは べつ。docs/lab/README.md）。中身は config/routes/lab.rb
+  draw(:lab)
 end

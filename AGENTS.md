@@ -71,6 +71,13 @@ docker compose exec web bin/rails db:seed   # 開発用ユーザー・素材・�
 ```
 テストは `docker compose exec web bin/rails test`。歌ってみた機能はブラウザの音声 API が中心なので自動テストが少ない。PR には「手で確かめた手順」を書く。
 
+## 7.5 🧪 /lab は 本体とは べつ もの
+`/lab` まわりは、チームメンバーの 練習・試作の 場所で、本体の アプリ（KotoBouquet）とは べつ もの。ayaribon は 保守しない。くわしくは `docs/lab/README.md`。
+- 対象：`app/**/lab/`・`config/routes/lab/`・`config/routes/lab.rb`・`test/lab/`・`docs/lab/`・`lab_` から はじまる テーブルと マイグレーション
+- 本体の 変更の ときに、lab の 中を 直したり、lab に 合わせて 本体を 変えたり しなくて よい
+- 逆に、lab の 変更が 本体の ファイルに 入らない ように する
+- lab の 中の コードは、本体の 品質ルール（仕様書・課題の 表 など）の 対象外
+
 ## 8. 終わったと言える条件
 - 関係する課題（K〜）の状態を `open-issues.md` で更新した
 - 守ること（5章）を破っていない

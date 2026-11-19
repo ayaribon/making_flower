@@ -1,0 +1,15 @@
+<%# 🧪 /lab の 入口：区画の 一覧（Lab::HomeController.spaces が フォルダを 見て 自動で 出す） %>
+<main class="lab-main">
+  <h1 class="lab-title">🧪 lab</h1>
+  <p class="lab-lead">メンバーの 練習・試作の 場所です。本体（KotoBouquet）とは べつ。</p>
+  <% if @spaces.any? %>
+    <ul class="lab-spaces">
+      <% @spaces.each do |name| %>
+        <li><%= link_to name, "/lab/#{name}", class: "lab-space" %></li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="lab-lead">まだ 区画が ありません。<code>bin/rails g lab_space 名前</code> で 作れます。</p>
+  <% end %>
+  <p class="lab-foot"><%= link_to "🏠 本体の メニューへ", root_path %></p>
+</main>

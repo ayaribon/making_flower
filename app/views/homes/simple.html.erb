@@ -11,6 +11,9 @@
     <%= render "menu_cards" %>
 
     <footer class="hm-footer">
+      <% if current_user&.lab_link? %>
+        <%= link_to "🧪 lab", lab_root_path, class: "hm-link" %>
+      <% end %>
       <% if current_user&.admin? %>
         <%= link_to "🛠 管理画面", admin_users_path, class: "hm-link" %>
       <% end %>

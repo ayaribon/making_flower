@@ -1,0 +1,17 @@
+/*
+ * 🧪 /lab の CSS（lab の 枠 layouts/lab.html.erb だけが 読む。本体の application.css には 入らない）
+ * 各区画の CSS（lab/名前/ の 下）も ここで ぜんぶ まとめる。区画を ふやしても この ファイルは かえなくて いい
+ * 区画の クラスは .lab-名前- から はじめる（ほかの 区画と ぶつからない ように）
+ *
+ *= require_tree .
+ *= require_self
+ */
+/* ---- lab の 共通（入口 /lab）---- */
+body.lab { margin: 0; font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; background: #f6f7fb; color: #222; }
+.lab-main { max-width: 720px; margin: 0 auto; padding: 24px 16px; }
+.lab-title { margin: 0 0 8px; font-size: 1.6rem; }
+.lab-lead { color: #555; }
+.lab-spaces { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+.lab-space { display: block; padding: 14px 16px; border-radius: 12px; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); color: #3a3fc8; font-weight: 700; text-decoration: none; }
+.lab-space:hover { background: #eef0ff; }
+.lab-foot { margin-top: 24px; }

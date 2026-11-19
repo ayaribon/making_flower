@@ -1,0 +1,17 @@
+require "test_helper"
+
+# 🧪 区画「<%= space_name %>」の テスト（サンプル）。bin/rails test test/lab/<%= space_name %>
+class Lab::<%= module_name %>::HomeControllerTest < ActionDispatch::IntegrationTest
+  test "ログインして いないと /login へ" do
+    get "/lab/<%= space_name %>"
+    assert_redirected_to login_path
+  end
+
+  test "ログイン すると ようこそ ページ" do
+    user = User.new(name: "lab<%= space_name %>tester")
+    post login_path, params: { login_code: user.issue_login_code! }
+    get "/lab/<%= space_name %>"
+    assert_response :success
+    assert_select "[data-controller='lab--<%= space_name %>--hello']"
+  end
+end

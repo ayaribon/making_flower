@@ -1,0 +1,11 @@
+// 🧪 区画「<%= space_name %>」の Stimulus（サンプル）。画面では data-controller="lab--<%= space_name %>--hello"
+import { Controller } from "@hotwired/stimulus"
+import { greeting } from "lab/<%= space_name %>/greeting"
+
+export default class extends Controller {
+  static targets = ["output"]
+
+  connect() {
+    this.outputTarget.textContent = greeting("<%= space_name %>")
+  }
+}

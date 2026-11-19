@@ -83,6 +83,11 @@ class User < ApplicationRecord
     self.class.dettyan_owner_names.include?(name.to_s.downcase)
   end
 
+  # 🧪 メニューに /lab への 入口を 出す 人（Dettyan 本人と 管理者 だけ。/lab じたいは ログイン して いれば 開ける）
+  def lab_link?
+    admin? || dettyan_owner?
+  end
+
   # いま作業中の切り抜きの依頼（なければ nil）
   def working_clip_request
     clip_requests.working.order(:created_at).last

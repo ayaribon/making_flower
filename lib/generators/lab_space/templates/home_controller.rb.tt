@@ -1,0 +1,5 @@
+# 🧪 /lab/<%= space_name %>：区画「<%= space_name %>」の 入口（サンプル）
+class Lab::<%= module_name %>::HomeController < Lab::<%= module_name %>::BaseController
+  def index
+  end
+end

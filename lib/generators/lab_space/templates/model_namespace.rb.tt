@@ -1,0 +1,9 @@
+# 🧪 区画「<%= space_name %>」の モデルの 名前空間。テーブルは かならず lab_<%= space_name %>_〇〇（本体の テーブルと まざらない ように）
+#   例：app/models/lab/<%= space_name %>/memo.rb に class Lab::<%= module_name %>::Memo < ApplicationRecord を 書くと、テーブルは lab_<%= space_name %>_memos
+module Lab
+  module <%= module_name %>
+    def self.table_name_prefix
+      "lab_<%= space_name %>_"
+    end
+  end
+end
