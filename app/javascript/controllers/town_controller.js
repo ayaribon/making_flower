@@ -32,7 +32,7 @@ const FOREST = 64 // 町の 上と 下に 描く 森の 高さ（ドット）
 const ZOOM_MAX = 2.5 // ふつうの 大きさ の 何倍 まで 大きく できるか
 const ZOOM_STEP = 1.25
 const ZOOM_KEY = "town:zoom"
-const OVERVIEW_PAD = 60 // 👁 みわたす とき 右に あける はば（px。ボタンの ぶん。home.css と そろえる）
+const DRAG_PX = 8 // これより うごいたら タップ では なく ドラッグ（町を みわたす）
 const BUILDING_TOP = TOWN_H * 0.15 // 建物の ボタン（home.css の .hm-town__building と おなじ）
 const BUILDING_H = TOWN_H * 0.37
 
@@ -43,7 +43,7 @@ export default class extends Controller {
   static targets = [
     "canvas", "layer", "intro", "building", "edgeLeft", "edgeRight",
     "guide", "guideSiva", "guideFace", "guideTitle", "guideText", "guideCount", "guideSkip", "guideMake", "guideNext",
-    "sayForm", "sayInput", "sayButton", "sayStatus", "zoomIn", "zoomOut", "overviewBtn"
+    "sayForm", "sayInput", "sayButton", "sayStatus", "zoomIn", "zoomOut", "homeBtn"
   ]
   // name：表示名（まちに 出る）。account：ログインの 呼び名（あんない を 見たか の しるし。表示名を かえても かわらない）
   // full：画面いっぱい（トップ）。画面の 形に あわせて 見せる はば を きめて、町を ぴったり おさめる
@@ -155,9 +155,7 @@ export default class extends Controller {
     const base = Math.max(minScale, Math.min(H / TOWN_H, W / 120))
     this.zoomMin = minScale / base
     this.zoom = Math.max(this.zoomMin, Math.min(ZOOM_MAX, this.zoom))
-    // 👁 みわたす：町 ぜんぶ（はば 256・たかさ 120）が 入る 大きさ。右の ボタン（👁 ＋ −）の ぶん（OVERVIEW_PAD）は あける
-    //   （home.css の .is-overview で 右に すきま。たて長の 画面では 上下にも すきま）
-    const scale = this.overview ? Math.min((W - OVERVIEW_PAD) / TOWN_W, H / TOWN_H) : base * this.zoom
+    const scale = base * this.zoom
     const viewW = Math.min(TOWN_W, Math.ceil(W / scale - 0.01))
     const viewH = Math.min(TOWN_H + FOREST * 2, Math.ceil(H / scale - 0.01))
     const section = this.canvasTarget.parentElement
@@ -169,8 +167,8 @@ export default class extends Controller {
       const hud = this.hudBottom.getBoundingClientRect()
       this.element.style.setProperty("--hm-hud-bottom", `${Math.max(0, Math.round(sec.bottom - hud.top))}px`)
     }
-    if (this.hasZoomInTarget) this.zoomInTarget.disabled = !this.overview && this.zoom >= ZOOM_MAX - 0.001
-    if (this.hasZoomOutTarget) this.zoomOutTarget.disabled = this.overview || this.zoom <= this.zoomMin + 0.001
+    if (this.hasZoomInTarget) this.zoomInTarget.disabled = this.zoom >= ZOOM_MAX - 0.001
+    if (this.hasZoomOutTarget) this.zoomOutTarget.disabled = this.zoom <= this.zoomMin + 0.001
     if (viewW === this.viewW && viewH === this.viewH) return
     this.viewW = viewW
     this.viewH = viewH
@@ -188,21 +186,24 @@ export default class extends Controller {
   zoomInBtn() { this.setZoom(this.zoom * ZOOM_STEP) }
   zoomOutBtn() { this.setZoom(this.zoom / ZOOM_STEP) }
 
-  // 👁 みわたす（2026-11-19 に ayaribon が「移動しなくても 見わたせる ように。入りたい 部屋に 入りやすく」）
-  //   町 ぜんぶ を 1画面に 出す。建物を タップすると 歩かずに すぐ 入る。もう1回 おすか ＋ で もとの 大きさ
-  toggleOverview() { this.setOverview(!this.overview) }
+  // 👀 町を みわたす（2026-11-19 に ayaribon）：ドラッグ・スクロール で 表示だけ うごく（キャラは うごかない）
+  //   👀 ボタン で じぶんの キャラの ところ に もどる
+  setFreeCam(on) {
+    this.freeCam = on
+    if (this.hasHomeBtnTarget) this.homeBtnTarget.classList.toggle("is-away", on)
+  }
 
-  setOverview(on) {
-    if (!this.fullValue) return
-    this.overview = on
-    if (this.hasOverviewBtnTarget) this.overviewBtnTarget.setAttribute("aria-pressed", String(on))
-    this.element.classList.toggle("is-overview", on)
-    this.fitFull()
+  recenter() { this.setFreeCam(false) }
+
+  // 表示を dx・dy（町の ドット）だけ ずらす
+  panBy(dx, dy) {
+    this.setFreeCam(true)
+    this.camX = Math.max(0, Math.min(Math.max(0, TOWN_W - this.viewW), this.camX + dx))
+    if (this.viewH < TOWN_H) this.camY = Math.max(0, Math.min(TOWN_H - this.viewH, this.camY + dy))
   }
 
   setZoom(z) {
     if (!this.fullValue) return
-    if (this.overview) this.setOverview(false)
     this.zoom = Math.max(this.zoomMin ?? 0.5, Math.min(ZOOM_MAX, z))
     this.fitFull()
     try { window.localStorage.setItem(ZOOM_KEY, String(Math.round(this.zoom * 100) / 100)) } catch (e) { /* おぼえられなくても よい */ }
@@ -223,28 +224,53 @@ export default class extends Controller {
       const [a, b] = [...this.pointers.values()]
       return Math.hypot(a.x - b.x, a.y - b.y) || 1
     }
+    // 1本指（マウス）の ドラッグ で 町を みわたす。ボタン・入力欄 の 上から は はじめない
+    const px = () => (this.canvasTarget.getBoundingClientRect().width || 1) / this.viewW // 1ドット の 画面 px
     const down = (e) => {
+      this.dragMoved = false
+      if (!e.target.closest("button, a, input, form, .hm-hud, .hm-zoom, .hm-guide") || e.target.closest(".hm-town__building")) {
+        this.drag = { id: e.pointerId, x: e.clientX, y: e.clientY, camX: this.camX, camY: this.camY }
+      }
       if (e.pointerType !== "touch") return
       this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
       if (this.pointers.size === 2) {
         this.pinch = { d: dist(), z: this.zoom }
+        this.drag = null
         // 1本目で 歩きはじめて いたら 止める
         if (this.me && !this.entering) { this.me.walking = false; this.me.plan = null; this.me.tx = this.me.x; this.me.ty = this.me.y }
       }
     }
     const move = (e) => {
+      const d = this.drag
+      if (d && d.id === e.pointerId && !this.pinch && (this.pointers.size <= 1)) {
+        const dx = e.clientX - d.x
+        const dy = e.clientY - d.y
+        if (this.dragMoved || Math.hypot(dx, dy) > DRAG_PX) {
+          this.dragMoved = true
+          this.camX = d.camX
+          this.camY = d.camY
+          this.panBy(-dx / px(), -dy / px())
+        }
+      }
       if (!this.pointers.has(e.pointerId)) return
       this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
-      if (this.pinch && this.pointers.size >= 2) this.setZoom(this.pinch.z * (dist() / this.pinch.d))
+      if (this.pinch && this.pointers.size >= 2) { this.dragMoved = true; this.setZoom(this.pinch.z * (dist() / this.pinch.d)) }
     }
     const up = (e) => {
+      if (this.drag?.id === e.pointerId) this.drag = null
+      if (this.dragMoved) setTimeout(() => { this.dragMoved = false }, 0) // すぐ あとの click だけ むし
       this.pointers.delete(e.pointerId)
       if (this.pointers.size < 2) this.pinch = null
     }
+    // PC：スクロール で みわたす（たてに 動けない ときは よこへ）。Ctrl＋スクロール（トラックパッドの ピンチ）は 大きさ
     const wheel = (e) => {
       if (e.target.closest(".hm-hud__menu")) return
       e.preventDefault()
-      this.setZoom(this.zoom * Math.exp(-Math.max(-60, Math.min(60, e.deltaY)) * 0.004))
+      if (e.ctrlKey) return this.setZoom(this.zoom * Math.exp(-Math.max(-60, Math.min(60, e.deltaY)) * 0.004))
+      const canY = this.viewH < TOWN_H && !e.shiftKey
+      const dx = (e.deltaX || (canY ? 0 : e.deltaY)) / px()
+      const dy = (canY ? e.deltaY : 0) / px()
+      this.panBy(dx, dy)
     }
     const gesture = (e) => e.preventDefault() // iPhone Safari の ページ拡大
     el.addEventListener("pointerdown", down, true)
@@ -303,10 +329,12 @@ export default class extends Controller {
 
   // ---- うごき ----
   tick(dt) {
-    const target = this.cameraTarget()
+    if (this.guiding && this.freeCam) this.setFreeCam(false)
+    // 👀 みわたし中（ドラッグ・スクロール した あと）は キャラを おいかけない
+    const target = this.freeCam ? this.camX : this.cameraTarget()
     this.camX += (target - this.camX) * Math.min(1, dt * 4)
     if (Math.abs(target - this.camX) < 0.3) this.camX = target
-    const targetY = this.cameraTargetY()
+    const targetY = this.freeCam ? this.camY : this.cameraTargetY()
     this.camY += (targetY - this.camY) * Math.min(1, dt * 4)
     if (Math.abs(targetY - this.camY) < 0.3) this.camY = targetY
     for (const a of [this.me, ...this.others]) {
@@ -375,8 +403,9 @@ export default class extends Controller {
   }
 
   // ---- タップ ----
+  // 指・マウス を はなした とき（ドラッグ して いなければ タップ）
   tap(event) {
-    if (this.entering || this.guiding || this.pinch || this.pointers?.size > 1) return
+    if (this.entering || this.guiding || this.pinch || this.pointers?.size > 1 || this.dragMoved) return
     const rect = this.canvasTarget.getBoundingClientRect()
     const x = this.camX + ((event.clientX - rect.left) / rect.width) * this.viewW
     const y = Math.round(this.camY) + ((event.clientY - rect.top) / rect.height) * this.viewH
@@ -395,6 +424,7 @@ export default class extends Controller {
     }
     if (hit(this.me, w, h)) return this.say(this.me, this.me.msg ? `${this.nameValue}「${this.me.msg}」` : `${this.nameValue}`)
     const p = clampWalk(x, y)
+    this.setFreeCam(false) // 地面を タップして 歩きだしたら 表示も キャラに もどる
     this.me.plan = null
     this.me.tx = p.x
     this.me.ty = p.y
@@ -403,12 +433,12 @@ export default class extends Controller {
 
   // 建物を タップ：入口まで 歩いて 入る
   goPlace(event) {
-    if (this.entering || this.guiding) return
+    if (this.entering || this.guiding || this.dragMoved) return // ドラッグ（みわたし）の あとの クリック は むし
     const id = event.params.place
     const door = doorOf(id)
     if (!door) return
-    // 2回目（その 建物へ 歩いている とちゅう）・👁 みわたし中 は 歩くのを またずに すぐ 入る（2026-11-19 に ayaribon）
-    if (this.overview || (this.me.plan === id && this.me.walking)) {
+    // 2回目（その 建物へ 歩いている とちゅう）は 歩くのを またずに すぐ 入る（2026-11-19 に ayaribon）
+    if (this.me.plan === id && this.me.walking) {
       this.me.walking = false
       this.me.plan = null
       return this.enter(id)
