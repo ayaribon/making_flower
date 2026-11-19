@@ -20,7 +20,13 @@ class GameAsset
     "chicken" => "sprout_lands/Animals/Chicken/chicken default.png",
     "chara" => "sprout_lands/Characters/Premium Charakter Spritesheet.png", # 🐱 Teemo 型の アバター（なくても 町は 出る）
     # 🧑 人の テンプレート（Sprout Sorry pack。非商用 ライセンス。この アプリは 非商用 と ayaribon が 判断。2026-11-18）
-    "human" => "sprout_sorry/Tests/free_character_spritesheet_by-cupnooble.png"
+    "human" => "sprout_sorry/Tests/free_character_spritesheet_by-cupnooble.png",
+    # 🧑‍💼 Dettyan 育成ゲームの けしき（テント・へや・ぼうけん）で 使う もの（なくても 前の 絵で 遊べる）
+    "walls" => "sprout_lands/Tilesets/Building parts/Wooden_House_Walls_Tilset.png",
+    "furniture" => "sprout_lands/Tilesets/Building parts/Basic_Furniture.png",
+    "stone" => "sprout_lands/Tilesets/ground tiles/New tiles/Stone_Ground_Tiles.png",
+    "grass_dark" => "sprout_lands/Tilesets/ground tiles/New tiles/Darker_Grass_Tile_Layers.png",
+    "paths" => "sprout_lands/Tilesets/Building parts/Paths.png"
   }.merge(
     # 💇 髪の パーツ（docs/town/hair_parts_spec.md。人の テンプレートに 重ねる）
     %w[short_bob blunt_bob long_straight twin_tails ponytail braids wolf_cut].flat_map do |stem|
@@ -44,7 +50,9 @@ class GameAsset
   HAIR_KEYS = SPROUT.keys.grep(/\Ahair_/).freeze
   AVATAR_LAYER_KEYS = SPROUT.keys.grep(/\Aavatar_/).freeze
   # なくても 町を 出せる もの（なければ アバターは 前の 絵）
-  OPTIONAL = (%w[chara human] + HAIR_KEYS + AVATAR_LAYER_KEYS).freeze
+  # 育成ゲームの けしきに 使う もの（町の もの ＋ 上の 5つ）
+  DETTYAN_KEYS = %w[grass soil trees flowers fences walls furniture stone grass_dark paths].freeze
+  OPTIONAL = (%w[chara human walls furniture stone grass_dark paths] + HAIR_KEYS + AVATAR_LAYER_KEYS).freeze
   # そろっているか を 確かめなおす 間かく（S3 に 上げてから 町に 出るまで、長くて この 時間）
   CHECK_EVERY = 10.minutes
 

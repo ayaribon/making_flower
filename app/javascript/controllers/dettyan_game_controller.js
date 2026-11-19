@@ -7,6 +7,7 @@ import { applyIdle, claimDailyReward, doCare, buyFood, feedFood, dirtCount, maxG
 import { PLACES, MONSTERS, canGo, startAdventure, grantEvents, finishAdventure, drawMonster, monsterSprite, findFriend } from "dettyan_adventure"
 import { STATS, JOBS, SKILLS, POINTS_PER_LEVEL, JOB_CHANGE_LEVEL, HP_PER_VIT, findJob, findSkill, dettyanStats, expToNext, addPoint, removePoint, resetPoints, autoAllocate, setJob, canChangeJob, applyLevelUps, takeTurn, autoAction, runAuto } from "dettyan_battle"
 import { enableDettyanHuman } from "dettyan_human"
+import { loadDettyanSheets, createCampWide, drawCampNightWide, createBattleStrip, drawBattleWide } from "dettyan_sprout"
 import { facing8 } from "avatar_human"
 import { GEAR, SLOTS, slotName, findGear, equipped, gearBonus, toggleGear, drawGearIcon, drawDressed, drawHeldMic, shopGear, buyGear } from "dettyan_gear"
 import { ROOM_W, ROOM_H, createRoom, drawRoomLive, drawChair, drawSpeaker, drawNightLight, drawWindowLight, CHAIR, SPEAKER, SEAT, WORK_SPOT, SING_SPOT } from "dettyan_room"
@@ -87,8 +88,8 @@ const OWNER_IDLE_CHANCE = 0.08 // 止まったとき、ひとりで「俺やん�
 
 export default class extends Controller {
   static targets = ["canvas", "start", "startText", "startNote", "money", "genki", "gokigen", "soundButton", "soundPanel", "bgmToggle", "seToggle", "bubble",
-    "menu", "sheet", "sheetTitle", "sheetMoney", "sheetList", "toast", "level", "genkiNum", "cmd", "cmdStatus", "cmdButtons", "statusButton", "goal", "story", "storyWho", "storyText"]
-  static values = { userId: Number, owner: Boolean, layers: Object } // owner：Dettyan 本人のアカウント。layers：素体＋レイヤーの 画像（あれば 町と 同じ 絵）
+    "menu", "sheet", "sheetTitle", "sheetMoney", "sheetList", "toast", "level", "genkiNum", "cmd", "cmdStatus", "cmdButtons", "statusButton", "goal", "story", "storyWho", "storyText", "top", "bottom"]
+  static values = { userId: Number, owner: Boolean, layers: Object, sprites: Object } // owner：Dettyan 本人のアカウント。layers：素体＋レイヤーの 画像（あれば 町と 同じ 絵）
 
   connect() {
     this.store = new DettyanStore({ userId: this.userIdValue })
@@ -96,10 +97,20 @@ export default class extends Controller {
     this.ready = false
     this.started = false
 
-    const c = this.canvasTarget
-    c.width = W
-    c.height = H
-    this.g = c.getContext("2d")
+    // 画面いっぱい：画面の canvas（this.screen）に、まんなか 128×96 の けしき（this.g。前からの 絵は ここに 描く）を おく
+    //   新しい 絵（Sprout Lands）は screen に そのまま 広く 描く（drawWide）。まわりは 同じ けしきの つづき
+    const stage = document.createElement("canvas")
+    stage.width = W
+    stage.height = H
+    this.stageCanvas = stage
+    this.g = stage.getContext("2d")
+    this.screen = this.canvasTarget.getContext("2d")
+    this.view = { ox: 0, oy: 0, VW: W, VH: H, scale: 1 }
+    this.layout()
+    this.resizeObserver = new ResizeObserver(() => this.layout())
+    this.resizeObserver.observe(this.element)
+    this.resizeObserver.observe(this.topTarget)
+    this.resizeObserver.observe(this.bottomTarget)
     this.room = createRoom({}) // セーブを読んだら 持っている家具で 描きなおす（rebuildHome）
     this.camp = createCamp()
     // mode："idle" | "walk" | "look" | "work"（PC で作業）| "sing"（歌う）。plan：歩いた先で始めること
@@ -130,10 +141,13 @@ export default class extends Controller {
 
     this.store.load({ onCache: (s) => this.renderHud(s) }).then((s) => this.afterLoad(s))
     enableDettyanHuman(this.layersValue)
+    // 🌱 けしきの 素材（そろえば 新しい 絵。なければ 前の 絵）
+    loadDettyanSheets(this.spritesValue).then((sheets) => { if (sheets) { this.sprout = sheets; this.wideCache = {} } })
   }
 
   disconnect() {
     cancelAnimationFrame(this.raf)
+    this.resizeObserver?.disconnect()
     clearTimeout(this.bubbleTimer)
     clearTimeout(this.toastTimer)
     clearInterval(this.idleTimer)
@@ -396,31 +410,131 @@ export default class extends Controller {
     if (this.chara.act) this.endActivity(false)
   }
 
+  // ---- 画面いっぱい ----
+  // まんなか 128×96 を 上と 下の あいだに おさめる 大きさ を きめて、canvas を 画面 ぜんぶ に する
+  layout() {
+    const Wp = this.element.clientWidth || W
+    const Hp = this.element.clientHeight || H
+    const top = this.hasTopTarget ? this.topTarget.offsetHeight : 0
+    const bottom = this.hasBottomTarget ? this.bottomTarget.offsetHeight : 0
+    const safeH = Math.max(H, Hp - top - bottom - 6)
+    const scale = Math.max(1, Math.min(Wp / W, safeH / H))
+    const VW = Math.ceil(Wp / scale)
+    const VH = Math.ceil(Hp / scale)
+    const ox = Math.round((VW - W) / 2)
+    const oy = Math.max(0, Math.min(VH - H, Math.round((top + (safeH - H * scale) / 2) / scale)))
+    const c = this.canvasTarget
+    if (c.width !== VW) c.width = VW
+    if (c.height !== VH) c.height = VH
+    c.style.width = `${VW * scale}px`
+    c.style.height = `${VH * scale}px`
+    const st = this.element.style
+    st.setProperty("--dt-top", `${top}px`)
+    st.setProperty("--dt-bottom", `${bottom}px`)
+    st.setProperty("--scene-x", `${ox * scale}px`)
+    st.setProperty("--scene-y", `${oy * scale}px`)
+    st.setProperty("--scene-w", `${W * scale}px`)
+    st.setProperty("--scene-h", `${H * scale}px`)
+    const changed = VW !== this.view.VW || VH !== this.view.VH || ox !== this.view.ox || oy !== this.view.oy
+    this.view = { ox, oy, VW, VH, scale }
+    if (changed) this.wideCache = {}
+  }
+
+  // けしきの 中の 場所（128×96 の 座標）→ canvas の 中の わりあい（%）
+  pctX(x) { return ((x + this.view.ox) / this.view.VW) * 100 }
+  pctY(y) { return ((y + this.view.oy) / this.view.VH) * 100 }
+
   draw() {
-    const g = this.g
+    const sg = this.screen
+    const v = this.view
+    sg.setTransform(1, 0, 0, 1, 0, 0)
+    sg.imageSmoothingEnabled = false
+    // 新しい 絵：screen に 広く 描く
+    if (this.wideScene()) {
+      sg.save()
+      sg.translate(v.ox, v.oy)
+      this.drawStage(sg, this.wideArea())
+      sg.restore()
+      return
+    }
+    // 前の 絵：128×96 に 描いて、はしの 色を まわりに のばす
+    this.drawStage(this.g, null)
+    this.stretchStage(sg)
+  }
+
+  // 新しい 絵で 広く 描ける 場面か
+  wideScene() {
+    if (this.story || !this.store.state) return false
+    if (this.battle || this.inTent) return !!this.sprout
+    return true // へや は 素材が なくても 広く 描ける
+  }
+
+  // 動かない ところ（広く 描いた もの）を とっておく
+  //   画面の 大きさが かわると layout() が wideCache を からに する
+  wide(key, make) {
+    this.wideCache ||= {}
+    this.wideCache[key] ||= make(this.wideArea())
+    return this.wideCache[key]
+  }
+
+  // 広く 描く ところ（128×96 の 座標で）
+  wideArea() {
+    const v = this.view
+    return { x: -v.ox, y: -v.oy, w: v.VW, h: v.VH }
+  }
+
+  // 128×96 の 絵を まんなかに おいて、上下左右の はしの 1ドットを のばす
+  stretchStage(sg) {
+    const { ox, oy, VW, VH } = this.view
+    const s = this.stageCanvas
+    const r = VW - ox - W
+    const b = VH - oy - H
+    if (oy > 0) sg.drawImage(s, 0, 0, W, 1, ox, 0, W, oy)
+    if (b > 0) sg.drawImage(s, 0, H - 1, W, 1, ox, oy + H, W, b)
+    if (ox > 0) {
+      sg.drawImage(s, 0, 0, 1, H, 0, oy, ox, H)
+      if (oy > 0) sg.drawImage(s, 0, 0, 1, 1, 0, 0, ox, oy)
+      if (b > 0) sg.drawImage(s, 0, H - 1, 1, 1, 0, oy + H, ox, b)
+    }
+    if (r > 0) {
+      sg.drawImage(s, W - 1, 0, 1, H, ox + W, oy, r, H)
+      if (oy > 0) sg.drawImage(s, W - 1, 0, 1, 1, ox + W, 0, r, oy)
+      if (b > 0) sg.drawImage(s, W - 1, H - 1, 1, 1, ox + W, oy + H, r, b)
+    }
+    sg.drawImage(s, ox, oy)
+  }
+
+  // area：広く 描くとき の 広さ（null は 128×96 だけ）
+  drawStage(g, area) {
     const ch = this.chara
     if (this.story) return this.drawStory(g)
-    if (this.battle) return this.drawBattle(g)
+    if (this.battle) return this.drawBattle(g, area)
     const now = this.store.now()
     const act = ch.act
     const s = this.store.state
     const dirt = s ? dirtCount(s, now) : 0
     if (this.inTent) {
-      // ⛺ テント：空・遠くの まち・たき火（Dettyan と前後が入れかわる）
-      drawCampSky(g, now, this.t)
-      g.drawImage(this.camp, 0, 0)
+      // ⛺ テント：空・遠くの まち・たき火（Dettyan と前後が入れかわる）。新しい 絵は 森の 中の ひろば
+      if (area) {
+        g.drawImage(this.wide("camp", (a) => createCampWide(this.sprout, a)), area.x, area.y)
+      } else {
+        drawCampSky(g, now, this.t)
+        g.drawImage(this.camp, 0, 0)
+      }
       for (let i = 0; i < dirt; i++) drawLeaf(g, ...LEAF_SPOTS[i])
       const layers = [
         { y: FIRE.y, draw: () => drawCampfire(g, now, this.t) },
         { y: ch.y + 0.5, draw: () => this.drawChara(g) }
       ]
       layers.sort((a, b) => a.y - b.y).forEach((l) => l.draw())
-      drawCampNight(g, now)
+      if (area) drawCampNightWide(g, now, area)
+      else drawCampNight(g, now)
       this.drawParticles(g)
       return
     }
     const f = s?.home.furniture || {}
-    g.drawImage(this.room, 0, 0)
+    if (area) g.drawImage(this.wide("room", (a) => createRoom(f, a)), area.x, area.y)
+    else g.drawImage(this.room, 0, 0)
     drawWindowLight(g, now)
     drawRoomLive(g, { now, t: this.t, mode: act?.kind, workT: act?.kind === "work" ? act.t : 0, f })
     for (let i = 0; i < dirt; i++) drawDust(g, ...DIRT_SPOTS[i])
@@ -429,7 +543,7 @@ export default class extends Controller {
     if (f.chair) layers.push({ y: CHAIR.base, draw: () => drawChair(g) })
     if (f.speaker) layers.push({ y: SPEAKER.base, draw: () => drawSpeaker(g, act?.kind === "sing", this.t) })
     layers.sort((a, b) => a.y - b.y).forEach((l) => l.draw())
-    drawNightLight(g, now, act?.kind === "work", f)
+    drawNightLight(g, now, act?.kind === "work", f, area)
     this.drawParticles(g)
   }
 
@@ -452,6 +566,7 @@ export default class extends Controller {
   rebuildHome() {
     const s = this.store.state
     this.room = createRoom(s?.home.furniture || {})
+    if (this.wideCache) delete this.wideCache.room
   }
 
   drawChara(g) {
@@ -574,8 +689,8 @@ export default class extends Controller {
     if (!this.started || this.story) return
     if (this.battle) return // バトル中は 下の コマンド で えらぶ
     const rect = this.canvasTarget.getBoundingClientRect()
-    const x = ((event.clientX - rect.left) / rect.width) * W
-    const y = ((event.clientY - rect.top) / rect.height) * H
+    const x = ((event.clientX - rect.left) / rect.width) * this.view.VW - this.view.ox
+    const y = ((event.clientY - rect.top) / rect.height) * this.view.VH - this.view.oy
     const ch = this.chara
     const hit = x >= ch.x - SPRITE_W / 2 - 2 && x <= ch.x + SPRITE_W / 2 + 2 && y >= ch.y - SPRITE_H - 2 && y <= ch.y + 2
     if (hit && this.eating) return
@@ -1649,11 +1764,16 @@ export default class extends Controller {
     list.append(back)
   }
 
-  drawBattle(g) {
+  drawBattle(g, area = null) {
     const B = this.battle
     const v = B.view
-    // けしき（dettyan_scenes.js。くも・ほたる・たいまつ・雪 などが動く）
-    drawScene(g, B.place, v.bob, v.scroll)
+    // けしき（dettyan_scenes.js。くも・ほたる・たいまつ・雪 などが動く）。新しい 絵は dettyan_sprout.js（広く）
+    if (area) {
+      const id = B.place.id
+      drawBattleWide(g, this.wide(`battle:${id}`, (a) => createBattleStrip(this.sprout, id, a)), id, area, v.bob, v.scroll)
+    } else {
+      drawScene(g, B.place, v.bob, v.scroll)
+    }
     // Dettyan（左）
     const lunge = v.lunge > 0 ? Math.round(Math.sin((v.lunge / 0.3) * Math.PI) * 10) : 0
     const hop = v.hop > 0 ? Math.round(Math.abs(Math.sin(v.hop * Math.PI * 3)) * 5) : 0
@@ -1735,8 +1855,8 @@ export default class extends Controller {
 
   popAt(text, x, y) {
     const p = el("div", "dt-pop", text)
-    p.style.left = `${(x / W) * 100}%`
-    p.style.top = `${(y / H) * 100}%`
+    p.style.left = `${this.pctX(x)}%`
+    p.style.top = `${this.pctY(y)}%`
     this.canvasTarget.parentElement.append(p)
     setTimeout(() => p.remove(), 1500)
   }
@@ -1751,8 +1871,8 @@ export default class extends Controller {
     const b = this.bubbleTarget
     const ch = this.chara
     b.textContent = text
-    b.style.left = `${(ch.x / W) * 100}%`
-    b.style.top = `${((ch.y - SPRITE_H - 2) / H) * 100}%`
+    b.style.left = `${this.pctX(ch.x)}%`
+    b.style.top = `${this.pctY(ch.y - SPRITE_H - 2)}%`
     b.hidden = false
     clearTimeout(this.bubbleTimer)
     this.bubbleTimer = setTimeout(() => this.hideBubble(), 2600)
