@@ -293,8 +293,24 @@ export default class extends Controller {
     this.groupsTarget.scrollTop = scroll
   }
 
+  // 🎲 おまかせ：色 だけで なく、かみがた・顔の パーツ・いしょう・ぼうし・アクセサリー も（2026-11-19 に ayaribon）
+  //   画像が ある もの から えらぶ。「なし」が ある もの（ぼうし・ひげ など）は はんぶん くらい「なし」
   random() {
-    this.avatar = randomAvatar()
+    const a = randomAvatar()
+    if (this.layers) {
+      const hairs = HUMAN_HAIRSTYLES.filter((h) => h.id !== "bald" && (!h.file || this.layers.hairs[h.id])) // ぼうず は おまかせ では えらばない
+      if (hairs.length) a.hs = hairs[Math.floor(Math.random() * hairs.length)].id
+      const order = [...AVATAR_FACE_SLOTS, "costume", "hat", "accessory"].filter((slot) => slot !== "costume" || this.layers.body)
+      for (const slot of order) {
+        const s = AVATAR_EQUIP[slot]
+        const key = AVATAR_SAVE_KEYS[slot]
+        if (!s || !key) continue
+        const have = s.items.filter((it) => it.maker && (!it.file || this.layers.items[slot][it.id]))
+        if (!have.some((it) => it.file)) continue
+        a[key] = s.def === "none" && Math.random() < 0.5 ? "none" : have[Math.floor(Math.random() * have.length)].id
+      }
+    }
+    this.avatar = { ...a, msg: this.avatar?.msg }
     this.renderGroups()
   }
 
