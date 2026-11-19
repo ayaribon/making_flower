@@ -161,19 +161,14 @@ function drawTent(g) {
     for (let i = 0; i <= n; i++) px(g, "#e8d7b0", x1 + Math.sign(x2 - x1) * i, 24 + (i / n) * 26, 1, 1)
     px(g, "#9a6a4a", x2, 50, 1, 3)
   }
-  // ねぶくろ
-  px(g, LINE, 47, 47, 17, 6)
-  px(g, "#7180b1", 48, 48, 15, 4)
-  px(g, "#8599c7", 48, 48, 15, 1)
-  px(g, "#f3e5c2", 59, 48, 4, 4)
 }
 
 function drawCampProps(g, s) {
   // たき火の まわりの つち（前の 絵と 同じ 場所）
   oval(g, FIRE.x, FIRE.y - 2, 16, 6, "#c49a6c")
   oval(g, FIRE.x, FIRE.y - 2, 13, 4, "#d8b483")
-  // まるたの いす（Sprout の まるた）
-  part(g, s.trees, 96, 96, 32, 16, 78, 56)
+  // まるたの いす（Sprout の まるた。Trees, stumps and bushes の いちばん下の だん、x 116〜138）
+  part(g, s.trees, 116, 97, 23, 14, 77, 56)
   // なべ
   px(g, LINE, 44, 63, 8, 6)
   px(g, "#9da89a", 45, 64, 6, 4)
