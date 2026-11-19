@@ -14,7 +14,8 @@
         <%# ドット絵の Dettyan（controllers/dettyan_icon_controller.js が描く。ゲームで着ている そうび のまま） %>
         <span class="hm-card__iconwrap">
           <canvas class="hm-card__icon hm-card__icon--dettyan" width="32" height="30" aria-hidden="true"
-                  data-controller="dettyan-icon" <%= "data-dettyan-icon-user-id-value=#{current_user.id}" if current_user %>></canvas>
+                  data-controller="dettyan-icon" <%= "data-dettyan-icon-user-id-value=#{current_user.id}" if current_user %>
+                  data-dettyan-icon-layers-value="<%= current_user ? avatar_layer_urls.to_json : "{}" %>"></canvas>
           <% if current_user&.dettyan_owner? %>
             <%# Dettyan 本人がメニューを見たときだけ、ふきだし %>
             <span class="hm-card__bubble" aria-hidden="true">俺やん！</span>

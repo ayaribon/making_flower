@@ -5,9 +5,8 @@ import { drawDettyan, SPRITE_W, SPRITE_H } from "dettyan_sprite"
 import { TOWN_W, TOWN_H, VIEW_NARROW, BUILDINGS, BUILDING_W, WALK, doorOf, clampWalk, drawTownBase, drawTownSky, drawTownLive, drawTownNight } from "town_world"
 import { loadSprout, drawSproutBase, drawSproutLive, drawSproutForest, sproutWindows, SPROUT_LAMPS, hairPartsOf } from "town_sprout"
 import { drawTeemo, facing, DETTYAN_TEEMO, TEEMO_W, TEEMO_H } from "avatar_teemo"
-import { drawHuman, facing8, avatarLayersOf, HUMAN_W, HUMAN_H } from "avatar_human"
+import { drawHuman, facing8, avatarLayersOf, HUMAN_W, HUMAN_H, DETTYAN_LOOK } from "avatar_human"
 // 🧑 町の Dettyan（人の テンプレート）：黒い 髪・マンバン・茶色の ジャケット
-const DETTYAN_HUMAN = { skin: "#f7e0cf", hair: "#3a3242", top: "#8a5a33", bottom: "#3a3a4a", shoes: "#4a3a32", acc: "manbun", hs: "manbun" }
 
 // 🏘️ はじまりのまち（トップページ）。docs/town/requirements.md
 // - 自分の アバター を タップした所へ 歩かせる。建物を タップすると、入口まで 歩いて 入る
@@ -462,7 +461,7 @@ export default class extends Controller {
       if (this.sprout?.human) {
         // 🧑 人の テンプレート（8方向。色・こもの は その人の キャラ）
         g.globalAlpha = a.self && this.entering ? 0.4 : 1
-        drawHuman(g, this.sprout.human, a.x, a.y, a.npc ? null : a.avatar, { dir: a.dir8 || "down", walking: !!a.walking, t: this.t + (a.phase || 0), look: a.npc ? DETTYAN_HUMAN : null, parts: this.hairParts, layers: this.avatarLayers })
+        drawHuman(g, this.sprout.human, a.x, a.y, a.npc ? null : a.avatar, { dir: a.dir8 || "down", walking: !!a.walking, t: this.t + (a.phase || 0), look: a.npc ? DETTYAN_LOOK : null, parts: this.hairParts, layers: this.avatarLayers })
         g.globalAlpha = 1
       } else if (USE_TEEMO && this.sprout?.chara) {
         // 🐱 Teemo 型（素材の キャラ画像。毛の 色・首の 色・こもの は その人の キャラ）

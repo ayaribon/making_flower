@@ -5,7 +5,7 @@
 // - Sprout Sorry pack は 非商用 ライセンス。この アプリは 非商用 と ayaribon が 判断（2026-11-18）。クレジット：Cup Nooble
 // Assets - From: Sprout Lands - By: Cup Nooble
 
-import { normalizeAvatar, HUMAN_HAIRSTYLES, DEFAULT_HAIRSTYLE, AVATAR_EQUIP, AVATAR_DRAW_ORDER, avatarAssetKey } from "avatar_sprite"
+import { normalizeAvatar, HUMAN_HAIRSTYLES, DEFAULT_HAIRSTYLE, AVATAR_EQUIP, AVATAR_DRAW_ORDER, AVATAR_SAVE_SLOTS, avatarAssetKey } from "avatar_sprite"
 import { CHIBI_SKINS, CHIBI_HAIRS, CHIBI_CLOTHS } from "avatar_chibi"
 import { drawAccessory } from "avatar_teemo"
 
@@ -282,7 +282,11 @@ const BASE_ROLE = {
   "#7b6762": "bottomDark", "#8c7369": "bottom",
   "#f3f2c0": "shoesLight", "#ded9ab": "shoes", "#c4bc93": "shoesDark"
 }
-const HAIR_LAYER_ROLE = { "#705f5b": "line", "#7b6762": "hairDark", "#8c7369": "hair", "#9d866f": "hairMid", "#b2a486": "hairLight" }
+// マンバン には まゆげ（目と 同じ 色）が ある。目の 色と そろえる
+const HAIR_LAYER_ROLE = { "#705f5b": "line", "#7b6762": "hairDark", "#8c7369": "hair", "#9d866f": "hairMid", "#b2a486": "hairLight", "#645552": "eye" }
+
+// 🧑‍💼 Dettyan（町・育成ゲーム）：黒髪 マンバン・いつもの服（costume_dettyan）。そうびは equip（枠 → id）で かさねる
+export const DETTYAN_LOOK = { skin: "#f7e0cf", hair: "#3a3242", top: "#8a5a33", bottom: "#3a3a4a", shoes: "#4a3a32", acc: "manbun", hs: "manbun", equip: { costume: "dettyan" } }
 
 const layerCache = new Map()
 function recolorLayer(img, roles, pal, key) {
@@ -319,27 +323,38 @@ export function avatarLayersOf(images) {
       if (img) items[slot][it.id] = img
     }
   }
-  const slots = images.avatar_body_base && items.costume.default && images.avatar_shoes_default
-  return { base: images.avatar_base || null, hairs, body: slots ? images.avatar_body_base : null, shoes: images.avatar_shoes_default || null, items }
+  const slots = images.avatar_body_base && items.costume.default && items.shoes.default
+  return { base: images.avatar_base || null, hairs, body: slots ? images.avatar_body_base : null, items }
 }
+
+const itemOf = (slot, id) => AVATAR_EQUIP[slot]?.items.find((it) => it.id === id)
 
 const FACING_AWAY = new Set(["up", "upright", "upleft"])
 
 // 装備の 枠の じゅんに 重ねる（ない 枠・知らない id・画像が ない ものは 描かない）
 function drawSlots(g, layers, a, look, spec, pal, dir, sx, sy, left, top) {
   const colorKey = JSON.stringify(spec)
-  const pick = (slot) => look?.[slot] ?? a[slot] ?? AVATAR_EQUIP[slot]?.def
+  // その 枠の アイテム：Dettyan などは look.equip、町の キャラは 保存の キー（costume・hat・accessory）
+  const pick = (slot) => {
+    const id = look?.equip?.[slot] ?? look?.[slot] ?? (AVATAR_SAVE_SLOTS.includes(slot) ? a[slot] : undefined) ?? AVATAR_EQUIP[slot]?.def
+    return layers.items[slot]?.[id] ? id : AVATAR_EQUIP[slot]?.def // 画像が ない ものは 初めの もの
+  }
+  const hidden = new Set()
+  for (const slot of Object.keys(AVATAR_EQUIP)) for (const h of itemOf(slot, pick(slot))?.hides || []) hidden.add(h)
   const put = (img) => g.drawImage(img, sx, sy, FW, FH, left, top, FW, FH)
   for (const slot of AVATAR_DRAW_ORDER[FACING_AWAY.has(dir) ? "facingAway" : "default"]) {
+    if (hidden.has(slot)) continue
     if (slot === "body") put(recolorLayer(layers.body, BASE_ROLE, pal, `body|${colorKey}`))
-    else if (slot === "shoes") put(recolorLayer(layers.shoes, BASE_ROLE, pal, `shoes|${colorKey}`))
-    else if (slot === "hair") {
+    else if (slot === "shoes") {
+      const id = pick("shoes")
+      put(id === "default" ? recolorLayer(layers.items.shoes.default, BASE_ROLE, pal, `shoes|${colorKey}`) : layers.items.shoes[id])
+    } else if (slot === "hair") {
       const hs = look?.hs || a.hs || DEFAULT_HAIRSTYLE
       const img = layers.hairs[hs] || (hs === "bald" ? null : layers.hairs[DEFAULT_HAIRSTYLE])
       if (img) put(recolorLayer(img, HAIR_LAYER_ROLE, pal, `hair|${hs}|${spec.hair}`))
     } else if (slot === "costume") {
       // ふだん着 だけ 色が かわる（ほかは 色が きまった 画像）
-      const id = layers.items.costume[pick("costume")] ? pick("costume") : "default"
+      const id = pick("costume")
       const img = layers.items.costume[id]
       put(id === "default" ? recolorLayer(img, BASE_ROLE, pal, `costume|${colorKey}`) : img)
     } else {

@@ -6,6 +6,8 @@ import { FOODS, findFood, foodGokigen, drawFood } from "dettyan_foods"
 import { applyIdle, claimDailyReward, doCare, buyFood, feedFood, dirtCount, maxGenki } from "dettyan_care"
 import { PLACES, MONSTERS, canGo, startAdventure, grantEvents, finishAdventure, drawMonster, monsterSprite, findFriend } from "dettyan_adventure"
 import { STATS, JOBS, SKILLS, POINTS_PER_LEVEL, JOB_CHANGE_LEVEL, HP_PER_VIT, findJob, findSkill, dettyanStats, expToNext, addPoint, removePoint, resetPoints, autoAllocate, setJob, canChangeJob, applyLevelUps, takeTurn, autoAction, runAuto } from "dettyan_battle"
+import { enableDettyanHuman } from "dettyan_human"
+import { facing8 } from "avatar_human"
 import { GEAR, SLOTS, slotName, findGear, equipped, gearBonus, toggleGear, drawGearIcon, drawDressed, drawHeldMic, shopGear, buyGear } from "dettyan_gear"
 import { ROOM_W, ROOM_H, createRoom, drawRoomLive, drawChair, drawSpeaker, drawNightLight, drawWindowLight, CHAIR, SPEAKER, SEAT, WORK_SPOT, SING_SPOT } from "dettyan_room"
 import { drawScene } from "dettyan_scenes"
@@ -86,7 +88,7 @@ const OWNER_IDLE_CHANCE = 0.08 // 止まったとき、ひとりで「俺やん�
 export default class extends Controller {
   static targets = ["canvas", "start", "startText", "startNote", "money", "genki", "gokigen", "soundButton", "soundPanel", "bgmToggle", "seToggle", "bubble",
     "menu", "sheet", "sheetTitle", "sheetMoney", "sheetList", "toast", "level", "genkiNum", "cmd", "cmdStatus", "cmdButtons", "statusButton", "goal", "story", "storyWho", "storyText"]
-  static values = { userId: Number, owner: Boolean } // owner：Dettyan 本人のアカウント
+  static values = { userId: Number, owner: Boolean, layers: Object } // owner：Dettyan 本人のアカウント。layers：素体＋レイヤーの 画像（あれば 町と 同じ 絵）
 
   connect() {
     this.store = new DettyanStore({ userId: this.userIdValue })
@@ -127,6 +129,7 @@ export default class extends Controller {
     document.addEventListener("visibilitychange", this.onVisibility)
 
     this.store.load({ onCache: (s) => this.renderHud(s) }).then((s) => this.afterLoad(s))
+    enableDettyanHuman(this.layersValue)
   }
 
   disconnect() {
@@ -479,7 +482,9 @@ export default class extends Controller {
     }
     // もぐもぐ：食べている間は口のあたりで小さく上下する
     const munch = this.eating ? Math.round(Math.abs(Math.sin(this.eating.t * 10))) : 0
-    this.drawMe(g, left, top + munch, { eyes: ch.blink > 0 || this.eating ? "blink" : "open", frame: ch.frame })
+    // 歩く ときは 行く ほうを むく（新しい 絵。前の 絵は まえ だけ）
+    const dir = ch.mode === "walk" ? facing8(ch.tx - ch.x, ch.ty - ch.y, "down") : "down"
+    this.drawMe(g, left, top + munch, { eyes: ch.blink > 0 || this.eating ? "blink" : "open", frame: ch.frame, dir })
     if (this.eating) this.drawEating(g, left, top)
   }
 
@@ -1657,7 +1662,7 @@ export default class extends Controller {
     g.fillStyle = "rgba(0, 0, 0, 0.2)"
     g.fillRect(BATTLE_ME_X - 6 + lunge, BATTLE_FEET - 1, 12, 2)
     const walkFrame = v.walk > 0 ? Math.floor(v.bob * 8) % 2 : lunge > 0 ? 1 : 0
-    if (!(v.flashMe > 0 && Math.floor(v.flashMe * 30) % 2)) this.drawMe(g, meLeft, meTop, { frame: walkFrame, eyes: v.myHp <= 0 ? "blink" : "open" })
+    if (!(v.flashMe > 0 && Math.floor(v.flashMe * 30) % 2)) this.drawMe(g, meLeft, meTop, { frame: walkFrame, eyes: v.myHp <= 0 ? "blink" : "open", dir: "downright" })
     // ❗ みつけた！
     if (v.find > 0) {
       g.fillStyle = "#ffffff"

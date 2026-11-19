@@ -29,7 +29,7 @@ for (const stem of HAIR_PART_STEMS) for (const side of ["back", "front"]) SPROUT
 export const AVATAR_LAYER_KEYS = [
   "avatar_base", ...["original", "manbun", "wolf_long", "pattsun_bob", "pattsun_long", "short_perm", "fluffy_bob", "odango"].map((id) => `avatar_hair_${id}`),
   // 👕 装備の 枠（avatar_sprite.js の AVATAR_EQUIP）
-  "avatar_body_base", "avatar_shoes_default",
+  "avatar_body_base",
   ...Object.values(AVATAR_EQUIP).flatMap((s) => s.items.map((it) => avatarAssetKey(it.file)))
 ]
 SPROUT_FILES.avatar_base = "../sprout_avatar/base_bald.png"

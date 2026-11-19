@@ -65,34 +65,91 @@ export const HUMAN_HAIRSTYLES = [
 export const DEFAULT_HAIRSTYLE = "original"
 
 // 👕 装備の 枠（2026-11-19 の ハンドオフ layers/avatar_catalog.json）。画像は S3 の game_assets/sprout_avatar/
-//   保存の キーは 枠の id（costume・hat・accessory）。"none" は なにも つけない
 //   アイテムを 足す ときは 画像1まい（128×96。素体と 同じ 並び）を 置いて、ここに 1行（app/models/game_asset.rb にも ファイル名）
-//   ふくの いろ・ズボンの いろ が かわるのは ふだん着（default）だけ（ほかは 色が きまった 画像）
-//   足・手（剣・盾）・せなか の 枠は まだ 中身が ない（素材が できたら 足す）
+//   maker：町の キャラメイクで えらべる もの（ほかは Dettyan 育成ゲームの そうび。id は dettyan_gear.js の GEAR と 同じ）
+//   hides：これを つけると 描かない 枠（ヘルメットで 髪・きぐるみで 髪と あたま）
+//   いろが かわるのは ふだん着（costume default）と ふつうの靴（shoes default）だけ（ほかは 色が きまった 画像）
+//   足・手（盾）の 枠は まだ 中身が ない
+// 町の キャラの 保存の キー（枠の id と 同じ。"none" は なし）。のこりの 枠は Dettyan の そうび から（look.equip）
+export const AVATAR_SAVE_SLOTS = ["costume", "hat", "accessory"]
 export const AVATAR_EQUIP = {
   costume: {
     name: "いしょう", def: "default",
     items: [
-      { id: "default", name: "ふだん着", file: "costume_default.png" },
-      { id: "longsleeve", name: "長そでシャツ", file: "costume_longsleeve.png" },
-      { id: "border", name: "ボーダー", file: "costume_border.png" },
-      { id: "overalls", name: "オーバーオール", file: "costume_overalls.png" },
-      { id: "dress", name: "ワンピース", file: "costume_dress.png" },
-      { id: "robe", name: "ローブ", file: "costume_robe.png" }
+      { id: "default", name: "ふだん着", file: "costume_default.png", maker: true },
+      { id: "longsleeve", name: "長そでシャツ", file: "costume_longsleeve.png", maker: true },
+      { id: "border", name: "ボーダー", file: "costume_border.png", maker: true },
+      { id: "overalls", name: "オーバーオール", file: "costume_overalls.png", maker: true },
+      { id: "dress", name: "ワンピース", file: "costume_dress.png", maker: true },
+      { id: "robe", name: "ローブ", file: "costume_robe.png", maker: true },
+      { id: "dettyan", name: "Dettyan の いつもの服", file: "costume_dettyan.png" },
+      { id: "jersey", name: "ジャージ", file: "costume_jersey.png" },
+      { id: "suit", name: "スーツ", file: "costume_suit.png" },
+      { id: "stage", name: "ステージいしょう", file: "costume_stage.png" },
+      { id: "kira", name: "キラキラいしょう", file: "costume_kira.png" },
+      { id: "parka", name: "ゆめかわパーカー", file: "costume_parka.png" },
+      { id: "sailor", name: "セーラーふく", file: "costume_sailor.png" },
+      { id: "kuma", name: "くまの きぐるみ", file: "costume_kuma.png", hides: ["hair", "hat"] },
+      { id: "yukata", name: "ゆかた", file: "costume_yukata.png" },
+      { id: "ouji", name: "おうじさまの ふく", file: "costume_ouji.png" }
     ]
   },
   hat: {
     name: "あたま", def: "none",
     items: [
-      { id: "ribbon", name: "リボン", file: "hat_ribbon.png" },
-      { id: "beanie", name: "ニット帽", file: "hat_beanie.png" },
-      { id: "straw", name: "むぎわら帽子", file: "hat_straw.png" },
-      { id: "wizard", name: "とんがり帽子", file: "hat_wizard.png" }
+      { id: "ribbon", name: "リボン", file: "hat_ribbon.png", maker: true }, // Dettyan の「おおきなリボン」も この 絵
+      { id: "beanie", name: "ニット帽", file: "hat_beanie.png", maker: true },
+      { id: "straw", name: "むぎわら帽子", file: "hat_straw.png", maker: true },
+      { id: "wizard", name: "とんがり帽子", file: "hat_wizard.png", maker: true },
+      { id: "cap", name: "キャップ", file: "hat_cap.png" },
+      { id: "headphones", name: "ヘッドホン", file: "hat_headphones.png" },
+      { id: "helmet", name: "ライトつきヘルメット", file: "hat_helmet.png", hides: ["hair"] },
+      { id: "crown", name: "おうかん", file: "hat_crown.png" },
+      { id: "nekomimi", name: "ねこみみ", file: "hat_nekomimi.png" },
+      { id: "usamimi", name: "うさみみ", file: "hat_usamimi.png" },
+      { id: "hanakanmuri", name: "はなかんむり", file: "hat_hanakanmuri.png" }
     ]
   },
   accessory: {
     name: "アクセサリー", def: "none",
-    items: [{ id: "glasses", name: "まるめがね", file: "accessory_glasses.png" }]
+    items: [{ id: "glasses", name: "まるめがね", file: "accessory_glasses.png", maker: true }]
+  },
+  shoes: {
+    name: "くつ", def: "default",
+    items: [
+      { id: "default", name: "ふつうの くつ", file: "shoes_default.png" },
+      { id: "sneakers", name: "スニーカー", file: "shoes_sneakers.png" },
+      { id: "loafers", name: "かわぐつ", file: "shoes_loafers.png" },
+      { id: "boots", name: "ブーツ", file: "shoes_boots.png" },
+      { id: "kirashoes", name: "キラキラくつ", file: "shoes_kirashoes.png" },
+      { id: "geta", name: "げた", file: "shoes_geta.png" },
+      { id: "usaslipper", name: "うさぎスリッパ", file: "shoes_usaslipper.png" },
+      { id: "yumeboots", name: "ゆめかわブーツ", file: "shoes_yumeboots.png" }
+    ]
+  },
+  hand_main: {
+    name: "て", def: "none",
+    items: [
+      { id: "stick", name: "木のぼう", file: "hand_main_stick.png" },
+      { id: "harisen", name: "ハリセン", file: "hand_main_harisen.png" },
+      { id: "mic", name: "マイク", file: "hand_main_mic.png" },
+      { id: "goldmic", name: "金のマイク", file: "hand_main_goldmic.png" },
+      { id: "penlight", name: "ペンライト", file: "hand_main_penlight.png" },
+      { id: "uchiwa", name: "ハートのうちわ", file: "hand_main_uchiwa.png" },
+      { id: "magicwand", name: "まほうのステッキ", file: "hand_main_magicwand.png" }
+    ]
+  },
+  back: {
+    name: "せなか", def: "none",
+    items: [
+      { id: "backpack", name: "リュック", file: "back_backpack.png" },
+      { id: "cape", name: "マント", file: "back_cape.png" },
+      { id: "guitar", name: "ギター", file: "back_guitar.png" },
+      { id: "wings", name: "てんしのはね", file: "back_wings.png" },
+      { id: "kumapack", name: "くまリュック", file: "back_kumapack.png" },
+      { id: "chouchou", name: "ちょうちょのはね", file: "back_chouchou.png" },
+      { id: "shippo", name: "ねこのしっぽ", file: "back_shippo.png" }
+    ]
   }
 }
 // 重ねる じゅん（うしろ向きの 3方向は せなか・手 の 前後が 入れかわる）。legs・hand_*・back は まだ 画像が ない
@@ -105,7 +162,10 @@ export const avatarAssetKey = (file) => `avatar_${file.replace(/\.png$/, "")}`
 
 const CHOICES = {
   hair: idsOf(HAIRS), eyes: idsOf(EYES), top: idsOf(TOPS), bottom: idsOf(BOTTOMS), acc: ACCESSORIES, hs: idsOf(HUMAN_HAIRSTYLES),
-  ...Object.fromEntries(Object.entries(AVATAR_EQUIP).map(([slot, s]) => [slot, [...(s.def === "none" ? ["none"] : []), ...idsOf(s.items)]]))
+  ...Object.fromEntries(AVATAR_SAVE_SLOTS.map((slot) => {
+    const s = AVATAR_EQUIP[slot]
+    return [slot, [...(s.def === "none" ? ["none"] : []), ...idsOf(s.items.filter((it) => it.maker))]]
+  }))
 }
 const RANGES = { skin: SKINS.length, hairColor: HAIR_COLORS.length, topColor: CLOTH_COLORS.length, bottomColor: CLOTH_COLORS.length, shoes: CLOTH_COLORS.length }
 

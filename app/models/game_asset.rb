@@ -30,10 +30,16 @@ class GameAsset
     # 💇 素体＋髪レイヤー（Sorry pack の 人の テンプレートを 改変した もの。非商用。S3 の game_assets/sprout_avatar/）
     { "avatar_base" => "sprout_avatar/base_bald.png" },
     %w[original manbun wolf_long pattsun_bob pattsun_long short_perm fluffy_bob odango].to_h { |id| ["avatar_hair_#{id}", "sprout_avatar/hair_#{id}.png"] },
-    # 👕 装備の 枠（体・くつ・いしょう・あたま・アクセサリー。avatar_sprite.js の AVATAR_EQUIP と そろえる）
-    %w[body_base shoes_default
+    # 👕 装備の 枠（体・いしょう・くつ・あたま・アクセサリー・て・せなか。avatar_sprite.js の AVATAR_EQUIP と そろえる。
+    #   test/javascript/avatar_equip_test.mjs で 同じか 確かめる）
+    %w[body_base
        costume_default costume_longsleeve costume_border costume_overalls costume_dress costume_robe
-       hat_ribbon hat_beanie hat_straw hat_wizard accessory_glasses].to_h { |stem| ["avatar_#{stem}", "sprout_avatar/#{stem}.png"] }
+       costume_dettyan costume_jersey costume_suit costume_stage costume_kira costume_parka costume_sailor costume_kuma costume_yukata costume_ouji
+       hat_ribbon hat_beanie hat_straw hat_wizard hat_cap hat_headphones hat_helmet hat_crown hat_nekomimi hat_usamimi hat_hanakanmuri
+       accessory_glasses
+       shoes_default shoes_sneakers shoes_loafers shoes_boots shoes_kirashoes shoes_geta shoes_usaslipper shoes_yumeboots
+       hand_main_stick hand_main_harisen hand_main_mic hand_main_goldmic hand_main_penlight hand_main_uchiwa hand_main_magicwand
+       back_backpack back_cape back_guitar back_wings back_kumapack back_chouchou back_shippo].to_h { |stem| ["avatar_#{stem}", "sprout_avatar/#{stem}.png"] }
   ).freeze
   HAIR_KEYS = SPROUT.keys.grep(/\Ahair_/).freeze
   AVATAR_LAYER_KEYS = SPROUT.keys.grep(/\Aavatar_/).freeze
