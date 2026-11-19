@@ -15,7 +15,14 @@
 
     <div class="av-main">
       <div class="av-stage">
-        <canvas class="av-preview" data-avatar-maker-target="preview" role="img" aria-label="じぶんの キャラ"></canvas>
+        <canvas class="av-preview" data-avatar-maker-target="preview" role="img" aria-label="じぶんの キャラ（よこに なぞると まわる）" tabindex="0"
+                data-action="pointerdown->avatar-maker#dragStart pointermove->avatar-maker#dragMove pointerup->avatar-maker#dragEnd pointercancel->avatar-maker#dragEnd keydown->avatar-maker#turnKey"></canvas>
+        <%# 🔄 むきを かえる（◀ ▶・キャラを よこに なぞる・← → キー）。⏸ で くるくる を とめる／うごかす %>
+        <div class="av-turn" data-avatar-maker-target="turn" hidden>
+          <button type="button" class="av-turn__btn" data-action="avatar-maker#turnLeft" aria-label="ひだりに まわす">◀</button>
+          <button type="button" class="av-turn__btn av-turn__btn--spin" data-avatar-maker-target="spinButton" data-action="avatar-maker#toggleSpin" aria-pressed="true">⏸ くるくる</button>
+          <button type="button" class="av-turn__btn" data-action="avatar-maker#turnRight" aria-label="みぎに まわす">▶</button>
+        </div>
         <p class="av-name" data-avatar-maker-target="nameLabel"><%= current_user.display_label %></p>
         <%# 🏷️ 表示名（まち・あいさつ に 出る なまえ）。空なら ログインの 呼び名 %>
         <label class="av-msg">

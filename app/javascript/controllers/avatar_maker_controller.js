@@ -12,13 +12,15 @@ import { findGear } from "dettyan_gear"
 // 💬 ひとこと（まちで キャラが 言う ことば）も ここで かえられる（まちの 下の 入力でも かえられる）
 // 絵は avatar_chibi.js（16×20。Sprout Lands の 町と 同じ 細かさ）
 const ACC_NAMES = { manbun: "マンバン" }
+// 見本の むき（右まわり の じゅん）
+const DIRS = ["down", "downright", "right", "upright", "up", "upleft", "left", "downleft"]
 const PW = 20 // 見本の 大きさ（ドット。こもの が 上に はみ出しても 入るように）
 const PH = 28
 const OX = 2
 const OY = 6
 
 export default class extends Controller {
-  static targets = ["preview", "groups", "save", "status", "msg", "displayName", "nameLabel"]
+  static targets = ["preview", "groups", "save", "status", "msg", "displayName", "nameLabel", "turn", "spinButton"]
   static values = { avatar: Object, url: String, back: String, account: String, humanUrl: String, hairUrls: Object, layerUrls: Object }
 
   connect() {
@@ -51,6 +53,53 @@ export default class extends Controller {
 
   disconnect() {
     cancelAnimationFrame(this.raf)
+  }
+
+  // ---- 🔄 むきを かえる（2026-11-19 に ayaribon が「まわし、こちらでも できるように」） ----
+  turnLeft() { this.turn(-1) }
+  turnRight() { this.turn(1) }
+
+  turn(step) {
+    this.setSpin(false)
+    this.dirIndex = (this.dirIndex || 0) + step
+  }
+
+  toggleSpin() { this.setSpin(this.spinning === false) }
+
+  setSpin(on) {
+    if (on && this.spinning === false) {
+      // いまの むき から くるくる を つづける
+      this.spinFrom = this.dirIndex || 0
+      this.spinT0 = this.t
+    }
+    this.spinning = on
+    if (this.hasSpinButtonTarget) {
+      this.spinButtonTarget.setAttribute("aria-pressed", String(on))
+      this.spinButtonTarget.textContent = on ? "⏸ くるくる" : "▶ くるくる"
+    }
+  }
+
+  // キャラを よこに なぞると まわる（24px ごとに 1つ となりの むき）
+  dragStart(e) {
+    if (!this.human) return
+    this.drag = { x: e.clientX, from: this.dirIndex || 0 }
+    this.previewTarget.setPointerCapture?.(e.pointerId)
+  }
+
+  dragMove(e) {
+    if (!this.drag) return
+    const steps = Math.round((e.clientX - this.drag.x) / 24)
+    if (steps === 0 && this.spinning !== false) return
+    this.setSpin(false)
+    this.dirIndex = this.drag.from + steps
+  }
+
+  dragEnd() { this.drag = null }
+
+  // ← → キーでも まわる
+  turnKey(e) {
+    if (e.key === "ArrowLeft") { e.preventDefault(); this.turn(-1) }
+    if (e.key === "ArrowRight") { e.preventDefault(); this.turn(1) }
   }
 
   hasSaved() {
@@ -92,6 +141,7 @@ export default class extends Controller {
   }
 
   useHumanPreview() {
+    if (this.hasTurnTarget) this.turnTarget.hidden = false
     const c = this.previewTarget
     c.width = 24
     c.height = 40
@@ -107,9 +157,11 @@ export default class extends Controller {
       g.clearRect(0, 0, 24, 40)
       g.fillStyle = "rgba(0, 0, 0, 0.18)"
       g.fillRect(6, 36, 12, 2)
-      const dirs = ["down", "downright", "right", "upright", "up", "upleft", "left", "downleft"]
-      const dir = dirs[Math.floor(this.t / 1.5) % dirs.length]
-      drawHuman(g, this.human, 12, 37, this.avatar, { dir, walking: this.t % 6 > 3, t: this.t, parts: this.hairParts, layers: this.layers })
+      // 🔄 じぶんで まわしている ときは その むきで 立つ。くるくる の ときは 1.5秒ごとに となりの むきへ
+      if (this.spinning !== false) this.dirIndex = (this.spinFrom || 0) + Math.floor((this.t - (this.spinT0 || 0)) / 1.5)
+      const dir = DIRS[((this.dirIndex || 0) % DIRS.length + DIRS.length) % DIRS.length]
+      const walking = this.spinning !== false && this.t % 6 > 3
+      drawHuman(g, this.human, 12, 37, this.avatar, { dir, walking, t: this.t, parts: this.hairParts, layers: this.layers })
       return
     }
     g.clearRect(0, 0, PW, PH)
