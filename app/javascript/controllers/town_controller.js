@@ -42,6 +42,9 @@ const ZOOM_KEY = "town:zoom"
 const BUILDING_TOP = TOWN_H * 0.15 // 建物の ボタン（home.css の .hm-town__building と おなじ）
 const BUILDING_H = TOWN_H * 0.37
 
+// 素材を 読んでいる あいだの 地面の 色（Sprout の 草の 色に ちかい）
+const LOADING_COLOR = "#9fc76a"
+
 export default class extends Controller {
   static targets = [
     "canvas", "layer", "intro", "building", "edgeLeft", "edgeRight",
@@ -78,6 +81,7 @@ export default class extends Controller {
         this.avatarLayers = avatarLayersOf(sheets)
         drawSproutBase(this.base.getContext("2d"), sheets)
         this.drawForest((g) => drawSproutForest(g, sheets, FOREST))
+        this.drawGuideFace() // あんない の 顔も 新しい 絵に
       }).catch(() => {
         drawTownBase(this.base.getContext("2d"))
       }).finally(() => { this.baseReady = true })
@@ -445,6 +449,13 @@ export default class extends Controller {
   // ---- 描く ----
   draw() {
     const g = this.g
+    // 素材の 絵を 読んでいる あいだは 地面の 色だけ（前の 絵の 人・Dettyan を 一瞬でも 出さない）
+    this.canvasTarget.parentElement.classList.toggle("is-loading", !this.baseReady) // 建物の 名前・ふきだし・◀ ▶ も かくす（home.css）
+    if (!this.baseReady) {
+      g.fillStyle = LOADING_COLOR
+      g.fillRect(0, 0, this.canvasTarget.width, this.canvasTarget.height)
+      return
+    }
     const now = Date.now()
     const cam = Math.round(this.camX)
     const camY = Math.round(this.camY)
@@ -458,10 +469,7 @@ export default class extends Controller {
         g.fillRect(0, -FOREST, TOWN_W, TOWN_H + FOREST * 2)
       }
     }
-    if (!this.baseReady) {
-      g.fillStyle = "#c0d470"
-      g.fillRect(0, 0, TOWN_W, TOWN_H)
-    } else if (this.sprout) {
+    if (this.sprout) {
       g.drawImage(this.base, 0, 0)
       drawSproutLive(g, this.t, this.sprout)
     } else {
@@ -683,9 +691,20 @@ export default class extends Controller {
   }
 
   // あんない の 顔（Dettyan の 頭 だけ）
+  // あんない の 顔（Dettyan の 頭）。新しい 絵が あれば 人の 絵（ひろばの Dettyan と 同じ 見た目）の 顔の まわり、なければ 前の ドット絵
   drawGuideFace() {
     if (!this.hasGuideFaceTarget) return
     const c = this.guideFaceTarget
+    if (this.sprout?.human) {
+      c.width = 20
+      c.height = 16
+      const g = c.getContext("2d")
+      g.clearRect(0, 0, c.width, c.height)
+      // ひろばの Dettyan（本人の キャラ）。本人が 見ているときは 自分の キャラ
+      const avatar = this.dettyan ? this.dettyan.avatar : this.me?.avatar
+      drawHuman(g, this.sprout.human, 10, 23, avatar, { dir: "down", look: avatar ? null : DETTYAN_LOOK, parts: this.hairParts, layers: this.avatarLayers })
+      return
+    }
     c.width = SPRITE_W
     c.height = 16
     drawDettyan(c.getContext("2d"), 0, 0, { eyes: "open" })

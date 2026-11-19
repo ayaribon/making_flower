@@ -25,8 +25,15 @@ export default class extends Controller {
     this.n = 0
     this.happy = false
     this.reduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
-    this.draw()
-    enableDettyanHuman(this.layersValue).then((ok) => { if (ok && this.g) this.draw() })
+    // 新しい 絵を 読みおわってから 描く（前の 絵を 一瞬 出さない）。読めなければ 前の 絵
+    this.ready = false
+    const layers = this.layersValue && Object.keys(this.layersValue).length
+    if (layers) {
+      Promise.race([enableDettyanHuman(this.layersValue), new Promise((r) => setTimeout(r, 6000))]).finally(() => { this.ready = true; if (this.g) this.draw() })
+    } else {
+      this.ready = true
+      this.draw()
+    }
     if (this.reduced) return
 
     this.timer = setInterval(() => { this.n += 1; this.draw() }, TICK_MS)
@@ -49,6 +56,7 @@ export default class extends Controller {
   }
 
   draw() {
+    if (!this.ready) return
     const g = this.g
     const n = this.n
     g.clearRect(0, 0, W, H)

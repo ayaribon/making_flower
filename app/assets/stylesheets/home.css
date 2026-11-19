@@ -279,3 +279,6 @@
   .hm-hud__btn { padding: 5px 9px; font-size: 0.75rem; }
   .hm-hud--bottom .hm-say { max-width: 420px; margin: 0 auto; padding: 4px 8px; }
 }
+
+/* 素材の 絵を 読んでいる あいだ（town_controller.js）：建物の 名前・人の 名前・ふきだし・◀ ▶ を かくす */
+.hm-town.is-loading .hm-town__building, .hm-town.is-loading .hm-town__edge, .hm-town.is-loading .hm-town__layer { visibility: hidden; }

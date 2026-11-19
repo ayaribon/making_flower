@@ -140,16 +140,21 @@ export default class extends Controller {
     window.addEventListener("pagehide", this.onHide)
     document.addEventListener("visibilitychange", this.onVisibility)
 
-    this.store.load({ onCache: (s) => this.renderHud(s) }).then((s) => this.afterLoad(s))
-    enableDettyanHuman(this.layersValue)
-    // 🌱 けしきの 素材（そろえば 新しい 絵。なければ 前の 絵）
-    loadDettyanSheets(this.spritesValue).then((sheets) => {
-      if (!sheets) return
-      this.sprout = sheets
-      this.wideCache = {}
-      this.tools = makeBattleTools(sheets.actions) // ⚔️ 農作業の 道具を こうげきの うごきに
-      this.monsterArt = makeMonsterArt(sheets, MONSTERS) // 👾 モンスター（ある ものだけ）
-    })
+    // 🧑 Dettyan の 新しい 絵 と 🌱 けしきの 素材 を 読みおわるまで（成功・失敗 どちらでも）ステージを 描かない
+    //   読みおわる まえに 前の 絵が 一瞬 出ないように。読めなければ 前の 絵で 遊べる。6秒で あきらめる
+    const giveUp = () => new Promise((resolve) => setTimeout(resolve, 6000))
+    const art = Promise.race([Promise.allSettled([
+      enableDettyanHuman(this.layersValue),
+      // 🌱 けしきの 素材（そろえば 新しい 絵。なければ 前の 絵）
+      loadDettyanSheets(this.spritesValue).then((sheets) => {
+        if (!sheets) return
+        this.sprout = sheets
+        this.wideCache = {}
+        this.tools = makeBattleTools(sheets.actions) // ⚔️ 農作業の 道具を こうげきの うごきに
+        this.monsterArt = makeMonsterArt(sheets, MONSTERS) // 👾 モンスター（ある ものだけ）
+      })
+    ]), giveUp()]).then(() => { this.artLoaded = true })
+    Promise.all([this.store.load({ onCache: (s) => this.renderHud(s) }), art]).then(([s]) => this.afterLoad(s))
   }
 
   disconnect() {
@@ -456,6 +461,12 @@ export default class extends Controller {
     const v = this.view
     sg.setTransform(1, 0, 0, 1, 0, 0)
     sg.imageSmoothingEnabled = false
+    // 絵を 読んでいる あいだは 色だけ（前の 絵を 一瞬でも 出さない）
+    if (!this.artLoaded) {
+      sg.fillStyle = "#2a1c12"
+      sg.fillRect(0, 0, v.VW, v.VH)
+      return
+    }
     // 新しい 絵：screen に 広く 描く
     if (this.wideScene()) {
       sg.save()
