@@ -68,8 +68,25 @@ export const DEFAULT_HAIRSTYLE = "original"
 // 🚀 画像が よその サイト（S3 から じかに。GameAsset.direct_url）の ときは CORS で 読む
 //   （色を ぬりかえる ために canvas の getImageData を 使う ので、CORS なし だと 読めなく なる）
 export function allowCors(img, url) {
-  if (/^https?:\/\//.test(url) && !url.startsWith(window.location.origin)) img.crossOrigin = "anonymous"
+  if (isCrossOrigin(url)) img.crossOrigin = "anonymous"
   return img
+}
+
+function isCrossOrigin(url) {
+  return /^https?:\/\//.test(url) && !url.startsWith(window.location.origin)
+}
+
+// 素材の 画像を 1まい 読む（読めなければ null）。S3 から じかに 読めない とき（CORS の 設定 ちがい など）は、
+// サーバー経由（/game_assets/sprout/キー）で もう一度 読む。町が まっしろに ならない ように
+export function loadAssetImage(key, url) {
+  const tryLoad = (u) => new Promise((resolve) => {
+    const img = allowCors(new Image(), u)
+    img.decoding = "async"
+    img.onload = () => resolve(img)
+    img.onerror = () => resolve(null)
+    img.src = u
+  })
+  return tryLoad(url).then((img) => img || (isCrossOrigin(url) ? tryLoad(`/game_assets/sprout/${key}`) : null))
 }
 
 // 👕 装備の 枠（2026-11-19 の ハンドオフ layers/avatar_catalog.json）。画像は S3 の game_assets/sprout_avatar/

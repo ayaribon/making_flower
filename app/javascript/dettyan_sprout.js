@@ -8,7 +8,7 @@ import { timeOfDay, glow } from "dettyan_room"
 import { FIRE } from "dettyan_camp"
 import { TOWN_W, TOWN_H } from "town_world"
 import { drawSproutBase, drawSproutLive, drawSproutForest } from "town_sprout"
-import { allowCors } from "avatar_sprite"
+import { loadAssetImage } from "avatar_sprite"
 
 const T = 16
 // 町（town_sprout.js）と 同じ 色の きまり：ふちは こい 赤むらさき
@@ -21,11 +21,10 @@ export const NEEDED = ["grass", "soil", "trees", "flowers", "fences", "well", "s
 export function loadDettyanSheets(urls, timeoutMs = 20000) {
   if (!urls || NEEDED.some((k) => !urls[k])) return Promise.resolve(null)
   const got = {}
-  const one = ([key, url]) => new Promise((resolve) => {
-    const img = allowCors(new Image(), url)
-    img.onload = () => { got[key] = img; resolve([key, img]) }
-    img.onerror = () => resolve(null)
-    img.src = url
+  const one = ([key, url]) => loadAssetImage(key, url).then((img) => {
+    if (!img) return null
+    got[key] = img
+    return [key, img]
   })
   const all = Promise.all(Object.entries(urls).map(one)).then((pairs) => {
     const sheets = Object.fromEntries(pairs.filter(Boolean))
@@ -39,12 +38,7 @@ export function loadDettyanSheets(urls, timeoutMs = 20000) {
 // 画像を 読む（読めない ものは 入れない）。{ キー: 画像 }
 export function loadImages(urls) {
   const out = {}
-  return Promise.all(Object.entries(urls || {}).map(([key, url]) => new Promise((resolve) => {
-    const img = allowCors(new Image(), url)
-    img.onload = () => { out[key] = img; resolve() }
-    img.onerror = () => resolve()
-    img.src = url
-  }))).then(() => out)
+  return Promise.all(Object.entries(urls || {}).map(([key, url]) => loadAssetImage(key, url).then((img) => { if (img) out[key] = img }))).then(() => out)
 }
 
 // ---- 道具 ----
