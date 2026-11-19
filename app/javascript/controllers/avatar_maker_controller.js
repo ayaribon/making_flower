@@ -94,7 +94,13 @@ export default class extends Controller {
     this.dirIndex = this.drag.from + steps
   }
 
-  dragEnd() { this.drag = null }
+  // なぞらずに タップ（クリック）したら 1つ となりの むきへ（2026-11-19 に ayaribon が「タップで 1こずつ」）
+  dragEnd(e) {
+    const d = this.drag
+    this.drag = null
+    if (!d || e.type === "pointercancel") return
+    if (Math.abs(e.clientX - d.x) < 8) this.turn(1)
+  }
 
   // ← → キーでも まわる
   turnKey(e) {
