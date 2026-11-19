@@ -125,15 +125,33 @@
 .dt-item__icon--emoji { display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
 /* 🛋️ Sprout の 家具：色・がら と しまう／だす（dettyan_game_controller.js の furnitureOptsRow） */
 .dt-item__icon--art { padding: 3px; box-sizing: border-box; object-fit: contain; }
-.dt-furnopts { display: flex; flex-direction: column; gap: 6px; padding: 2px 4px 10px 54px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
-.dt-furnopts__line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
-.dt-furnopts__label { font-size: 0.75rem; opacity: 0.75; margin-right: 2px; }
+.dt-furnopts { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 4px 10px 54px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
 .dt-furnopts__chip {
   min-height: 32px; padding: 2px 10px; border: 0; border-radius: 999px; cursor: pointer; touch-action: manipulation;
   background: rgba(255, 255, 255, 0.12); color: #fff; font: inherit; font-size: 0.78rem; font-weight: 700;
 }
-.dt-furnopts__chip.is-on { background: #ffb347; color: #2a1c12; }
-.dt-furnopts__toggle { align-self: flex-start; }
+/* 🎨 もようがえ：へや を 見ながら 色・がら を かえる（下の ボタンの 上に 出す） */
+.dt-decor {
+  position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--dt-bottom, 0px) + 10px); z-index: 8;
+  width: min(92%, 420px); box-sizing: border-box; padding: 8px 10px; border-radius: 16px;
+  background: rgba(42, 28, 18, 0.92); color: #fff; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  display: flex; flex-direction: column; gap: 6px; text-align: center;
+}
+.dt-decor[hidden] { display: none; }
+.dt-decor.is-top { bottom: auto; top: calc(var(--dt-top, 0px) + 6px); }
+.dt-decor__name { font-weight: 800; }
+.dt-decor__buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.dt-decor__next {
+  min-height: 42px; padding: 4px 16px; border: 0; border-radius: 999px; cursor: pointer; touch-action: manipulation;
+  background: #fff3df; color: #2a1c12; font: inherit; font-size: 1rem; font-weight: 800;
+}
+.dt-decor__next:active { transform: scale(0.96); }
+.dt-decor__end { display: flex; gap: 8px; }
+.dt-decor__cancel, .dt-decor__ok {
+  min-height: 40px; border: 0; border-radius: 999px; cursor: pointer; touch-action: manipulation; font: inherit; font-weight: 800;
+}
+.dt-decor__cancel { flex: 1; background: rgba(255, 255, 255, 0.16); color: #fff; }
+.dt-decor__ok { flex: 2; background: #ffb347; color: #2a1c12; }
 .dt-sheet__section { margin: 12px 4px 2px; font-size: 0.85rem; font-weight: 700; opacity: 0.85; }
 .dt-sheet__note { padding: 4px 4px 6px; font-size: 0.78rem; opacity: 0.8; }
 /* ショップのタブ（たべもの・いしょう） */
