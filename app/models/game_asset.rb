@@ -26,7 +26,8 @@ class GameAsset
     "furniture" => "sprout_lands/Tilesets/Building parts/Basic_Furniture.png",
     "stone" => "sprout_lands/Tilesets/ground tiles/New tiles/Stone_Ground_Tiles.png",
     "grass_dark" => "sprout_lands/Tilesets/ground tiles/New tiles/Darker_Grass_Tile_Layers.png",
-    "paths" => "sprout_lands/Tilesets/Building parts/Paths.png"
+    "paths" => "sprout_lands/Tilesets/Building parts/Paths.png",
+    "actions" => "sprout_lands/Characters/Basic Charakter Actions.png" # 農作業の うごき（道具だけ 切りだして バトルの こうげきに）
   }.merge(
     # 💇 髪の パーツ（docs/town/hair_parts_spec.md。人の テンプレートに 重ねる）
     %w[short_bob blunt_bob long_straight twin_tails ponytail braids wolf_cut].flat_map do |stem|
@@ -51,8 +52,8 @@ class GameAsset
   AVATAR_LAYER_KEYS = SPROUT.keys.grep(/\Aavatar_/).freeze
   # なくても 町を 出せる もの（なければ アバターは 前の 絵）
   # 育成ゲームの けしきに 使う もの（町の もの ＋ 上の 5つ）
-  DETTYAN_KEYS = %w[grass soil trees flowers fences walls furniture stone grass_dark paths].freeze
-  OPTIONAL = (%w[chara human walls furniture stone grass_dark paths] + HAIR_KEYS + AVATAR_LAYER_KEYS).freeze
+  DETTYAN_KEYS = %w[grass soil trees flowers fences walls furniture stone grass_dark paths actions].freeze
+  OPTIONAL = (%w[chara human walls furniture stone grass_dark paths actions] + HAIR_KEYS + AVATAR_LAYER_KEYS).freeze
   # そろっているか を 確かめなおす 間かく（S3 に 上げてから 町に 出るまで、長くて この 時間）
   CHECK_EVERY = 10.minutes
 

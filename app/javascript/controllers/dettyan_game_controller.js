@@ -7,7 +7,8 @@ import { applyIdle, claimDailyReward, doCare, buyFood, feedFood, dirtCount, maxG
 import { PLACES, MONSTERS, canGo, startAdventure, grantEvents, finishAdventure, drawMonster, monsterSprite, findFriend } from "dettyan_adventure"
 import { STATS, JOBS, SKILLS, POINTS_PER_LEVEL, JOB_CHANGE_LEVEL, HP_PER_VIT, findJob, findSkill, dettyanStats, expToNext, addPoint, removePoint, resetPoints, autoAllocate, setJob, canChangeJob, applyLevelUps, takeTurn, autoAction, runAuto } from "dettyan_battle"
 import { enableDettyanHuman } from "dettyan_human"
-import { loadDettyanSheets, createCampWide, drawCampNightWide, createBattleStrip, drawBattleWide } from "dettyan_sprout"
+import { loadDettyanSheets, createCampWide, drawCampNightWide, createBattleStrip, drawBattleWide, makeBattleTools, drawBattleTool } from "dettyan_sprout"
+import { usingHumanDraw } from "dettyan_gear"
 import { facing8 } from "avatar_human"
 import { GEAR, SLOTS, slotName, findGear, equipped, gearBonus, toggleGear, drawGearIcon, drawDressed, drawHeldMic, shopGear, buyGear } from "dettyan_gear"
 import { ROOM_W, ROOM_H, createRoom, drawRoomLive, drawChair, drawSpeaker, drawNightLight, drawWindowLight, CHAIR, SPEAKER, SEAT, WORK_SPOT, SING_SPOT } from "dettyan_room"
@@ -142,7 +143,12 @@ export default class extends Controller {
     this.store.load({ onCache: (s) => this.renderHud(s) }).then((s) => this.afterLoad(s))
     enableDettyanHuman(this.layersValue)
     // 🌱 けしきの 素材（そろえば 新しい 絵。なければ 前の 絵）
-    loadDettyanSheets(this.spritesValue).then((sheets) => { if (sheets) { this.sprout = sheets; this.wideCache = {} } })
+    loadDettyanSheets(this.spritesValue).then((sheets) => {
+      if (!sheets) return
+      this.sprout = sheets
+      this.wideCache = {}
+      this.tools = makeBattleTools(sheets.actions) // ⚔️ 農作業の 道具を こうげきの うごきに
+    })
   }
 
   disconnect() {
@@ -1409,6 +1415,7 @@ export default class extends Controller {
     const v = B.view
     v.bob += dt
     v.lunge = Math.max(0, v.lunge - dt)
+    if (v.swing) { v.swing.t -= dt; if (v.swing.t <= 0) v.swing = null }
     v.foeLunge = Math.max(0, v.foeLunge - dt)
     v.flashMe = Math.max(0, v.flashMe - dt)
     v.flashFoe = Math.max(0, v.flashFoe - dt)
@@ -1514,9 +1521,12 @@ export default class extends Controller {
         this.sound.se("pet")
         this.popAt(`+${e.heal}`, BATTLE_ME_X, BATTLE_FEET - 30)
         this.sparkle(BATTLE_ME_X, BATTLE_FEET - 14)
+        v.swing = { tool: "can", t: 0.45, dur: 0.45, still: true } // じょうろを かたむける
         return
       }
       v.lunge = 0.3
+      // おの を ふる（まほう は じょうろ）
+      v.swing = { tool: skill?.type === "magic" ? "can" : "axe", t: 0.3, dur: 0.3 }
       v.flashFoe = 0.25
       v.foeHp = e.foeHp
       this.sound.se("hit")
@@ -1782,7 +1792,11 @@ export default class extends Controller {
     g.fillStyle = "rgba(0, 0, 0, 0.2)"
     g.fillRect(BATTLE_ME_X - 6 + lunge, BATTLE_FEET - 1, 12, 2)
     const walkFrame = v.walk > 0 ? Math.floor(v.bob * 8) % 2 : lunge > 0 ? 1 : 0
-    if (!(v.flashMe > 0 && Math.floor(v.flashMe * 30) % 2)) this.drawMe(g, meLeft, meTop, { frame: walkFrame, eyes: v.myHp <= 0 ? "blink" : "open", dir: "downright" })
+    const swing = v.swing && this.tools && usingHumanDraw() ? v.swing : null
+    if (!(v.flashMe > 0 && Math.floor(v.flashMe * 30) % 2)) {
+      this.drawMe(g, meLeft, meTop, { frame: swing ? 0 : walkFrame, eyes: v.myHp <= 0 ? "blink" : "open", dir: "downright", noHand: !!swing })
+      if (swing) drawBattleTool(g, this.tools, swing.tool, BATTLE_ME_X + lunge, BATTLE_FEET - hop, 1 - swing.t / swing.dur)
+    }
     // ❗ みつけた！
     if (v.find > 0) {
       g.fillStyle = "#ffffff"

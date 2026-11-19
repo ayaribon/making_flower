@@ -371,3 +371,56 @@ export function drawBattleWide(g, strip, placeId, area, t, scroll) {
     }
   }
 }
+
+// ---- ⚔️ バトルの うごき（農作業の うごき を 転用。2026-11-19 に ayaribon） ----
+// Sprout Lands の「Basic Charakter Actions」（48×48 の コマ。横 2コマ＝ふりあげ・ふりおろし）から 道具だけ 切りだす
+//   体は ちがう キャラ（Teemo）なので 使わない。道具の 場所は 体の まんなか・足もと からの ずれ で おぼえて、Dettyan に かさねる
+//   右むき：くわ＝3だん目・おの＝7だん目・じょうろ＝11だん目（0 から かぞえる）
+const ACTION_ROWS = { hoe: 3, axe: 7, can: 11 }
+const BODY_COLORS = new Set(["243,242,192", "92,78,146", "118,109,170", "221,213,222", "232,181,172", "243,216,197"])
+
+export function makeBattleTools(sheet) {
+  if (!sheet) return null
+  const src = document.createElement("canvas")
+  src.width = sheet.width
+  src.height = sheet.height
+  const sg = src.getContext("2d")
+  sg.drawImage(sheet, 0, 0)
+  const out = {}
+  for (const [name, row] of Object.entries(ACTION_ROWS)) {
+    out[name] = [0, 1].map((col) => {
+      const d = sg.getImageData(col * 48, row * 48, 48, 48).data
+      let bx0 = 99, bx1 = -1, by1 = -1, tx0 = 99, ty0 = 99, tx1 = -1, ty1 = -1
+      for (let y = 0; y < 48; y++) for (let x = 0; x < 48; x++) {
+        const i = (y * 48 + x) * 4
+        if (!d[i + 3]) continue
+        if (BODY_COLORS.has(`${d[i]},${d[i + 1]},${d[i + 2]}`)) { bx0 = Math.min(bx0, x); bx1 = Math.max(bx1, x); by1 = Math.max(by1, y) } else { tx0 = Math.min(tx0, x); ty0 = Math.min(ty0, y); tx1 = Math.max(tx1, x); ty1 = Math.max(ty1, y) }
+      }
+      const w = tx1 - tx0 + 1
+      const h = ty1 - ty0 + 1
+      const c = document.createElement("canvas")
+      c.width = w
+      c.height = h
+      const g = c.getContext("2d")
+      const img = g.createImageData(w, h)
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const i = ((ty0 + y) * 48 + tx0 + x) * 4
+        if (!d[i + 3] || BODY_COLORS.has(`${d[i]},${d[i + 1]},${d[i + 2]}`)) continue
+        img.data.set([d[i], d[i + 1], d[i + 2], d[i + 3]], (y * w + x) * 4)
+      }
+      g.putImageData(img, 0, 0)
+      // 体の まんなか・足もと からの ずれ（人の 体は Teemo より 1.3ばい くらい 高い）
+      const cx = (bx0 + bx1) / 2
+      // ふりおろし（col 1）は 畑を たがやす 高さ なので、バトルでは 手の 高さ まで あげて 少し 前へ
+      const lift = col === 1 && name !== "can" ? 7 : 0
+      return { canvas: c, dx: Math.round(tx0 - cx) + (lift ? 2 : 0), dy: Math.round((ty0 - by1) * 1.3) - lift }
+    })
+  }
+  return out
+}
+
+// 道具を かさねる（x：体の まんなか、feet：足もと、p：0〜1 の すすみ。はじめ 4わり は ふりあげ）
+export function drawBattleTool(g, tools, name, x, feet, p) {
+  const f = tools?.[name]?.[p < 0.4 ? 0 : 1]
+  if (f) g.drawImage(f.canvas, Math.round(x + f.dx), Math.round(feet + f.dy))
+}

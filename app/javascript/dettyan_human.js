@@ -41,6 +41,7 @@ export function equipOf(set = {}, { singing = false } = {}) {
 //   opts：view（"back" で うしろ）・dir（8方向）・frame（1 で 歩きの コマ）・hideHand（歌う とき）
 function drawDettyanHuman(g, layers, left, top, set, opts = {}) {
   const equip = equipOf(set, { singing: !!opts.hideHand })
+  if (opts.noHand) equip.hand_main = "none" // バトルで 道具を ふる ときは 手の ものを 出さない
   const dir = opts.view === "back" ? "up" : opts.dir || "down"
   drawHuman(g, null, left + 10, top + 24, null, { dir, walking: opts.frame === 1, t: 0, look: { ...DETTYAN_LOOK, equip }, layers })
 }
