@@ -180,7 +180,7 @@ export default class extends Controller {
     "harmonyGuideTargetInfo",
     "keroToggle", "keroAmount", "keroValue",
     "fxStrength", "fxStrengthValue", "fxBeat", "fxChorus", "fxSparkle", "fxInfo",
-    "mvRatioButton", "mvSafe", "mvFrame",
+    "mvRatioButton", "mvSafe", "mvFrame", "mvThumbButton", "mvThumbNoLyrics",
     "fastButton", "fastNote", "exportQuality", "exportProgress", "exportBackgroundNotice",
     "autoAlignButton", "undoAlignButton",
     "flowHeader", "flowNav", "flowButton",
@@ -4450,6 +4450,60 @@ export default class extends Controller {
   async seekMvCommit() {
     this.mvSeekDragging = false
     if (this.mode === "playing") await this.mvPlayFrom(this.mvSeekSec)
+  }
+
+  // 📸 いま見ている場面（シークバーの位置）を、サムネ用の画像（JPEG）にして保存する
+  // 動画と同じ renderFrame(t) で、動画と同じ大きさに描き直す（画面の「重なる所」の表示などは入らない）
+  // 画像はこの端末の中だけで作る（N1）。iPhone などは共有メニューから「画像を保存」で写真に入れられる
+  async saveMvThumb() {
+    if (!this.mv || (this.mode !== "idle" && this.mode !== "playing")) return // 録音・書き出しの最中は撮らない
+    const btn = this.hasMvThumbButtonTarget ? this.mvThumbButtonTarget : null
+    if (btn) btn.disabled = true
+    try {
+      await this.ensureMvFont()
+      const r = MV_RATIOS[this.mv.ratio] || MV_RATIOS["16:9"]
+      const canvas = document.createElement("canvas")
+      canvas.width = r.width
+      canvas.height = r.height
+      const noLyrics = this.hasMvThumbNoLyricsTarget && this.mvThumbNoLyricsTarget.checked
+      const scene = { ...this.mvScene, showProgress: false } // 再生の進み具合のバーはサムネに入れない
+      if (noLyrics) scene.lyrics = []
+      const t = this.mvSeekSec || 0
+      renderFrame(canvas.getContext("2d"), canvas.width, canvas.height, t, scene)
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92))
+      if (!blob) throw new Error("toBlob failed")
+      const tag = { "16:9": "yoko", "9:16": "tate", "1:1": "square" }[this.mv.ratio] || "yoko"
+      const sec = this.formatSec(t).replace(/[:.]/g, "-")
+      const name = `utattemita_thumb_${tag}_${sec}.jpg`
+      const done = `📸 サムネを作りました（${r.width}×${r.height}・${this.formatSec(t)} の場面${noLyrics ? "・歌詞なし" : ""}・${Math.round(blob.size / 1024)}KB）`
+      // スマホ（指でさわる端末）は共有メニューで写真に保存できるようにする。だめならダウンロード
+      const file = typeof File === "function" ? new File([blob], name, { type: "image/jpeg" }) : null
+      const touch = window.matchMedia && window.matchMedia("(pointer: coarse)").matches
+      if (touch && file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file] })
+          this.setStatus(`${done}。共有メニューの「画像を保存」で写真に入ります`)
+          return
+        } catch (e) {
+          if (e && e.name === "AbortError") { this.setStatus("サムネの保存をやめました"); return }
+          // 共有できなかったときは、下のダウンロードにする
+        }
+      }
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = name
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 30_000)
+      this.setStatus(`${done}。ダウンロードに保存しました`)
+    } catch (e) {
+      console.error(e)
+      this.setStatus("サムネを作れませんでした。もう一度ためしてね")
+    } finally {
+      if (btn) btn.disabled = false
+    }
   }
 
   mvJump(event) {

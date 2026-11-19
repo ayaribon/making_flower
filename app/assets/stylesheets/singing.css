@@ -1138,6 +1138,7 @@
 .sg .sg-mvstep .sg-qt__preview { margin: 8px 0 4px; }
 .sg .sg-mvstep .sg-qt__canvas { max-height: 46vh; }
 .sg .sg-mv-jumps { gap: 6px; align-items: center; }
+.sg .sg-mv-thumb { gap: 10px; align-items: center; flex-wrap: wrap; }
 .sg .sg-mv-player { margin-top: 8px; }
 .sg .sg-slide.is-replacing { border-color: var(--sg-primary); box-shadow: 0 0 0 2px rgba(47, 111, 237, 0.25); }
 .sg .sg-slide__back { font-size: 0.82rem; }

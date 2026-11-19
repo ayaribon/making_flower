@@ -613,6 +613,11 @@
             <button class="sg-btn sg-btn--small" data-mv-jump="chorus" data-action="singing-mixer#mvJump">サビ</button>
             <button class="sg-btn sg-btn--small" data-mv-jump="outro" data-action="singing-mixer#mvJump">最後（クレジット）</button>
           </div>
+          <%# 📸 いま見ている場面を、サムネ用の画像にする（画面の中だけで作る。サーバーには送らない） %>
+          <div class="sg-row sg-mv-thumb">
+            <button type="button" class="sg-btn sg-btn--small" data-singing-mixer-target="mvThumbButton" data-action="singing-mixer#saveMvThumb">📸 この場面をサムネにする</button>
+            <label class="sg-check"><input type="checkbox" data-singing-mixer-target="mvThumbNoLyrics"><span>歌詞を消して撮る</span></label>
+          </div>
           <label class="sg-check sg-safe-toggle"><input type="checkbox" checked data-singing-mixer-target="mvSafe" data-action="change->singing-mixer#toggleMvSafe"><span>アプリのボタンが重なる所を見せる（動画には入りません）</span></label>
         </div>
 
