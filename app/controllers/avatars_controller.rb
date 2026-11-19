@@ -11,11 +11,16 @@ class AvatarsController < ApplicationController
     @human_url = present.include?("human") ? sprout_asset_path("human") : nil
     # 💇 髪の パーツ（あるものだけ）
     @hair_urls = GameAsset::HAIR_KEYS.select { |key| present.include?(key) }.index_with { |key| sprout_asset_path(key) }
+    # 💇 素体＋髪レイヤー（あるものだけ）
+    @layer_urls = GameAsset::AVATAR_LAYER_KEYS.select { |key| present.include?(key) }.index_with { |key| sprout_asset_path(key) }
   end
 
   def update
     raw = params.require(:avatar).permit(*User::AVATAR_KEYS).to_h
-    avatar = User.clean_avatar((current_user.avatar || {}).merge(raw))
+    # へんな 値は すてる（前の 値は のこす）。msg は 送られたら そのまま（"" で けす）
+    merged = (current_user.avatar || {}).merge(User.clean_avatar(raw.except("msg")) || {})
+    merged["msg"] = raw["msg"] if raw.key?("msg")
+    avatar = User.clean_avatar(merged)
     return render json: { error: "キャラの形が ちがいます" }, status: :unprocessable_entity unless avatar
 
     current_user.avatar = avatar

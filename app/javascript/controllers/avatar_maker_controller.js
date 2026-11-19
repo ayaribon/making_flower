@@ -2,7 +2,8 @@ import { Controller } from "@hotwired/stimulus"
 import {
   normalizeAvatar, randomAvatar, cleanMsg, DEFAULT_AVATAR, HAIRS, EYES, TOPS, BOTTOMS, ACCESSORIES
 } from "avatar_sprite"
-import { drawHuman, USE_HAIR_VARIANTS, USE_ACCESSORIES } from "avatar_human"
+import { drawHuman, avatarLayersOf, USE_HAIR_VARIANTS, USE_ACCESSORIES } from "avatar_human"
+import { HUMAN_HAIRSTYLES } from "avatar_sprite"
 import { drawChibi as drawAvatar, CHIBI_SKINS as SKINS, CHIBI_HAIRS as HAIR_COLORS, CHIBI_CLOTHS as CLOTH_COLORS } from "avatar_chibi"
 import { findGear } from "dettyan_gear"
 
@@ -18,7 +19,7 @@ const OY = 6
 
 export default class extends Controller {
   static targets = ["preview", "groups", "save", "status", "msg", "displayName", "nameLabel"]
-  static values = { avatar: Object, url: String, back: String, account: String, humanUrl: String, hairUrls: Object }
+  static values = { avatar: Object, url: String, back: String, account: String, humanUrl: String, hairUrls: Object, layerUrls: Object }
 
   connect() {
     this.saved = normalizeAvatar(this.hasSaved() ? this.avatarValue : DEFAULT_AVATAR)
@@ -35,6 +36,7 @@ export default class extends Controller {
       img.onload = () => { this.human = img; this.useHumanPreview(); this.renderGroups() }
       img.src = this.humanUrlValue
       this.loadHairParts()
+      this.loadLayers()
     }
     this.t = 0
     this.last = performance.now()
@@ -70,6 +72,25 @@ export default class extends Controller {
     }
   }
 
+  // 💇 素体＋髪レイヤー（ぜんぶ 読めたら 使う）
+  loadLayers() {
+    const entries = Object.entries(this.layerUrlsValue || {})
+    if (!entries.find(([k]) => k === "avatar_base")) return
+    const images = {}
+    let left = entries.length
+    for (const [key, url] of entries) {
+      const img = new Image()
+      const done = () => {
+        if (--left > 0) return
+        this.layers = avatarLayersOf(images)
+        if (this.human) this.renderGroups()
+      }
+      img.onload = () => { images[key] = img; done() }
+      img.onerror = done
+      img.src = url
+    }
+  }
+
   useHumanPreview() {
     const c = this.previewTarget
     c.width = 24
@@ -88,7 +109,7 @@ export default class extends Controller {
       g.fillRect(6, 36, 12, 2)
       const dirs = ["down", "downright", "right", "upright", "up", "upleft", "left", "downleft"]
       const dir = dirs[Math.floor(this.t / 1.5) % dirs.length]
-      drawHuman(g, this.human, 12, 37, this.avatar, { dir, walking: this.t % 6 > 3, t: this.t, parts: this.hairParts })
+      drawHuman(g, this.human, 12, 37, this.avatar, { dir, walking: this.t % 6 > 3, t: this.t, parts: this.hairParts, layers: this.layers })
       return
     }
     g.clearRect(0, 0, PW, PH)
@@ -108,7 +129,8 @@ export default class extends Controller {
     if (this.human) {
       // 人の テンプレートで 変えられる のは 色 と こもの
       this.group(box, "はだ", this.swatches("skin", SKINS))
-      if (USE_HAIR_VARIANTS) this.group(box, "かみがた", this.choices("hair", HAIRS.map((h) => ({ id: h.id, label: h.name, preview: { ...a, hair: h.id } }))))
+      if (this.layers) this.group(box, "かみがた", this.choices("hs", HUMAN_HAIRSTYLES.filter((h) => !h.file || this.layers.hairs[h.id]).map((h) => ({ id: h.id, label: h.name, preview: { ...a, hs: h.id } }))))
+      else if (USE_HAIR_VARIANTS) this.group(box, "かみがた", this.choices("hair", HAIRS.map((h) => ({ id: h.id, label: h.name, preview: { ...a, hair: h.id } }))))
       this.group(box, "かみの いろ", this.swatches("hairColor", HAIR_COLORS))
       this.group(box, "ふくの いろ", this.swatches("topColor", CLOTH_COLORS))
       this.group(box, "ズボンの いろ", this.swatches("bottomColor", CLOTH_COLORS))
@@ -175,7 +197,7 @@ export default class extends Controller {
         c.height = 34
         c.style.width = "53px"
         c.style.height = "82px"
-        drawHuman(c.getContext("2d"), this.human, 11, 32, item.preview, { dir: "down", parts: this.hairParts })
+        drawHuman(c.getContext("2d"), this.human, 11, 32, item.preview, { dir: "down", parts: this.hairParts, layers: this.layers })
       } else if (item.face) drawAvatar(g, -1, -4, item.preview) // 目のあたりだけ
       else drawAvatar(g, 3, 5, item.preview)
       const label = document.createElement("span")

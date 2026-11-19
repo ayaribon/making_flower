@@ -129,4 +129,13 @@ class AvatarsControllerTest < ActionDispatch::IntegrationTest
     get root_path
     assert_select "a[href='#{credits_path}']"
   end
+
+  test "💇 髪型（hs）：アンダーバー つきの id も 保存できる" do
+    user = login_as("avhs")
+    patch avatar_path, params: { avatar: { hs: "pattsun_long", hair: "bob" } }, as: :json
+    assert_response :success
+    assert_equal "pattsun_long", user.reload.avatar["hs"]
+    patch avatar_path, params: { avatar: { hs: "_bad", acc: "Crown" } }, as: :json
+    assert_equal "pattsun_long", user.reload.avatar["hs"], "へんな 値は すてる（前の まま）"
+  end
 end

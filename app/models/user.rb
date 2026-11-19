@@ -22,7 +22,7 @@ class User < ApplicationRecord
   # 中身の形は app/javascript/avatar_sprite.js（えらべる値は そちらで そろえる。ここでは 知らない項目・へんな値を すてるだけ）
   # 💬 "msg" は まちで みんなに 見える ひとこと（20文字まで）。同じ 列の 中に 入れる（列は 増やさない）
   serialize :avatar, coder: JSON
-  AVATAR_LOOK_KEYS = %w[v skin hair hairColor eyes top topColor bottom bottomColor shoes acc].freeze
+  AVATAR_LOOK_KEYS = %w[v skin hair hairColor eyes top topColor bottom bottomColor shoes acc hs].freeze
   AVATAR_KEYS = (AVATAR_LOOK_KEYS + %w[msg]).freeze
   AVATAR_MSG_MAX = 20
   # 見えない 文字（改行・タブ・ゼロはば・向きを かえる 文字）は すきまに する
@@ -36,7 +36,7 @@ class User < ApplicationRecord
       when Integer then look[key] = value if value.between?(0, 99)
       when String
         if value.match?(/\A\d{1,2}\z/) then look[key] = value.to_i
-        elsif value.match?(/\A[a-z]{1,20}\z/) then look[key] = value
+        elsif value.match?(/\A[a-z][a-z_]{0,19}\z/) then look[key] = value
         end
       end
     end

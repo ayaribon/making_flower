@@ -5,7 +5,7 @@
 // - Sprout Sorry pack は 非商用 ライセンス。この アプリは 非商用 と ayaribon が 判断（2026-11-18）。クレジット：Cup Nooble
 // Assets - From: Sprout Lands - By: Cup Nooble
 
-import { normalizeAvatar } from "avatar_sprite"
+import { normalizeAvatar, HUMAN_HAIRSTYLES, DEFAULT_HAIRSTYLE } from "avatar_sprite"
 import { CHIBI_SKINS, CHIBI_HAIRS, CHIBI_CLOTHS } from "avatar_chibi"
 import { drawAccessory } from "avatar_teemo"
 
@@ -274,8 +274,48 @@ export function facing8(dx, dy, prev = "down") {
 }
 
 // 人の アバターを 描く。x, y は 足もと。opts：{ dir, walking, t（秒）, look（Dettyan など。データの かわり） }
+// ---- 💇 素体＋髪レイヤー（ハンドオフの layers/。素体に hair_original を 重ねると テンプレートと 同じ） ----
+// 元の 色 → 役わり（layers/palettes.json の source）
+const BASE_ROLE = {
+  "#dcb98a": "skinShade", "#e8cfa6": "skin", "#f3e5c2": "skinLight", "#645552": "eye",
+  "#78a158": "topDark", "#8db15d": "topShade", "#a4c263": "top", "#c0d470": "topMid", "#d2e077": "topLight",
+  "#7b6762": "bottomDark", "#8c7369": "bottom",
+  "#f3f2c0": "shoesLight", "#ded9ab": "shoes", "#c4bc93": "shoesDark"
+}
+const HAIR_LAYER_ROLE = { "#705f5b": "line", "#7b6762": "hairDark", "#8c7369": "hair", "#9d866f": "hairMid", "#b2a486": "hairLight" }
+
+const layerCache = new Map()
+function recolorLayer(img, roles, pal, key) {
+  if (layerCache.has(key)) return layerCache.get(key)
+  const c = document.createElement("canvas")
+  c.width = FW * 8
+  c.height = FH * 3
+  const g = c.getContext("2d")
+  g.drawImage(img, 0, 0)
+  const data = g.getImageData(0, 0, c.width, c.height)
+  const d = data.data
+  const map = new Map(Object.entries(roles).map(([hex, role]) => [rgbOf(hex).join(), pal[role]]))
+  for (let i = 0; i < d.length; i += 4) {
+    if (!d[i + 3]) continue
+    const to = map.get(`${d[i]},${d[i + 1]},${d[i + 2]}`)
+    if (to) { d[i] = to[0]; d[i + 1] = to[1]; d[i + 2] = to[2] }
+  }
+  g.putImageData(data, 0, 0)
+  layerCache.set(key, c)
+  return c
+}
+
+// 読みこんだ 画像 { avatar_base, avatar_hair_<id> } → { base, hairs: { id: 画像 } }
+export function avatarLayersOf(images) {
+  if (!images?.avatar_base) return null
+  const hairs = {}
+  for (const h of HUMAN_HAIRSTYLES) if (h.file && images[`avatar_hair_${h.id}`]) hairs[h.id] = images[`avatar_hair_${h.id}`]
+  return { base: images.avatar_base, hairs }
+}
+
 // parts：{ ファイル名: { back: 画像, front: 画像 } }（髪の パーツ。なければ 足した 髪）
-export function drawHuman(g, sheet, x, y, raw, { dir = "down", walking = false, t = 0, look = null, parts = null } = {}) {
+// layers：{ base, hairs }（素体＋髪レイヤー。あれば これが いちばん 先）
+export function drawHuman(g, sheet, x, y, raw, { dir = "down", walking = false, t = 0, look = null, parts = null, layers = null } = {}) {
   const a = normalizeAvatar(raw)
   const spec = look ? { skin: look.skin, hair: look.hair, top: look.top, bottom: look.bottom, shoes: look.shoes || look.bottom }
     : { skin: CHIBI_SKINS[a.skin], hair: CHIBI_HAIRS[a.hairColor], top: CHIBI_CLOTHS[a.topColor], bottom: CHIBI_CLOTHS[a.bottomColor], shoes: CHIBI_CLOTHS[a.shoes] }
@@ -286,6 +326,20 @@ export function drawHuman(g, sheet, x, y, raw, { dir = "down", walking = false, 
   const left = Math.round(x - ANCHOR_X)
   const top = Math.round(y - ANCHOR_Y)
   const pal = paletteFor(spec)
+  if (layers?.base) {
+    // 💇 素体 → 髪レイヤー（髪型は hs。Dettyan は look.hs）
+    const hs = look?.hs || a.hs || DEFAULT_HAIRSTYLE
+    const colorKey = JSON.stringify(spec)
+    pal.topMid = mix(rgb(spec.top), WHITE, 0.15)
+    const base = recolorLayer(layers.base, BASE_ROLE, pal, `base|${colorKey}`)
+    g.drawImage(base, col * FW, row * FH, FW, FH, left, top, FW, FH)
+    const hairImg = layers.hairs[hs] || (hs === "bald" ? null : layers.hairs[DEFAULT_HAIRSTYLE])
+    if (hairImg) {
+      const hair = recolorLayer(hairImg, HAIR_LAYER_ROLE, pal, `hair|${hs}|${spec.hair}`)
+      g.drawImage(hair, col * FW, row * FH, FW, FH, left, top, FW, FH)
+    }
+    return
+  }
   const stem = USE_HAIR_VARIANTS ? HAIR_PARTS[style] : null
   const part = stem && parts?.[stem]
   let tops

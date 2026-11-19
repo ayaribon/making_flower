@@ -43,13 +43,28 @@ export const BOTTOMS = [
 export const ACCESSORIES = ["none", "cap", "headphones", "ribbon", "nekomimi", "usamimi", "hanakanmuri", "crown"]
 
 export const DEFAULT_AVATAR = {
-  v: 1, skin: 0, hair: "short", hairColor: 0, eyes: "dot",
+  v: 1, hs: "original", skin: 0, hair: "short", hairColor: 0, eyes: "dot",
   top: "jacket", topColor: 6, bottom: "pants", bottomColor: 9, shoes: 9, acc: "none"
 }
 
 const idsOf = (list) => list.map((x) => x.id)
+// 💇 人の アバターの 髪型（素体＋髪レイヤー。docs/town/requirements.md の「髪型レイヤー」）。データの キーは hs
+// id は 保存されるので あとから 変えない。file が null は 髪なし
+export const HUMAN_HAIRSTYLES = [
+  { id: "original", name: "ツンツン", file: "hair_original.png" },
+  { id: "manbun", name: "マンバン", file: "hair_manbun.png" },
+  { id: "wolf_long", name: "ウルフロング", file: "hair_wolf_long.png" },
+  { id: "pattsun_bob", name: "ぱっつんボブ", file: "hair_pattsun_bob.png" },
+  { id: "pattsun_long", name: "ぱっつんロング", file: "hair_pattsun_long.png" },
+  { id: "short_perm", name: "短髪パーマ", file: "hair_short_perm.png" },
+  { id: "fluffy_bob", name: "ふわふわボブ", file: "hair_fluffy_bob.png" },
+  { id: "odango", name: "おだんご", file: "hair_odango.png" },
+  { id: "bald", name: "ハゲ", file: null }
+]
+export const DEFAULT_HAIRSTYLE = "original"
+
 const CHOICES = {
-  hair: idsOf(HAIRS), eyes: idsOf(EYES), top: idsOf(TOPS), bottom: idsOf(BOTTOMS), acc: ACCESSORIES
+  hair: idsOf(HAIRS), eyes: idsOf(EYES), top: idsOf(TOPS), bottom: idsOf(BOTTOMS), acc: ACCESSORIES, hs: idsOf(HUMAN_HAIRSTYLES)
 }
 const RANGES = { skin: SKINS.length, hairColor: HAIR_COLORS.length, topColor: CLOTH_COLORS.length, bottomColor: CLOTH_COLORS.length, shoes: CLOTH_COLORS.length }
 

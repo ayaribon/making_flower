@@ -24,8 +24,12 @@ export const SPROUT_FILES = {
 // 💇 髪の パーツ（hair_<ファイル名>_back / _front。avatar_human.js の HAIR_PARTS）
 export const HAIR_PART_STEMS = ["short_bob", "blunt_bob", "long_straight", "twin_tails", "ponytail", "braids", "wolf_cut"]
 for (const stem of HAIR_PART_STEMS) for (const side of ["back", "front"]) SPROUT_FILES[`hair_${stem}_${side}`] = `../sprout_hair/${stem}_${side}.png`
+// 💇 素体＋髪レイヤー（avatar_human.js の avatarLayersOf）
+export const AVATAR_LAYER_KEYS = ["avatar_base", ...["original", "manbun", "wolf_long", "pattsun_bob", "pattsun_long", "short_perm", "fluffy_bob", "odango"].map((id) => `avatar_hair_${id}`)]
+SPROUT_FILES.avatar_base = "../sprout_avatar/base_bald.png"
+for (const k of AVATAR_LAYER_KEYS.slice(1)) SPROUT_FILES[k] = `../sprout_avatar/${k.replace("avatar_", "")}.png`
 // なくても 町を 出せる もの
-export const SPROUT_OPTIONAL = ["chara", "human", ...HAIR_PART_STEMS.flatMap((s) => [`hair_${s}_back`, `hair_${s}_front`])]
+export const SPROUT_OPTIONAL = ["chara", "human", ...HAIR_PART_STEMS.flatMap((s) => [`hair_${s}_back`, `hair_${s}_front`]), ...AVATAR_LAYER_KEYS]
 
 // 読みこんだ 画像から 髪の パーツを まとめる { ファイル名: { back, front } }
 export function hairPartsOf(sheets) {

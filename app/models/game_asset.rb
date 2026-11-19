@@ -26,10 +26,15 @@ class GameAsset
     %w[short_bob blunt_bob long_straight twin_tails ponytail braids wolf_cut].flat_map do |stem|
       %w[back front].map { |side| ["hair_#{stem}_#{side}", "sprout_hair/#{stem}_#{side}.png"] }
     end.to_h
+  ).merge(
+    # 💇 素体＋髪レイヤー（Sorry pack の 人の テンプレートを 改変した もの。非商用。S3 の game_assets/sprout_avatar/）
+    { "avatar_base" => "sprout_avatar/base_bald.png" },
+    %w[original manbun wolf_long pattsun_bob pattsun_long short_perm fluffy_bob odango].to_h { |id| ["avatar_hair_#{id}", "sprout_avatar/hair_#{id}.png"] }
   ).freeze
   HAIR_KEYS = SPROUT.keys.grep(/\Ahair_/).freeze
+  AVATAR_LAYER_KEYS = SPROUT.keys.grep(/\Aavatar_/).freeze
   # なくても 町を 出せる もの（なければ アバターは 前の 絵）
-  OPTIONAL = (%w[chara human] + HAIR_KEYS).freeze
+  OPTIONAL = (%w[chara human] + HAIR_KEYS + AVATAR_LAYER_KEYS).freeze
   # そろっているか を 確かめなおす 間かく（S3 に 上げてから 町に 出るまで、長くて この 時間）
   CHECK_EVERY = 10.minutes
 
