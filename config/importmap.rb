@@ -36,6 +36,7 @@ pin "dettyan_room", preload: false # 🏢 Dettyan の事務所の部屋の絵
 pin "dettyan_scenes", preload: false # 🌳 モンスター退治の けしき
 pin "dettyan_battle", preload: false # ⚔️ バトル（手動・オート）・ステータス・職業・スキル
 pin "dettyan_home", preload: false # 🏠 テント → マイホーム・家具
+pin "dettyan_furniture_art", preload: false # 🛋️ Sprout の 家具の 絵
 pin "dettyan_camp", preload: false # ⛺ テントと おはなしの けしき
 pin "dettyan_story", preload: false # 📖 おはなし（目標と ページ）
 pin "avatar_sprite", preload: false # 👤 みんなの アバター（キャラメイクの 部品と 絵）

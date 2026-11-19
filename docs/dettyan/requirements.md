@@ -239,7 +239,7 @@
 ## 5.6 すまい と 家具（⛺ テント → 🏠 マイホーム）
 - **テント**（さいしょ）：まちはずれの くさはら。テント・たき火（ゆれる・夜は まわりだけ明るい）・ねぶくろ・まるたの いす・遠くに はじまりのまち。ほこり の代わりに 落ち葉 が たまる（そうじ で コイン は同じ）。たき火の そばで 歌う（PC 作業は しない）。
 - **マイホーム**：💰3000。🛒 ショップ の「🏠 いえ・かぐ」で買う。買うと かべ・ゆか・まど だけの へや に ひっこす。
-- **家具**：1つずつ買うと、きまった場所に すぐ おかれる。表は `app/javascript/dettyan_home.js` の `FURNITURE`（絵は `dettyan_room.js`）。
+- **家具**：1つずつ買うと、きまった場所に すぐ おかれる。表は `app/javascript/dettyan_home.js` の `FURNITURE`（絵は `dettyan_room.js`。Sprout の 家具は `dettyan_furniture_art.js`。5.6.1）。
 
 | 家具 | 💰 | メモ |
 |---|---|---|
@@ -256,6 +256,34 @@
 | スピーカー | 1200 | 歌うと ふるえる |
 | REC ランプ | 700 | 歌うと つく |
 | パソコン | 4000 | つくえ が いる。**つくえ・いす・パソコン が そろうと PC で作業する** |
+
+### 5.6.1 🌱 Sprout の 家具（2026-11-19 に ayaribon）
+- 買った 素材（Sprout Lands・Sprout Sorry pack）の 家具。絵は `app/javascript/dettyan_furniture_art.js`（おく場所は `PLACES` で きまっている）。
+- **買った あとで 色・がら を えらべる**（ショップの「🏠 いえ・かぐ」で、もっている 家具の 下に ボタン）。お金は かからない。セーブは `s.home.opts`。
+- **しまう／だす**：Sprout の 家具 だけ（つくえ・いす・パソコン などは PC 作業に いるので しまえない）。セーブは `s.home.hidden`。
+- 素材が S3 に ない 家具は ショップに 出さない（あとから 上げれば 出る）。
+
+| 家具 | 💰 | えらべる もの | 素材（S3 の game_assets/ の 下） |
+|---|---|---|---|
+| ベッド | 2000 | 木の色 4・ふとん 6 | `sprout_sorry/Early Access/Plant update 2/Furniture/new Wooden Furniture.png` |
+| たんす | 1500 | 木の色 4 | 同じ |
+| テーブル と いす | 1800 | 木の色 4 | 同じ |
+| ソファ | 2500 | 木の色 4 | 同じ |
+| たからばこ | 1200 | 木の色 4 | 同じ フォルダの `Cherry_Chest.png`・`Birch_Chest.png`・`Oak_Chest.png`・`Pine_Chest.png` |
+| はなの はちうえ | 300 | 3しゅるい（まどべ） | `sprout_lands/Tilesets/Building parts/Basic_Furniture.png`（もう ある） |
+| かべの え | 500 | 3しゅるい | 同じ |
+| しきもの | 600 | 3色（テーブルの 下） | 同じ |
+
+### 5.6.2 🎃🎄 きせつ げんてい の かざり
+- **きかん中 だけ ショップに 出て 買える**。買った ものは きかんが すぎても ずっと もっていて、しまう／だす できる。毎年 同じ きかんに また 売る。
+- きかんは **日本の 日づけ**（サーバーの 時計）。表は `dettyan_home.js` の `SEASONS`（かえる ときは ここだけ）。
+
+| かざり | 💰 | きかん | 素材（S3 の game_assets/ の 下） |
+|---|---|---|---|
+| かぼちゃ ランタン | 800 | ハロウィン 10/1〜10/31 | `sprout_sorry/Early Access/halloween/carved_halloween_pumpkins.png` |
+| クリスマスツリー | 2500 | クリスマス 12/1〜12/25 | `sprout_sorry/Early Access/Sprout winter/christmas tree.png` |
+| プレゼントの はこ（5しゅるい） | 500 | クリスマス 12/1〜12/25 | `sprout_sorry/Early Access/Sprout winter/winter sprites.png` |
+| ゆきだるま | 1000 | ふゆ 12/1〜2/28 | 同じ |
 
 ## 5.7 部屋のようす（見ているだけ。セーブは変えない）
 - 部屋の絵は `app/javascript/dettyan_room.js`。窓・カーテン・SiVA のポスター・時計・本だな（トロフィー・金のレコード）・つくえ（PC・デスクライト・マグカップ）・いす・観葉植物・スピーカー・歌うための まるいラグ。**持っている家具だけ 描く**（5.6）。

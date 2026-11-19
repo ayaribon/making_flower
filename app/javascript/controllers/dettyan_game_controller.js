@@ -12,7 +12,8 @@ import { usingHumanDraw } from "dettyan_gear"
 import { facing8 } from "avatar_human"
 import { GEAR, SLOTS, slotName, findGear, equipped, gearBonus, toggleGear, drawGearIcon, drawDressed, drawHeldMic, shopGear, buyGear } from "dettyan_gear"
 import { ROOM_W, ROOM_H, createRoom, drawRoomLive, drawChair, drawSpeaker, drawNightLight, drawWindowLight, CHAIR, SPEAKER, SEAT, WORK_SPOT, SING_SPOT } from "dettyan_room"
-import { HOUSE, FURNITURE, findFurniture, hasHouse, hasFurniture, canWork, buyHouse, buyFurniture } from "dettyan_home"
+import { HOUSE, FURNITURE, FURNITURE_OPTS, SEASONS, findFurniture, hasHouse, hasFurniture, canWork, buyHouse, buyFurniture, shownFurniture, shopVisible, inSeason, seasonEnd, furnitureOpt, setFurnitureOpt, toggleShown, isShown } from "dettyan_home"
+import { drawFurnitureBack, furnitureLayers, furnitureIcon } from "dettyan_furniture_art"
 import { drawCampfire, drawLeaf, FIRE, CAMP_SING_SPOT, LEAF_SPOTS } from "dettyan_camp"
 import { CLEAR_TEXT, currentGoal, checkStory, SCENES } from "dettyan_story"
 
@@ -146,6 +147,8 @@ export default class extends Controller {
           Object.assign(this.sprout, more)
           this.tools = makeBattleTools(this.sprout.actions) // ⚔️ 農作業の 道具を こうげきの うごきに
           this.monsterArt = makeMonsterArt(this.sprout, MONSTERS) // 👾 モンスター（ある ものだけ）
+          this.rebuildHome() // 🛋️ 家具の 絵が とどいた
+          if (this.sheetMode === "shop" && this.shopTabId === "home") this.renderSheet()
         })
       })
     ]), giveUp()]).then(() => {
@@ -467,7 +470,9 @@ export default class extends Controller {
   splitSprites() {
     const now = {}
     const later = {}
-    for (const [k, url] of Object.entries(this.spritesValue || {})) (k.startsWith("mon_") || k === "actions" ? later : now)[k] = url
+    // モンスター・こうげきの うごき・家具（🛋️ 家具は 読めたら へや を 描きなおす）は あとから
+    const isLater = (k) => /^(mon_|furn_|chest_|deco_)/.test(k) || k === "actions"
+    for (const [k, url] of Object.entries(this.spritesValue || {})) (isLater(k) ? later : now)[k] = url
     return { now, later }
   }
 
@@ -525,8 +530,8 @@ export default class extends Controller {
       this.drawParticles(g)
       return
     }
-    const f = s?.home.furniture || {}
-    g.drawImage(this.wide("room", (a) => createRoom(f, a)), area.x, area.y)
+    const f = s ? shownFurniture(s) : {}
+    g.drawImage(this.roomCanvas(s, f), area.x, area.y)
     drawWindowLight(g, now)
     drawRoomLive(g, { now, t: this.t, mode: act?.kind, workT: act?.kind === "work" ? act.t : 0, f })
     for (let i = 0; i < dirt; i++) drawDust(g, ...DIRT_SPOTS[i])
@@ -534,6 +539,7 @@ export default class extends Controller {
     const layers = [{ y: ch.y + 0.5, draw: () => this.drawChara(g) }]
     if (f.chair) layers.push({ y: CHAIR.base, draw: () => drawChair(g) })
     if (f.speaker) layers.push({ y: SPEAKER.base, draw: () => drawSpeaker(g, act?.kind === "sing", this.t) })
+    if (s) layers.push(...furnitureLayers(g, this.sprout, s, f, this.t)) // 🛋️ Sprout の 家具（ベッド・ソファ・ツリー など）
     layers.sort((a, b) => a.y - b.y).forEach((l) => l.draw())
     drawNightLight(g, now, act?.kind === "work", f, area)
     this.drawParticles(g)
@@ -552,6 +558,17 @@ export default class extends Controller {
   // ほこり（テントでは 落ち葉）の場所
   get dirtSpots() {
     return this.inTent ? LEAF_SPOTS : DIRT_SPOTS
+  }
+
+  // へや の うごかない 絵（かべ・ゆか・家具。🛋️ Sprout の かべの え・まどべの 花・たんす・しきもの も）
+  roomCanvas(s, f) {
+    return this.wide("room", (a) => {
+      const c = createRoom(f, a)
+      const g = c.getContext("2d")
+      g.setTransform(1, 0, 0, 1, -a.x, -a.y)
+      if (s) drawFurnitureBack(g, this.sprout, s, f)
+      return c
+    })
   }
 
   // 家具が かわったら、へや の絵を 描きなおす
@@ -824,8 +841,10 @@ export default class extends Controller {
   }
 
   // 🏠 いえ・かぐ：さいしょは マイホーム だけ買える。家を買ったら 家具（買うと すぐ へや に おかれる）
+  //   🌱 Sprout の 家具：買った あとで 色・がら を えらべて、しまう／だす が できる。🎃🎄 きせつ げんてい は その きかん だけ 売る
   renderHomeShop(list, s) {
     const house = hasHouse(s)
+    const now = this.store.now()
     list.append(el("div", "dt-sheet__section", "🏠 いえ"))
     const hb = el("button", "dt-item__button" + (house ? " dt-item__button--on" : ""), house ? "もっている" : "かう")
     hb.type = "button"
@@ -833,28 +852,92 @@ export default class extends Controller {
     hb.dataset.action = "dettyan-game#buyHome"
     hb.dataset.dettyanGameIdParam = HOUSE.id
     list.append(emojiRow(HOUSE.icon, HOUSE.name, HOUSE.desc, house ? "すんでいる" : `💰${HOUSE.price}　いまは テントで 野宿`, hb))
-    list.append(el("div", "dt-sheet__section", "🛋️ かぐ"))
-    if (!house) list.append(el("div", "dt-sheet__none", "マイホーム を 買ったら、家具を 買って おけるよ"))
-    for (const item of FURNITURE) {
-      const owned = hasFurniture(s, item.id)
-      const need = (item.needs || []).map(findFurniture).find((n) => !hasFurniture(s, n.id))
-      const b = el("button", "dt-item__button" + (owned ? " dt-item__button--on" : ""), owned ? "おいてある" : "かう")
-      b.type = "button"
-      b.disabled = owned || !house || !!need || s.money < item.price
-      b.dataset.action = "dettyan-game#buyHome"
-      b.dataset.dettyanGameIdParam = item.id
-      const sub = owned ? "へや に おいてある" : need ? `💰${item.price}　さきに ${need.name} が いるよ` : `💰${item.price}`
-      list.append(emojiRow(item.icon, item.name, item.desc, sub, b))
+    const hasArt = (k) => !!this.sprout?.[k]
+    const groups = [
+      ["🛋️ かぐ", FURNITURE.filter((item) => !item.season)],
+      ["🎃 きせつ げんてい", FURNITURE.filter((item) => item.season)]
+    ]
+    for (const [title, items] of groups) {
+      const shown = items.filter((item) => shopVisible(s, item, now, hasArt))
+      if (!shown.length) continue
+      list.append(el("div", "dt-sheet__section", title))
+      if (!house) { list.append(el("div", "dt-sheet__none", "マイホーム を 買ったら、家具を 買って おけるよ")); if (title !== "🛋️ かぐ") continue }
+      for (const item of shown) {
+        const owned = hasFurniture(s, item.id)
+        const need = (item.needs || []).map(findFurniture).find((n) => !hasFurniture(s, n.id))
+        const b = el("button", "dt-item__button" + (owned ? " dt-item__button--on" : ""), owned ? "もっている" : "かう")
+        b.type = "button"
+        b.disabled = owned || !house || !!need || s.money < item.price
+        b.dataset.action = "dettyan-game#buyHome"
+        b.dataset.dettyanGameIdParam = item.id
+        const limit = item.season && !owned ? `　${SEASONS[item.season].name} げんてい・${seasonEnd(item.season)} まで` : ""
+        const sub = owned ? (isShown(s, item.id) ? "へや に おいてある" : "しまってある") : need ? `💰${item.price}　さきに ${need.name} が いるよ` : `💰${item.price}${limit}`
+        const row = emojiRow(item.icon, item.name, item.desc, sub, b)
+        const icon = item.sprout && furnitureIcon(this.sprout, s, item.id)
+        if (icon) { icon.className = "dt-item__icon dt-item__icon--art"; row.querySelector(".dt-item__icon").replaceWith(icon) }
+        list.append(row)
+        if (owned && item.sprout) list.append(this.furnitureOptsRow(s, item))
+      }
     }
+  }
+
+  // 🎨 色・がら と しまう／だす（買った Sprout の 家具）
+  furnitureOptsRow(s, item) {
+    const box = el("div", "dt-furnopts")
+    for (const key of item.opts || []) {
+      const def = FURNITURE_OPTS[key]
+      const line = el("div", "dt-furnopts__line")
+      line.append(el("span", "dt-furnopts__label", def.name))
+      const cur = furnitureOpt(s, item.id, key)
+      def.choices.forEach((name, i) => {
+        const c = el("button", "dt-furnopts__chip" + (i === cur ? " is-on" : ""), name)
+        c.type = "button"
+        c.setAttribute("aria-pressed", String(i === cur))
+        c.dataset.action = "dettyan-game#setFurnOpt"
+        c.dataset.dettyanGameIdParam = item.id
+        c.dataset.dettyanGameKeyParam = key
+        c.dataset.dettyanGameValueParam = String(i)
+        line.append(c)
+      })
+      box.append(line)
+    }
+    const shown = isShown(s, item.id)
+    const t = el("button", "dt-furnopts__chip dt-furnopts__toggle", shown ? "📦 しまう" : "🏠 だす")
+    t.type = "button"
+    t.dataset.action = "dettyan-game#toggleFurn"
+    t.dataset.dettyanGameIdParam = item.id
+    box.append(t)
+    return box
+  }
+
+  setFurnOpt(event) {
+    const { id, key, value } = event.params
+    let ok = false
+    this.store.update((s) => { ok = setFurnitureOpt(s, id, key, Number(value)) })
+    if (!ok) return
+    this.sound.se("tap")
+    this.rebuildHome()
+    this.renderSheet()
+  }
+
+  toggleFurn(event) {
+    const id = event.params.id
+    let ok = false
+    this.store.update((s) => { ok = toggleShown(s, id) })
+    if (!ok) return
+    this.sound.se("tap")
+    this.rebuildHome()
+    this.renderSheet()
   }
 
   buyHome(event) {
     const id = event.params.id
     let r = null
-    this.store.update((s) => { r = id === HOUSE.id ? buyHouse(s) : buyFurniture(s, id) })
+    this.store.update((s) => { r = id === HOUSE.id ? buyHouse(s) : buyFurniture(s, id, this.store.now()) })
     if (!r.ok) {
       this.sound.se("no")
       if (r.reason === "money") this.toast("コインが たりないよ")
+      if (r.reason === "season") this.toast("いまは 売っていないよ")
       return
     }
     this.sound.se("buy")
@@ -1141,8 +1224,8 @@ export default class extends Controller {
       drawCampfire(g, now, t)
       at = { x: 88, y: 70 }
     } else {
-      const f = s?.home.furniture || {}
-      g.drawImage(this.wide("room", (a) => createRoom(f, a)), area.x, area.y)
+      const f = s ? shownFurniture(s) : {}
+      g.drawImage(this.roomCanvas(s, f), area.x, area.y)
       drawRoomLive(g, { now, t, mode: p.pose === "back" ? "work" : null, workT: t, f })
       if (p.pose === "back" && f.chair) {
         this.drawMe(g, SEAT.left, SEAT.top, { view: "back" })

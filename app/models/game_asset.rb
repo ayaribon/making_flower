@@ -42,7 +42,17 @@ class GameAsset
     "mon_mushroom" => "sprout_monsters/mon_mushroom.png",
     "mon_golem" => "sprout_monsters/mon_golem.png",
     "mon_yeti" => "sprout_monsters/mon_yeti.png",
-    "mon_wyvern" => "sprout_monsters/mon_wyvern.png"
+    "mon_wyvern" => "sprout_monsters/mon_wyvern.png",
+    # 🛋️ マイホームの 家具（Sprout Sorry pack の Early Access。非商用。dettyan_furniture_art.js）
+    "furn_wood" => "sprout_sorry/Early Access/Plant update 2/Furniture/new Wooden Furniture.png",
+    "chest_cherry" => "sprout_sorry/Early Access/Plant update 2/Furniture/Cherry_Chest.png",
+    "chest_birch" => "sprout_sorry/Early Access/Plant update 2/Furniture/Birch_Chest.png",
+    "chest_oak" => "sprout_sorry/Early Access/Plant update 2/Furniture/Oak_Chest.png",
+    "chest_pine" => "sprout_sorry/Early Access/Plant update 2/Furniture/Pine_Chest.png",
+    # 🎃🎄 きせつ げんてい の かざり
+    "deco_pumpkin" => "sprout_sorry/Early Access/halloween/carved_halloween_pumpkins.png",
+    "deco_tree" => "sprout_sorry/Early Access/Sprout winter/christmas tree.png",
+    "deco_winter" => "sprout_sorry/Early Access/Sprout winter/winter sprites.png"
   }.merge(
     # 💇 髪の パーツ（docs/town/hair_parts_spec.md。人の テンプレートに 重ねる）
     %w[short_bob blunt_bob long_straight twin_tails ponytail braids wolf_cut].flat_map do |stem|
@@ -70,8 +80,10 @@ class GameAsset
   # 育成ゲームの けしきに 使う もの（町の もの ＋ 上の 5つ）
   MONSTER_KEYS = %w[mon_slime mon_bat mon_bee mon_frog mon_ghost mon_spider_green mon_spider_gold mon_mouse
                     mon_crow mon_mushroom mon_golem mon_yeti mon_wyvern].freeze
-  DETTYAN_KEYS = (%w[grass soil trees flowers fences well signs chicken walls furniture stone grass_dark paths actions] + MONSTER_KEYS).freeze
-  OPTIONAL = (%w[chara human walls furniture stone grass_dark paths actions] + MONSTER_KEYS + HAIR_KEYS + AVATAR_LAYER_KEYS).freeze
+  # 🛋️ マイホームの 家具・きせつの かざり（なければ その 家具を 売らない）
+  FURNITURE_KEYS = %w[furn_wood chest_cherry chest_birch chest_oak chest_pine deco_pumpkin deco_tree deco_winter].freeze
+  DETTYAN_KEYS = (%w[grass soil trees flowers fences well signs chicken walls furniture stone grass_dark paths actions] + MONSTER_KEYS + FURNITURE_KEYS).freeze
+  OPTIONAL = (%w[chara human walls furniture stone grass_dark paths actions] + MONSTER_KEYS + FURNITURE_KEYS + HAIR_KEYS + AVATAR_LAYER_KEYS).freeze
   # そろっているか を 確かめなおす 間かく（S3 に 上げてから 町に 出るまで、長くて この 時間）
   CHECK_EVERY = 10.minutes
 
