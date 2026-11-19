@@ -21,16 +21,16 @@ const MOUNTAIN_GEAR = ["goldmic", "kira", "crown", "wings", "kirashoes"]
 // chests：宝箱の数 [少ない, 多い]、chest.coins：宝箱の お金 [少ない, 多い]、friend：友達に 会う確率
 // けしきの絵は dettyan_scenes.js（id ごと）。sky / ground は絵がないときの色
 export const PLACES = [
-  { id: "park",   name: "公園",   icon: "🌳", level: 1, genki: 15, power: 0.97, count: [2, 3], monsters: ["green", "crow", "green", "blue"], drop: 0.1, gear: PARK_GEAR, gearDrop: 0.2,
+  { id: "park",   name: "公園",   icon: "🌳", level: 1, genki: 15, power: 0.97, count: [2, 3], monsters: ["green", "crow", "green", "blue", "mouse", "frog"], drop: 0.1, gear: PARK_GEAR, gearDrop: 0.2,
     chests: [0, 1], chest: { coins: [30, 60] }, friend: 0.3,
     sky: "#9fd6ff", ground: "#7cc46a", line: "#5aa24c" },
-  { id: "forest", name: "森",     icon: "🌲", level: 3, genki: 25, power: 1.25, count: [3, 4], monsters: ["blue", "mushroom", "bee", "blue", "green", "purple"], drop: 0.2, gear: [...FOREST_GEAR, ...PARK_GEAR], gearDrop: 0.2,
+  { id: "forest", name: "森",     icon: "🌲", level: 3, genki: 25, power: 1.25, count: [3, 4], monsters: ["blue", "mushroom", "bee", "blue", "green", "purple", "frog", "spider"], drop: 0.2, gear: [...FOREST_GEAR, ...PARK_GEAR], gearDrop: 0.2,
     chests: [0, 2], chest: { coins: [60, 110] }, friend: 0.3,
     sky: "#5f8f6a", ground: "#3f6e3a", line: "#2f5a2c" },
-  { id: "cave",   name: "どうくつ", icon: "🪨", level: 6, genki: 40, power: 1.47, count: [3, 5], monsters: ["purple", "bat", "purple", "golem", "blue", "red", "king"], drop: 0.3, gear: [...CAVE_GEAR, ...FOREST_GEAR], gearDrop: 0.2,
+  { id: "cave",   name: "どうくつ", icon: "🪨", level: 6, genki: 40, power: 1.47, count: [3, 5], monsters: ["purple", "bat", "purple", "golem", "blue", "red", "king", "ghost"], drop: 0.3, gear: [...CAVE_GEAR, ...FOREST_GEAR], gearDrop: 0.2,
     chests: [1, 2], chest: { coins: [100, 180] }, friend: 0.3,
     sky: "#3a3440", ground: "#5a5260", line: "#46404c" },
-  { id: "mountain", name: "山", icon: "🏔️", level: 10, genki: 60, power: 1.85, count: [3, 5], monsters: ["red", "yeti", "wyvern", "red", "purple", "king"], drop: 0.4, gear: [...MOUNTAIN_GEAR, ...CAVE_GEAR], gearDrop: 0.2,
+  { id: "mountain", name: "山", icon: "🏔️", level: 10, genki: 60, power: 1.85, count: [3, 5], monsters: ["red", "yeti", "wyvern", "red", "purple", "king", "goldspider", "ghost"], drop: 0.4, gear: [...MOUNTAIN_GEAR, ...CAVE_GEAR], gearDrop: 0.2,
     chests: [1, 2], chest: { coins: [160, 260] }, friend: 0.3,
     sky: "#c9d8ec", ground: "#8a8a7a", line: "#6e6e60" }
 ]

@@ -419,3 +419,99 @@ export function drawBattleTool(g, tools, name, x, feet, p) {
   const f = tools?.[name]?.[p < 0.4 ? 0 : 1]
   if (f) g.drawImage(f.canvas, Math.round(x + f.dx), Math.round(feet + f.dy))
 }
+
+// ---- 👾 モンスター（Sprout Sorry pack の Early Access。2026-11-19 に ayaribon） ----
+// key：画像（GameAsset）、cell：1コマの 大きさ、row：使う だん（ふわふわ・ぴょこぴょこ する だん）
+// tint：スライムは みどりの 絵を あかるさ で その モンスターの 色（colors の O・B・L）に ぬりかえる
+// ない モンスター（カラス・キノコ・ゴーレム・ゆきおとこ・ちびドラゴン）は 前の 絵（docs/dettyan/monster_request.md で 依頼中）
+export const MONSTER_ART = {
+  green: { key: "mon_slime", cell: 38, row: 5, tint: true },
+  blue: { key: "mon_slime", cell: 38, row: 5, tint: true },
+  purple: { key: "mon_slime", cell: 38, row: 5, tint: true },
+  red: { key: "mon_slime", cell: 38, row: 5, tint: true },
+  king: { key: "mon_slime", cell: 38, row: 5, tint: true },
+  bat: { key: "mon_bat", cell: 32, row: 0 },
+  bee: { key: "mon_bee", cell: 16, row: 0 },
+  mouse: { key: "mon_mouse", cell: 16, row: 1 },
+  frog: { key: "mon_frog", cell: 16, row: 2 },
+  spider: { key: "mon_spider_green", cell: 16, row: 0 },
+  goldspider: { key: "mon_spider_gold", cell: 16, row: 0 },
+  ghost: { key: "mon_ghost", cell: 16, row: 0 }
+}
+
+const rgbOf = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))
+const mixRgb = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t))
+
+// { id: { frames: [canvas], w, h } }（そろって いる ものだけ）
+export function makeMonsterArt(sheets, monsters) {
+  const out = {}
+  for (const [id, art] of Object.entries(MONSTER_ART)) {
+    const img = sheets?.[art.key]
+    if (!img || !monsters[id]) continue
+    const n = Math.floor(img.width / art.cell)
+    const src = document.createElement("canvas")
+    src.width = img.width
+    src.height = art.cell
+    const sg = src.getContext("2d")
+    sg.drawImage(img, 0, art.row * art.cell, img.width, art.cell, 0, 0, img.width, art.cell)
+    const data = sg.getImageData(0, 0, src.width, src.height)
+    const d = data.data
+    // コマの 中の 絵の はんい（ぜんぶの コマを あわせた もの）
+    let x0 = 99, y0 = 99, x1 = -1, y1 = -1
+    const used = []
+    for (let f = 0; f < n; f++) {
+      let any = false
+      for (let y = 0; y < art.cell; y++) for (let x = 0; x < art.cell; x++) {
+        if (!d[(y * src.width + f * art.cell + x) * 4 + 3]) continue
+        any = true
+        x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y)
+      }
+      if (any) used.push(f)
+    }
+    if (!used.length) continue
+    if (art.tint) {
+      // あかるさ → O（くらい）・B・L（あかるい）
+      const c = monsters[id].colors
+      const O = mixRgb(rgbOf(c.O), rgbOf(c.B), 0.3), B = rgbOf(c.B), L = rgbOf(c.L)
+      for (let i = 0; i < d.length; i += 4) {
+        if (!d[i + 3]) continue
+        const l = (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2] - 118) / (242 - 118)
+        const t = Math.max(0, Math.min(1, l))
+        const to = t < 0.45 ? mixRgb(O, B, t / 0.45) : mixRgb(B, L, (t - 0.45) / 0.55)
+        d[i] = to[0]; d[i + 1] = to[1]; d[i + 2] = to[2]
+      }
+      sg.putImageData(data, 0, 0)
+    }
+    const w = x1 - x0 + 1
+    const h = y1 - y0 + 1
+    const frames = used.map((f) => {
+      const c = document.createElement("canvas")
+      c.width = w
+      c.height = h
+      c.getContext("2d").drawImage(src, f * art.cell + x0, y0, w, h, 0, 0, w, h)
+      return c
+    })
+    out[id] = { frames, w, h }
+  }
+  return out
+}
+
+// モンスターを 描く（x：まんなか、feet：足もと、t：秒、scale：大きさ）。おうかん は キングスライム
+export function drawMonsterArt(g, art, monster, x, feet, t, scale = 2) {
+  const f = art.frames[Math.floor(t * 8) % art.frames.length]
+  const w = art.w * scale
+  const h = art.h * scale
+  const left = Math.round(x - w / 2)
+  const top = Math.round(feet - h)
+  g.drawImage(f, left, top, w, h)
+  if (monster.crown) {
+    const cx = Math.round(x)
+    const cy = top - 2
+    px(g, LINE, cx - 5, cy - 1, 10, 5)
+    px(g, "#ffd84d", cx - 4, cy, 8, 3)
+    px(g, "#ffd84d", cx - 4, cy - 2, 2, 2)
+    px(g, "#ffd84d", cx - 1, cy - 3, 2, 3)
+    px(g, "#ffd84d", cx + 2, cy - 2, 2, 2)
+    px(g, "#e0484d", cx - 1, cy + 1, 2, 1)
+  }
+}

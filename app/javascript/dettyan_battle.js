@@ -198,6 +198,73 @@ export const MONSTERS = {
       ".OGLLGGGGO..",
       "..OGGOOGGO..",
       "...OO..OO..."
+    ] },
+  // ---- 2026-11-19 に ふやした（Sprout Sorry pack の 絵が ある。なければ この ドット絵） ----
+  mouse:  { name: "のねずみ", hp: 9, atk: 4, def: 0, spd: 5, coins: 18, exp: 3,
+    colors: { O: "#4a4048", B: "#a8a4a8", L: "#d8d4d8", P: "#f2a8b8", E: "#1a1414" },
+    sprite: [
+      "...OO.......",
+      "..OPPO......",
+      ".OBBBBOO....",
+      "OEBBBBBBO...",
+      "PBBBBBBBBO.O",
+      "OBBLLLBBBBO.",
+      ".OBBBBBBBO..",
+      "..OO..OO...."
+    ] },
+  frog:   { name: "ぴょんガエル", hp: 12, atk: 5, def: 0, spd: 3, coins: 28, exp: 4,
+    colors: { O: "#2a4a22", G: "#7cc45a", L: "#d8eea0", W: "#ffffff", E: "#1a1414" },
+    sprite: [
+      "..OO....OO..",
+      ".OWEO..OWEO.",
+      ".OGGOOOOGGO.",
+      "OGGGGGGGGGGO",
+      "OGGOOOOOOGGO",
+      "OGLLLLLLLLGO",
+      ".OGGGGGGGGO.",
+      "OGGO....OGGO",
+      "OOO......OOO"
+    ] },
+  spider: { name: "もりグモ", hp: 22, atk: 9, def: 1, spd: 6, coins: 50, exp: 8,
+    colors: { O: "#1e3a1e", B: "#5aa04a", E: "#ff5050" },
+    special: { name: "どくの いと", every: 4, mult: 1.4 },
+    sprite: [
+      "...OOOOOO...",
+      "..OBBBBBBO..",
+      ".OBEBBBBEBO.",
+      ".OBBBBBBBBO.",
+      "O.OBBBBBBO.O",
+      ".O.OOOOOO.O.",
+      "O.O.O..O.O.O",
+      ".O........O."
+    ] },
+  ghost:  { name: "おばけ", hp: 34, atk: 12, def: 2, spd: 7, coins: 85, exp: 14, fly: true,
+    colors: { O: "#6a6a7a", W: "#f4f4ec", S: "#c8c8d8", E: "#1a1414" },
+    special: { name: "おどろかす", every: 3, mult: 1.5 },
+    sprite: [
+      "...OOOOOO...",
+      "..OWWWWWWO..",
+      ".OWWWWWWWWO.",
+      ".OWEWWWWEWO.",
+      ".OWWWWWWWWO.",
+      ".OWWWSSWWWO.",
+      ".OWWWWWWWWO.",
+      ".OWWWWWWWWO.",
+      ".OWO.OWO.OWO",
+      "..O...O...O."
+    ] },
+  goldspider: { name: "きんの クモ", hp: 48, atk: 15, def: 6, spd: 8, coins: 140, exp: 24,
+    colors: { O: "#6b4a00", B: "#f0b52a", E: "#e0484d" },
+    special: { name: "きんの いと", every: 3, mult: 1.6 },
+    sprite: [
+      "...OOOOOO...",
+      "..OBBBBBBO..",
+      ".OBEBBBBEBO.",
+      ".OBBBBBBBBO.",
+      "O.OBBBBBBO.O",
+      ".O.OOOOOO.O.",
+      "O.O.O..O.O.O",
+      ".O........O."
     ] }
 }
 

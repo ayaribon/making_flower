@@ -27,7 +27,16 @@ class GameAsset
     "stone" => "sprout_lands/Tilesets/ground tiles/New tiles/Stone_Ground_Tiles.png",
     "grass_dark" => "sprout_lands/Tilesets/ground tiles/New tiles/Darker_Grass_Tile_Layers.png",
     "paths" => "sprout_lands/Tilesets/Building parts/Paths.png",
-    "actions" => "sprout_lands/Characters/Basic Charakter Actions.png" # 農作業の うごき（道具だけ 切りだして バトルの こうげきに）
+    "actions" => "sprout_lands/Characters/Basic Charakter Actions.png", # 農作業の うごき（道具だけ 切りだして バトルの こうげきに）
+    # 👾 モンスター（Sprout Sorry pack の Early Access。非商用。dettyan_sprout.js の MONSTER_ART）
+    "mon_slime" => "sprout_sorry/Early Access/Dungeon Pack/enemies/small_green_slime_animations.png",
+    "mon_bat" => "sprout_sorry/Early Access/Dungeon Pack/enemies/small_bat_animations.png",
+    "mon_bee" => "sprout_sorry/Early Access/Plant update 2/Bee/bee_spritesheet.png",
+    "mon_frog" => "sprout_sorry/Early Access/Plant update 2/frog/frog_spritesheet.png",
+    "mon_ghost" => "sprout_sorry/Early Access/halloween/mobs/chost_spritesheet.png",
+    "mon_spider_green" => "sprout_sorry/Early Access/halloween/mobs/lil_green_spider_spritesheet.png",
+    "mon_spider_gold" => "sprout_sorry/Early Access/halloween/mobs/lil_golden_spider_spritesheet.png",
+    "mon_mouse" => "sprout_sorry/Early Access/halloween/mobs/little_grey_mouse.png"
   }.merge(
     # 💇 髪の パーツ（docs/town/hair_parts_spec.md。人の テンプレートに 重ねる）
     %w[short_bob blunt_bob long_straight twin_tails ponytail braids wolf_cut].flat_map do |stem|
@@ -52,8 +61,9 @@ class GameAsset
   AVATAR_LAYER_KEYS = SPROUT.keys.grep(/\Aavatar_/).freeze
   # なくても 町を 出せる もの（なければ アバターは 前の 絵）
   # 育成ゲームの けしきに 使う もの（町の もの ＋ 上の 5つ）
-  DETTYAN_KEYS = %w[grass soil trees flowers fences walls furniture stone grass_dark paths actions].freeze
-  OPTIONAL = (%w[chara human walls furniture stone grass_dark paths actions] + HAIR_KEYS + AVATAR_LAYER_KEYS).freeze
+  MONSTER_KEYS = %w[mon_slime mon_bat mon_bee mon_frog mon_ghost mon_spider_green mon_spider_gold mon_mouse].freeze
+  DETTYAN_KEYS = (%w[grass soil trees flowers fences walls furniture stone grass_dark paths actions] + MONSTER_KEYS).freeze
+  OPTIONAL = (%w[chara human walls furniture stone grass_dark paths actions] + MONSTER_KEYS + HAIR_KEYS + AVATAR_LAYER_KEYS).freeze
   # そろっているか を 確かめなおす 間かく（S3 に 上げてから 町に 出るまで、長くて この 時間）
   CHECK_EVERY = 10.minutes
 

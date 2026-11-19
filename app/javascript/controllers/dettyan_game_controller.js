@@ -7,7 +7,7 @@ import { applyIdle, claimDailyReward, doCare, buyFood, feedFood, dirtCount, maxG
 import { PLACES, MONSTERS, canGo, startAdventure, grantEvents, finishAdventure, drawMonster, monsterSprite, findFriend } from "dettyan_adventure"
 import { STATS, JOBS, SKILLS, POINTS_PER_LEVEL, JOB_CHANGE_LEVEL, HP_PER_VIT, findJob, findSkill, dettyanStats, expToNext, addPoint, removePoint, resetPoints, autoAllocate, setJob, canChangeJob, applyLevelUps, takeTurn, autoAction, runAuto } from "dettyan_battle"
 import { enableDettyanHuman } from "dettyan_human"
-import { loadDettyanSheets, createCampWide, drawCampNightWide, createBattleStrip, drawBattleWide, makeBattleTools, drawBattleTool } from "dettyan_sprout"
+import { loadDettyanSheets, createCampWide, drawCampNightWide, createBattleStrip, drawBattleWide, makeBattleTools, drawBattleTool, makeMonsterArt, drawMonsterArt } from "dettyan_sprout"
 import { usingHumanDraw } from "dettyan_gear"
 import { facing8 } from "avatar_human"
 import { GEAR, SLOTS, slotName, findGear, equipped, gearBonus, toggleGear, drawGearIcon, drawDressed, drawHeldMic, shopGear, buyGear } from "dettyan_gear"
@@ -148,6 +148,7 @@ export default class extends Controller {
       this.sprout = sheets
       this.wideCache = {}
       this.tools = makeBattleTools(sheets.actions) // ⚔️ 農作業の 道具を こうげきの うごきに
+      this.monsterArt = makeMonsterArt(sheets, MONSTERS) // 👾 モンスター（ある ものだけ）
     })
   }
 
@@ -1507,6 +1508,7 @@ export default class extends Controller {
     } else if (e.t === "appear") {
       v.thing = null
       v.foe = MONSTERS[e.foe]
+      v.foeId = e.foe
       v.foeHp = e.hp
       v.foeMax = e.maxHp
       v.dying = 0
@@ -1837,7 +1839,14 @@ export default class extends Controller {
       const lift = v.foe.fly ? 10 + Math.round(Math.sin(v.bob * 5) * 2) : 0
       g.fillStyle = "rgba(0, 0, 0, 0.2)"
       g.fillRect(BATTLE_FOE_X - 10 - fl, BATTLE_FEET - 1, 20, 2)
-      if (!(v.flashFoe > 0 && Math.floor(v.flashFoe * 30) % 2)) {
+      const art = area && this.monsterArt?.[v.foeId]
+      if (art && !(v.flashFoe > 0 && Math.floor(v.flashFoe * 30) % 2)) {
+        // 新しい 絵（Sprout）。2ばい
+        g.save()
+        g.globalAlpha = 1 - v.dying
+        drawMonsterArt(g, art, v.foe, BATTLE_FOE_X - fl, BATTLE_FEET - lift, v.bob, 2)
+        g.restore()
+      } else if (!(v.flashFoe > 0 && Math.floor(v.flashFoe * 30) % 2)) {
         g.save()
         g.globalAlpha = 1 - v.dying
         g.translate(BATTLE_FOE_X - 12 - fl, BATTLE_FEET - rows * 2 - lift)
