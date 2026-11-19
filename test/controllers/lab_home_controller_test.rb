@@ -24,4 +24,23 @@ class LabHomeControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/\.lab-/, app_css)
     assert_match(/\.lab-dettyan-/, lab_css)
   end
+
+  test "メニューの 🧪 lab は Dettyan 本人と 管理者 だけに 出る（まち・かんたんメニュー）" do
+    { "labmember" => false, "dettyan" => true }.each do |name, shown|
+      user = User.new(name: name)
+      post login_path, params: { login_code: user.issue_login_code! }
+      get root_path
+      assert_select "a[href='/lab']", shown ? 1 : 0, "#{name}：まち"
+      patch home_mode_path(mode: "simple")
+      get root_path
+      assert_select "a[href='/lab']", shown ? 1 : 0, "#{name}：かんたんメニュー"
+      patch home_mode_path(mode: "town")
+      delete logout_path
+    end
+    admin = User.new(name: "labboss", admin: true)
+    post login_path, params: { login_code: admin.issue_login_code! }
+    get root_path
+    assert_select "a[href='/lab']", 1, "管理者"
+  end
+
 end
