@@ -254,24 +254,76 @@ get "editor", to: "editors#show"
 
 ## 10. 開発環境の起動
 
-Docker を使う場合:
+Rails（web）も MySQL（db）も **Docker の中で うごく**。手元に Ruby や MySQL を 入れなくて よい。
+メンバー（Windows ＋ WSL2 ＋ Docker Desktop）は、この 手順 だけで ログインまで できる。
 
+### 0. 用意する もの
+- Windows：**WSL2（Ubuntu）** と **Docker Desktop**（設定 → Resources → WSL integration で Ubuntu を オン）
+- ここから 先は ぜんぶ **WSL（Ubuntu）の ターミナル** で 打つ
+
+### 1. clone する（WSL の ホームの 中に 置く）
 ```bash
-docker compose up -d db
-bundle install
-bin/rails db:create db:schema:load
-bin/rails server
+cd ~
+git clone https://github.com/ayaribon/making_flower.git
+cd making_flower
 ```
+- `/mnt/c/...`（Windows の フォルダ）に 置くと、とても おそく なり、ファイルの 変更も つたわりにくい。かならず `~` の 下に 置く
 
-またはローカル環境で MySQL を起動してから:
-
+### 2. `.env` を 作る
 ```bash
-bundle install
-bin/rails db:create db:schema:load
-bin/rails server
+cp .env.example .env
+id -u; id -g   # 2つとも 1000 なら そのまま。ちがう ときは .env の APP_UID・APP_GID に 書く
 ```
+- AWS・Discord の 項目は **メンバーは 空の まま で よい**（下の「鍵・素材が ない とき」）
+- `.env` は コミット しない（`.gitignore` 済み）
 
-アプリ本体は通常 `http://localhost:3000` で起動する。`docker-compose.yml` では `web` サービスが `3000` ポートを公開し、`db` が MySQL 8 を提供する構成になっている。
+### 3. ビルドして 起動する
+```bash
+docker compose build          # 1回目は 数分 かかる（Gemfile が かわった ときも もう一度）
+docker compose up -d          # db と web が うごきだす
+docker compose exec web bin/rails db:prepare   # DB を 作って テーブルを 入れる（はじめては seed も ここで 流れる）
+docker compose exec web bin/rails db:seed      # 開発用の ユーザー・素材・テンプレ を 入れる（もう あれば 飛ばす）
+```
+- **ログインID**（`devuser`＝一般、`devadmin`＝管理者）は、seed が はじめて ユーザーを 作った ときに さいごに 出る。DB を 新しく 作った ときは `db:prepare` の 出力に 出る。この 画面に しか 出ないので ひかえる
+- 何回 流しても 同じ（もう ある ものは 飛ばす）。ID を わすれたら `docker compose exec web bin/rails 'users:reissue[devuser]'`
+- テンプレの 一部は Openverse の 素材（`ov-` から はじまる）を 使う。「見つからない素材」と 出たら、ネットに つないだ 状態で `docker compose exec web bin/rails materials:import_openverse_picks`（ない ままでも 起動・ログインは できる）
+- db が 立ち上がる 前に `db:prepare` を 打つと つながらない ことが ある。そのときは 10秒 ほど まって もう一度
+
+### 4. ログインする
+- ブラウザで http://localhost:3000/login を 開いて、ひかえた ログインID を 入れる
+- 管理画面は `devadmin` で ログインして http://localhost:3000/admin/users
+
+### よく つかう コマンド
+| したい こと | コマンド |
+|---|---|
+| とめる | `docker compose stop` |
+| また 起動 | `docker compose up -d` |
+| ログを 見る | `docker compose logs -f web` |
+| テスト | `docker compose exec web bin/rails test` |
+| JS の テスト | `node --test test/javascript/*.mjs`（WSL に Node 22 が ある とき） |
+| マイグレーション（pull の あと） | `docker compose exec web bin/rails db:migrate` |
+| DB を まっさらに | `docker compose down -v` → 3 から やりなおし（**データは 消える**） |
+
+### 鍵・素材が ない とき（メンバーの ふつう）
+メンバーには AWS の 鍵・Discord の ウェブフック・買った 素材（`private_assets/`）は わたさない。それでも 起動・ログイン できる。
+
+| 画面 | 鍵・素材 なし の とき |
+|---|---|
+| `/`（まち） | 町の 絵は 出ない。「まちの 絵の 素材が ないよ」→「📋 かんたんメニュー へ」で カードの メニューに 切りかわる（この ブラウザに おぼえる） |
+| `/avatar`（キャラメイク）・`/dettyan` | 絵の 素材が ないので「よみこめなかった」と 出る |
+| `/editor`（編集画面） | うごく。✨ AI 切り抜き だけ 「AIの準備に失敗しました」（下の mediapipe） |
+| `/singing`（歌ってみた） | うごく（音・動画は ブラウザの 中だけ） |
+| `/clip_requests/new`（切り抜き依頼） | 開ける。送り先（Discord）が ない ので「いまは送れません」と 出て、送る ボタンは おせない |
+| `/admin/*`（管理画面） | うごく |
+
+- **AI 切り抜き（`public/mediapipe/`）**：ライブラリと モデル（約44MB）は リポジトリに 入って いない（`.gitignore`）。ない ときは ✨ を おすと「AIの準備に失敗しました」と 出る だけで、ほかの 編集は できる
+- **画像の 保存先**：開発では `storage/`（手元の ディスク）。S3 は 使わない
+- 素材を 見たい ときは ayaribon に 相談（配布 禁止の 素材なので、`private_assets/` は リポジトリにも チャットにも 置かない）
+
+### ポートが ぶつかる とき
+- web は `3000`、MySQL は **`3307`**（PC に MySQL が 入っていても ぶつからない ように 3306 から ずらした）
+- アプリ（web）は Docker の 中で `db:3306` に つなぐ ので、`3307` は PC から DB を のぞく とき（DB の ツール など）だけ 使う
+- `3000` が ふさがって いる ときは、使って いる もの（ほかの Rails など）を とめる
 
 ### 🚀 ゲームの 素材画像を S3 から じかに 出す（GAME_ASSETS_DIRECT）
 町・キャラメイク・Dettyan の 画像（S3 の `game_assets/`。買った 素材なので バケットは ひみつの まま）は、ふだんは サーバーが S3 から とって わたす。

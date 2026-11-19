@@ -84,7 +84,9 @@ export default class extends Controller {
         this.baseReady = true
       }).catch(fail)
     } else {
-      fail()
+      // 素材が この サーバーに ない（鍵・素材なしの 開発環境 など）：もう一度 では なく かんたんメニュー を すすめる
+      this.noArt = true
+      this.showArtError({ missing: true })
     }
     this.reduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
 
@@ -107,7 +109,7 @@ export default class extends Controller {
     this.dettyan = this.ownerValue ? null : { x: door.x + 10, y: door.y + 18, blink: 0, nextBlink: 2, name: dv.name || "Dettyan", avatar: dAvatar, msg: dAvatar?.msg || "" }
     this.chatIn = CHAT_FIRST
     this.drawGuideFace()
-    if (!this.guideSeen()) this.startGuide()
+    if (this.noArt) { /* 絵が ない ときは あんない を 出さない */ } else if (!this.guideSeen()) this.startGuide()
     else if (!mine && this.hasIntroTarget) this.introTarget.hidden = false
 
     this.nameTag = this.label("hm-town__name", this.nameValue)
@@ -738,17 +740,19 @@ export default class extends Controller {
   }
 
   // 絵が 読めなかった：町の 上に 知らせ と「もう一度」
-  showArtError() {
+  // missing：素材が はじめから ない（開発環境 など）。「もう一度」では なおらないので かんたんメニュー へ
+  showArtError({ missing = false } = {}) {
     if (this.artError) return
     const box = document.createElement("div")
     box.className = "hm-town__error"
     box.setAttribute("role", "alert")
     const p = document.createElement("p")
-    p.textContent = "まちの 絵を よみこめなかったよ…"
+    p.textContent = missing ? "まちの 絵の 素材が ないよ。かんたんメニュー から 行けるよ" : "まちの 絵を よみこめなかったよ…"
     const b = document.createElement("button")
     b.type = "button"
-    b.textContent = "🔄 もう一度"
-    b.addEventListener("click", () => window.location.reload())
+    b.textContent = missing ? "📋 かんたんメニュー へ" : "🔄 もう一度"
+    const simple = this.element.querySelector(".hm-hud__form button")
+    b.addEventListener("click", () => (missing && simple ? simple.click() : window.location.reload()))
     box.append(p, b)
     this.canvasTarget.parentElement.append(box)
     this.artError = box

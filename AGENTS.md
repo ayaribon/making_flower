@@ -60,13 +60,16 @@ AI はどれも、作業を始める前にこのファイルを読んでくだ�
 | `app/assets/stylesheets/singing.css` | 見た目 |
 
 ## 7. 動かし方
+くわしくは `README.md` の「10. 開発環境の起動」（Rails も MySQL も Docker の 中）。
 ```bash
-docker compose up -d db
-bundle install
-bin/rails db:create db:schema:load
-bin/rails server        # http://localhost:3000/singing
+cp .env.example .env
+docker compose build
+docker compose up -d
+docker compose exec web bin/rails db:prepare
+docker compose exec web bin/rails db:seed   # 開発用ユーザー・素材・テンプレ（ログインIDが出る）
+# http://localhost:3000/singing
 ```
-テストは `bin/rails test`。歌ってみた機能はブラウザの音声 API が中心なので自動テストが少ない。PR には「手で確かめた手順」を書く。
+テストは `docker compose exec web bin/rails test`。歌ってみた機能はブラウザの音声 API が中心なので自動テストが少ない。PR には「手で確かめた手順」を書く。
 
 ## 8. 終わったと言える条件
 - 関係する課題（K〜）の状態を `open-issues.md` で更新した
