@@ -100,9 +100,17 @@ class GameAsset
         if @checked_at.nil? || Time.current - @checked_at > CHECK_EVERY
           @present = SPROUT.select { |_key, path| exist_local?(path) || exist_s3?(path) }.keys.to_set
           @checked_at = Time.current
+          # 画像を さしかえた ときに 古い ものを 出しつづけない ように、おぼえた 中身も わすれる
+          @bytes = Concurrent::Map.new
         end
         @present
       end
+    end
+
+    # 画像の URL に つける しるし（確かめなおす たびに かわる → ブラウザも 新しい 画像を とりに くる）
+    def version
+      present_keys
+      @checked_at.to_i
     end
 
     # テスト用：おぼえている ものを わすれる

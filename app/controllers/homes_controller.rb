@@ -31,6 +31,6 @@ class HomesController < ApplicationController
   def sprout_sprites
     return {} unless GameAsset.available?
 
-    GameAsset::SPROUT.keys.select { |key| GameAsset.present_keys.include?(key) }.index_with { |key| sprout_asset_path(key) }
+    GameAsset::SPROUT.keys.select { |key| GameAsset.present_keys.include?(key) }.index_with { |key| game_asset_path(key) }
   end
 end

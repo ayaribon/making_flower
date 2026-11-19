@@ -1,4 +1,10 @@
 class ApplicationController < ActionController::Base
+  # 🌱 買った 素材の 画像の URL（さしかえが ブラウザにも とどく ように しるし v を つける。GameAsset.version）
+  helper_method :game_asset_path
+  def game_asset_path(key)
+    sprout_asset_path(key, v: GameAsset.version)
+  end
+
   # どの画面もログインが必要（ログイン画面だけは SessionsController で外す）
   before_action :require_login
 

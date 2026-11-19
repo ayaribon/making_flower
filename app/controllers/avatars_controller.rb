@@ -8,11 +8,11 @@ class AvatarsController < ApplicationController
   def edit
     # 🧑 人の テンプレート（町と 同じ 絵で 見本を 出す）。S3 に なければ 2頭身の 絵
     present = GameAsset.present_keys
-    @human_url = present.include?("human") ? sprout_asset_path("human") : nil
+    @human_url = present.include?("human") ? game_asset_path("human") : nil
     # 💇 髪の パーツ（あるものだけ）
-    @hair_urls = GameAsset::HAIR_KEYS.select { |key| present.include?(key) }.index_with { |key| sprout_asset_path(key) }
+    @hair_urls = GameAsset::HAIR_KEYS.select { |key| present.include?(key) }.index_with { |key| game_asset_path(key) }
     # 💇 素体＋髪レイヤー（あるものだけ）
-    @layer_urls = GameAsset::AVATAR_LAYER_KEYS.select { |key| present.include?(key) }.index_with { |key| sprout_asset_path(key) }
+    @layer_urls = GameAsset::AVATAR_LAYER_KEYS.select { |key| present.include?(key) }.index_with { |key| game_asset_path(key) }
   end
 
   def update

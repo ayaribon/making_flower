@@ -19,10 +19,10 @@ class GameAssetsControllerTest < ActionDispatch::IntegrationTest
     FileUtils.rm_rf(@dir)
   end
 
-  def put(key)
+  def put(key, data = PNG)
     file = @dir.join(GameAsset::SPROUT.fetch(key))
     FileUtils.mkdir_p(file.dirname)
-    File.binwrite(file, PNG)
+    File.binwrite(file, data)
   end
 
   def login_as(name)
@@ -110,6 +110,19 @@ class GameAssetsControllerTest < ActionDispatch::IntegrationTest
     get root_path
     sprites = JSON.parse(css_select("[data-controller=town]").first["data-town-sprites-value"])
     assert_equal GameAsset::SPROUT.keys.sort, sprites.keys.sort
-    assert_equal sprout_asset_path("grass"), sprites["grass"]
+    assert_equal sprout_asset_path("grass", v: GameAsset.version), sprites["grass"]
+  end
+
+  test "画像を さしかえたら：確かめなおした あとは 新しい 中身・URL の しるし v も かわる（ブラウザに 古い 画像が のこらない）" do
+    put("grass", "old")
+    GameAsset.reset!
+    assert_equal "old", GameAsset.read("grass")
+    v1 = GameAsset.version
+    put("grass", "new")
+    travel GameAsset::CHECK_EVERY + 1.second do
+      GameAsset.present_keys
+      assert_equal "new", GameAsset.read("grass")
+      assert_not_equal v1, GameAsset.version
+    end
   end
 end
