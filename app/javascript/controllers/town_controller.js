@@ -61,6 +61,9 @@ export default class extends Controller {
     if (this.fullValue) this.listenPinch()
     this.resizeObserver = new ResizeObserver(() => this.fitView())
     this.resizeObserver.observe(this.element)
+    // 画面いっぱい：下の ひとこと の 高さ を はかって、あんない の 箱を その 上に 出す（home.css の --hm-hud-bottom）
+    this.hudBottom = this.element.querySelector(".hm-hud--bottom")
+    if (this.hudBottom) this.resizeObserver.observe(this.hudBottom)
     this.base = document.createElement("canvas")
     this.base.width = TOWN_W
     this.base.height = TOWN_H
@@ -157,6 +160,12 @@ export default class extends Controller {
     const section = this.canvasTarget.parentElement
     section.style.width = `${Math.round(viewW * scale)}px`
     section.style.height = `${Math.round(viewH * scale)}px`
+    if (this.hudBottom) {
+      // 町の 絵（section）の 下はし から 見た、ひとこと の 上はし までの 高さ
+      const sec = section.getBoundingClientRect()
+      const hud = this.hudBottom.getBoundingClientRect()
+      this.element.style.setProperty("--hm-hud-bottom", `${Math.max(0, Math.round(sec.bottom - hud.top))}px`)
+    }
     if (this.hasZoomInTarget) this.zoomInTarget.disabled = this.zoom >= ZOOM_MAX - 0.001
     if (this.hasZoomOutTarget) this.zoomOutTarget.disabled = this.zoom <= this.zoomMin + 0.001
     if (viewW === this.viewW && viewH === this.viewH) return

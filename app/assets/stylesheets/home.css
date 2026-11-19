@@ -291,3 +291,6 @@
 }
 .hm-town__error p { margin: 0; font-weight: 700; }
 .hm-town__error button { padding: 8px 16px; border: 0; border-radius: 999px; background: #ff5fa2; color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+
+/* 画面いっぱい：あんない の 箱は 下の ひとこと の 上に（town_controller.js が --hm-hud-bottom を はかる） */
+.hm-townwrap--full .hm-guide:not(.is-welcome) { bottom: calc(var(--hm-hud-bottom, 90px) + 8px); }
