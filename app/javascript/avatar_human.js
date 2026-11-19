@@ -364,6 +364,28 @@ export function avatarLayersOf(images) {
 
 const itemOf = (slot, id) => AVATAR_EQUIP[slot]?.items.find((it) => it.id === id)
 
+// 🚀 その 人たちを 描くのに いる 画像の キー だけ（ぜんぶ 読むと おそい。2026-11-19）
+//   list：[{ avatar（保存の 形）, look（Dettyan など。equip・hs） }]
+export function avatarLayerKeysFor(list) {
+  const keys = new Set(["avatar_base", "avatar_body_base"])
+  const add = (slot, id) => {
+    const it = AVATAR_EQUIP[slot]?.items.find((x) => x.id === id)
+    if (it?.file) keys.add(avatarAssetKey(it.file))
+  }
+  add("costume", "default")
+  add("shoes", "default")
+  for (const { avatar, look } of list) {
+    const a = normalizeAvatar(avatar)
+    const hs = look?.hs || a.hs || DEFAULT_HAIRSTYLE
+    if (HUMAN_HAIRSTYLES.find((h) => h.id === hs)?.file) keys.add(`avatar_hair_${hs}`)
+    for (const slot of Object.keys(AVATAR_EQUIP)) {
+      const id = look?.equip?.[slot] ?? (AVATAR_SAVE_KEYS[slot] ? a[AVATAR_SAVE_KEYS[slot]] : undefined)
+      if (id && id !== "none") add(slot, id)
+    }
+  }
+  return keys
+}
+
 const FACING_AWAY = new Set(["up", "upright", "upleft"])
 
 // 装備の 枠の じゅんに 重ねる（ない 枠・知らない id・画像が ない ものは 描かない）

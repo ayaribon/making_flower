@@ -3,7 +3,7 @@ import { normalizeAvatar, avatarFromName, cleanMsg } from "avatar_sprite"
 import { TOWN_W, TOWN_H, VIEW_NARROW, BUILDINGS, BUILDING_W, WALK, doorOf, clampWalk, drawTownNight } from "town_world"
 import { loadSprout, drawSproutBase, drawSproutLive, drawSproutForest, sproutWindows, SPROUT_LAMPS, hairPartsOf } from "town_sprout"
 import { facing } from "avatar_teemo"
-import { drawHuman, facing8, avatarLayersOf, HUMAN_W, HUMAN_H, DETTYAN_LOOK } from "avatar_human"
+import { drawHuman, facing8, avatarLayersOf, avatarLayerKeysFor, HUMAN_W, HUMAN_H, DETTYAN_LOOK } from "avatar_human"
 // 🧑 町の Dettyan（人の テンプレート）：黒い 髪・マンバン・茶色の ジャケット
 
 // 🏘️ はじまりのまち（トップページ）。docs/town/requirements.md
@@ -67,7 +67,7 @@ export default class extends Controller {
     this.base = document.createElement("canvas")
     this.base.width = TOWN_W
     this.base.height = TOWN_H
-    const urls = this.spritesValue
+    const urls = this.neededSprites(this.spritesValue)
     // 素材の 絵（Sprout Lands）が とどくまで まつ。とどかなければ「よみこめなかった」（前の 絵は 2026-11-19 に やめた）
     this.baseReady = false
     const fail = () => this.showArtError()
@@ -671,6 +671,26 @@ export default class extends Controller {
   }
 
   // あんない の 顔（Dettyan の 頭 だけ）
+  // 🚀 町で 使う 画像だけ（町の 絵・人の テンプレート・いま 町に いる 人が 着ている もの）。ぜんぶ 読むと おそい
+  neededSprites(all) {
+    if (!all) return all
+    const dv = this.dettyanValue || {}
+    const dAvatar = dv.avatar && Object.keys(dv.avatar).length ? dv.avatar : null
+    const people = [
+      { avatar: this.meValue },
+      ...(this.othersValue || []).map((o) => ({ avatar: o.avatar })),
+      dAvatar ? { avatar: dAvatar } : { look: DETTYAN_LOOK }
+    ]
+    const layers = avatarLayerKeysFor(people)
+    const out = {}
+    for (const [k, url] of Object.entries(all)) {
+      if (k === "chara" || k.startsWith("hair_")) continue // Teemo 型・前の 髪パーツ は 使わない
+      if (k.startsWith("avatar_") && !layers.has(k)) continue
+      out[k] = url
+    }
+    return out
+  }
+
   // 絵が 読めなかった：町の 上に 知らせ と「もう一度」
   showArtError() {
     if (this.artError) return

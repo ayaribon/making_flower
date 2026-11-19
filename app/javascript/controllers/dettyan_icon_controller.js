@@ -1,7 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 import { equipped, drawDressed, usingHumanDraw } from "dettyan_gear"
 import { peekCachedState } from "dettyan_save"
-import { enableDettyanHuman } from "dettyan_human"
+import { enableDettyanHuman, equipOf } from "dettyan_human"
+import { avatarLayerKeysFor, DETTYAN_LOOK } from "avatar_human"
 
 // 🏠 メインメニューの「Dettyan を育てる」のアイコン：ドット絵の Dettyan（まばたき・いきをする）
 // カードにカーソルをのせると、うれしそうに足ぶみする
@@ -27,7 +28,10 @@ export default class extends Controller {
     this.reduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
     // 新しい 絵（Dettyan の 素体＋レイヤー）を 読みおわってから 描く。読めなければ 描かない（前の 絵は 出さない）
     this.ready = false
-    Promise.race([enableDettyanHuman(this.layersValue), new Promise((r) => setTimeout(r, 6000))]).finally(() => {
+    // 🚀 いつもの 見た目 と いま つけている そうび の 画像 だけ 読む
+    const need = avatarLayerKeysFor([{ look: { ...DETTYAN_LOOK, equip: equipOf(this.set) } }])
+    const urls = Object.fromEntries(Object.entries(this.layersValue || {}).filter(([k]) => need.has(k)))
+    Promise.race([enableDettyanHuman(urls), new Promise((r) => setTimeout(r, 20000))]).finally(() => {
       this.ready = usingHumanDraw()
       if (this.g) this.draw()
     })

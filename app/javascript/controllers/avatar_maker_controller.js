@@ -3,7 +3,7 @@ import {
   normalizeAvatar, randomAvatar, cleanMsg, DEFAULT_AVATAR, HAIRS, EYES, TOPS, BOTTOMS, ACCESSORIES
 } from "avatar_sprite"
 import { drawHuman, avatarLayersOf, USE_HAIR_VARIANTS, USE_ACCESSORIES } from "avatar_human"
-import { HUMAN_HAIRSTYLES, AVATAR_EQUIP, AVATAR_SAVE_KEYS, AVATAR_FACE_SLOTS } from "avatar_sprite"
+import { HUMAN_HAIRSTYLES, AVATAR_EQUIP, AVATAR_SAVE_KEYS, AVATAR_FACE_SLOTS, allowCors } from "avatar_sprite"
 import { CHIBI_SKINS as SKINS, CHIBI_HAIRS as HAIR_COLORS, CHIBI_CLOTHS as CLOTH_COLORS } from "avatar_chibi"
 import { findGear } from "dettyan_gear"
 
@@ -37,7 +37,7 @@ export default class extends Controller {
     const artError = () => { this.statusTarget.textContent = "キャラの 絵を よみこめなかったよ… ページを ひらきなおしてね" }
     if (!this.humanUrlValue) artError()
     if (this.humanUrlValue) {
-      const img = new Image()
+      const img = allowCors(new Image(), this.humanUrlValue)
       img.onload = () => { this.human = img; this.useHumanPreview(); this.renderGroups() }
       img.onerror = artError
       img.src = this.humanUrlValue
@@ -122,7 +122,7 @@ export default class extends Controller {
     for (const [key, url] of Object.entries(this.hairUrlsValue || {})) {
       const m = key.match(/^hair_(.+)_(back|front)$/)
       if (!m) continue
-      const img = new Image()
+      const img = allowCors(new Image(), url)
       img.onload = () => {
         this.hairParts[m[1]] = { ...(this.hairParts[m[1]] || {}), [m[2]]: img }
         if (this.human) this.renderGroups()
@@ -138,7 +138,7 @@ export default class extends Controller {
     const images = {}
     let left = entries.length
     for (const [key, url] of entries) {
-      const img = new Image()
+      const img = allowCors(new Image(), url)
       const done = () => {
         if (--left > 0) return
         this.layers = avatarLayersOf(images)

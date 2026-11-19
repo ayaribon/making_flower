@@ -273,6 +273,21 @@ bin/rails server
 
 アプリ本体は通常 `http://localhost:3000` で起動する。`docker-compose.yml` では `web` サービスが `3000` ポートを公開し、`db` が MySQL 8 を提供する構成になっている。
 
+### 🚀 ゲームの 素材画像を S3 から じかに 出す（GAME_ASSETS_DIRECT）
+町・キャラメイク・Dettyan の 画像（S3 の `game_assets/`。買った 素材なので バケットは ひみつの まま）は、ふだんは サーバーが S3 から とって わたす。
+`GAME_ASSETS_DIRECT=1` に すると、サーバーは **期限つきの URL**（12時間。6時間ごとに 同じ URL なので ブラウザの キャッシュが きく）だけ 作って、ブラウザが S3 から じかに・同時に とる（はやい）。
+
+1. S3 の バケット → アクセス許可 → CORS に、アプリの ドメインからの GET を 許す（下の 例）
+2. `heroku config:set GAME_ASSETS_DIRECT=1`（もどす ときは `heroku config:unset GAME_ASSETS_DIRECT`）
+
+```json
+[
+  { "AllowedOrigins": ["https://（アプリの ドメイン）"], "AllowedMethods": ["GET", "HEAD"], "AllowedHeaders": ["*"], "MaxAgeSeconds": 86400 }
+]
+```
+- CORS が いるのは、絵の 色を ぬりかえる ために canvas で 画像の 中身を 読む から（`allowCors`）
+- S3 に ある か の しらべは 一覧 1回（`s3:ListBucket` が あれば。なければ 1まいずつ しらべる）
+
 ### デプロイ（Procfile）
 
 `Procfile` の `web` は、サーバーを起動する前に `rails db:migrate` を流す。新しいマイグレーションがあっても、デプロイするだけで本番の DB に反映される（手でマイグレーションしなくてよい）。

@@ -7,7 +7,7 @@
 // Assets - From: Sprout Lands - By: Cup Nooble（https://cupnooble.itch.io/sprout-lands-asset-pack）
 
 import { TOWN_W, TOWN_H, GROUND, BUILDINGS, FOUNTAIN, drawSign } from "town_world"
-import { AVATAR_EQUIP, avatarAssetKey } from "avatar_sprite"
+import { AVATAR_EQUIP, avatarAssetKey, allowCors } from "avatar_sprite"
 
 // 使う 素材（キー → 素材パックの 中の 場所）。サーバー（GameAsset::SPROUT）と そろえる。URL は キーごとに サーバーが わたす
 export const SPROUT_FILES = {
@@ -51,21 +51,26 @@ export function hairPartsOf(sheets) {
 const T = 16
 
 // 画像を ぜんぶ 読む。1つでも 読めなければ reject（町は コードで描く 版に もどる）
-export function loadSprout(urls, timeoutMs = 6000) {
+// timeoutMs まで まっても ぜんぶ そろわない ときは、なくては いけない もの（地面・木・人 など）が そろって いれば その ぶん で すすむ
+export function loadSprout(urls, timeoutMs = 20000) {
   const keys = Object.keys(SPROUT_FILES).filter((k) => !SPROUT_OPTIONAL.includes(k))
   if (!urls || keys.some((k) => !urls[k])) return Promise.reject(new Error("no sprout urls"))
   const extra = SPROUT_OPTIONAL.filter((k) => urls[k])
+  const got = {}
   const one = (k) => new Promise((resolve, reject) => {
-    const img = new Image()
+    const img = allowCors(new Image(), urls[k])
     img.decoding = "async"
-    img.onload = () => resolve([k, img])
+    img.onload = () => { got[k] = img; resolve([k, img]) }
     img.onerror = () => reject(new Error(`load ${k}`))
     img.src = urls[k]
   })
   // なくても よい もの は、読めなければ 入れない
   const maybe = (k) => one(k).catch(() => null)
   const all = Promise.all([...keys.map(one), ...extra.map(maybe)]).then((pairs) => Object.fromEntries(pairs.filter(Boolean)))
-  const timer = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), timeoutMs))
+  const timer = new Promise((resolve, reject) => setTimeout(() => {
+    if (keys.every((k) => got[k])) resolve({ ...got })
+    else reject(new Error("timeout"))
+  }, timeoutMs))
   return Promise.race([all, timer])
 }
 

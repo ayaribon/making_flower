@@ -65,6 +65,13 @@ export const HUMAN_HAIRSTYLES = [
 ]
 export const DEFAULT_HAIRSTYLE = "original"
 
+// 🚀 画像が よその サイト（S3 から じかに。GameAsset.direct_url）の ときは CORS で 読む
+//   （色を ぬりかえる ために canvas の getImageData を 使う ので、CORS なし だと 読めなく なる）
+export function allowCors(img, url) {
+  if (/^https?:\/\//.test(url) && !url.startsWith(window.location.origin)) img.crossOrigin = "anonymous"
+  return img
+}
+
 // 👕 装備の 枠（2026-11-19 の ハンドオフ layers/avatar_catalog.json）。画像は S3 の game_assets/sprout_avatar/
 //   アイテムを 足す ときは 画像1まい（128×96。素体と 同じ 並び）を 置いて、ここに 1行（app/models/game_asset.rb にも ファイル名）
 //   maker：町の キャラメイクで えらべる もの（ほかは Dettyan 育成ゲームの そうび。id は dettyan_gear.js の GEAR と 同じ）
