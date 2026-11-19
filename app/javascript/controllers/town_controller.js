@@ -376,6 +376,12 @@ export default class extends Controller {
     const id = event.params.place
     const door = doorOf(id)
     if (!door) return
+    // 2回目（その 建物へ 歩いている とちゅう）は 歩くのを またずに すぐ 入る（2026-11-19 に ayaribon）
+    if (this.me.plan === id && this.me.walking) {
+      this.me.walking = false
+      this.me.plan = null
+      return this.enter(id)
+    }
     this.me.tx = door.x
     this.me.ty = door.y
     this.me.plan = id
