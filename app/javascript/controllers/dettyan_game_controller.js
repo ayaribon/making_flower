@@ -12,8 +12,8 @@ import { usingHumanDraw } from "dettyan_gear"
 import { facing8 } from "avatar_human"
 import { GEAR, SLOTS, slotName, findGear, equipped, gearBonus, toggleGear, drawGearIcon, drawDressed, drawHeldMic, shopGear, buyGear } from "dettyan_gear"
 import { ROOM_W, ROOM_H, createRoom, drawRoomLive, drawChair, drawSpeaker, drawNightLight, drawWindowLight, CHAIR, SPEAKER, SEAT, WORK_SPOT, SING_SPOT } from "dettyan_room"
-import { HOUSE, FURNITURE, FURNITURE_OPTS, SEASONS, findFurniture, hasHouse, hasFurniture, canWork, buyHouse, buyFurniture, shownFurniture, shopVisible, inSeason, seasonEnd, furnitureOpt, setFurnitureOpt, toggleShown, isShown } from "dettyan_home"
-import { drawFurnitureBack, furnitureLayers, furnitureIcon, PLACES as FURNITURE_PLACES } from "dettyan_furniture_art"
+import { HOUSE, FURNITURE, FURNITURE_OPTS, SEASONS, findFurniture, hasHouse, hasFurniture, canWork, buyHouse, buyFurniture, shownFurniture, shopVisible, inSeason, seasonEnd, furnitureOpt, setFurnitureOpt, toggleShown, isShown, swapPlaces } from "dettyan_home"
+import { drawFurnitureBack, furnitureLayers, furnitureIcon, furnitureBox } from "dettyan_furniture_art"
 import { drawCampfire, drawLeaf, FIRE, CAMP_SING_SPOT, LEAF_SPOTS } from "dettyan_camp"
 import { CLEAR_TEXT, currentGoal, checkStory, SCENES } from "dettyan_story"
 
@@ -89,7 +89,7 @@ const OWNER_IDLE_CHANCE = 0.08 // 止まったとき、ひとりで「俺やん�
 
 export default class extends Controller {
   static targets = ["canvas", "start", "startText", "startNote", "money", "genki", "gokigen", "soundButton", "soundPanel", "bgmToggle", "seToggle", "bubble",
-    "menu", "sheet", "sheetTitle", "sheetMoney", "sheetList", "toast", "level", "genkiNum", "cmd", "cmdStatus", "cmdButtons", "statusButton", "goal", "story", "storyWho", "storyText", "top", "bottom", "decor", "decorName", "decorButtons"]
+    "menu", "sheet", "sheetTitle", "sheetMoney", "sheetList", "toast", "level", "genkiNum", "cmd", "cmdStatus", "cmdButtons", "statusButton", "goal", "story", "storyWho", "storyText", "top", "bottom", "decor", "decorName", "decorBody", "decorOpenButton", "decoBar", "decoList"]
   static values = { userId: Number, owner: Boolean, layers: Object, sprites: Object } // owner：Dettyan 本人のアカウント。layers：素体＋レイヤーの 画像（あれば 町と 同じ 絵）
 
   connect() {
@@ -511,11 +511,12 @@ export default class extends Controller {
   // area：広く 描く 広さ（128×96 の 座標）
   drawStage(g, area) {
     const ch = this.chara
-    // 🎨 もようがえ：ぼうけん に 出たら おわり。おはなし の あいだ は かくして、おわったら また 出す
+    // 🛋️ もようがえ：ぼうけん に 出たら おわり。おはなし の あいだ は かくして、おわったら また 出す
     if (this.decor) {
       if (this.battle || this.inTent) this.endDecor()
-      else if (this.decorTarget.hidden !== !!this.story) this.decorTarget.hidden = !!this.story
+      else if (this.decorTarget.hidden !== (!!this.story || !this.decor.id)) this.decorTarget.hidden = !!this.story || !this.decor.id
     }
+    this.updateDecorOpenButton()
     if (this.story) return this.drawStory(g, area)
     if (this.battle) return this.drawBattle(g, area)
     const now = this.store.now()
@@ -536,8 +537,7 @@ export default class extends Controller {
       return
     }
     const f = s ? shownFurniture(s) : {}
-    const look = this.decorState(s) // 🎨 もようがえ中は ためしの 色・がら で
-    g.drawImage(this.roomCanvas(look, f), area.x, area.y)
+    g.drawImage(this.roomCanvas(s, f), area.x, area.y)
     drawWindowLight(g, now)
     drawRoomLive(g, { now, t: this.t, mode: act?.kind, workT: act?.kind === "work" ? act.t : 0, f })
     for (let i = 0; i < dirt; i++) drawDust(g, ...DIRT_SPOTS[i])
@@ -545,9 +545,10 @@ export default class extends Controller {
     const layers = [{ y: ch.y + 0.5, draw: () => this.drawChara(g) }]
     if (f.chair) layers.push({ y: CHAIR.base, draw: () => drawChair(g) })
     if (f.speaker) layers.push({ y: SPEAKER.base, draw: () => drawSpeaker(g, act?.kind === "sing", this.t) })
-    if (s) layers.push(...furnitureLayers(g, this.sprout, look, f, this.t)) // 🛋️ Sprout の 家具（ベッド・ソファ・ツリー など）
+    if (s) layers.push(...furnitureLayers(g, this.sprout, s, f, this.t)) // 🛋️ Sprout の 家具（ベッド・ソファ・ツリー など）
     layers.sort((a, b) => a.y - b.y).forEach((l) => l.draw())
     drawNightLight(g, now, act?.kind === "work", f, area)
+    if (this.decor && s) this.drawDecorMark(g, s)
     this.drawParticles(g)
   }
 
@@ -887,103 +888,212 @@ export default class extends Controller {
     }
   }
 
-  // 🎨 いろを かえる（へや で 見ながら）と しまう／だす（買った Sprout の 家具）
+  // ショップ：もっている Sprout の 家具 は「🛋️ もようがえ」で へや に もどって その 家具を えらぶ
   furnitureOptsRow(s, item) {
     const box = el("div", "dt-furnopts")
-    if ((item.opts || []).length && isShown(s, item.id)) {
-      const c = el("button", "dt-furnopts__chip", "🎨 いろを かえる")
-      c.type = "button"
-      c.dataset.action = "dettyan-game#decorOpen"
-      c.dataset.dettyanGameIdParam = item.id
-      box.append(c)
-    }
-    const shown = isShown(s, item.id)
-    const t = el("button", "dt-furnopts__chip", shown ? "📦 しまう" : "🏠 だす")
-    t.type = "button"
-    t.dataset.action = "dettyan-game#toggleFurn"
-    t.dataset.dettyanGameIdParam = item.id
-    box.append(t)
+    const c = el("button", "dt-furnopts__chip", "🛋️ もようがえ")
+    c.type = "button"
+    c.dataset.action = "dettyan-game#decorFromShop"
+    c.dataset.dettyanGameIdParam = item.id
+    box.append(c)
     return box
   }
 
-  decorOpen(event) {
+  // ---- 🛋️ もようがえ（2026-11-19 に ayaribon）----
+  // 下の バーが 家具の ならび に なる。タップで えらぶ（しまって いれば おく）、えらんで いる 家具を もう1回 で おく／おかない
+  // えらんだ 家具には へや の 上に 小さな パネル：色・がら の 小さな 絵（タップで すぐ かわる）・おく／おかない・いれかえる
+  decorFromShop(event) {
     this.sheetTarget.hidden = true
     this.sheetMode = null
-    this.startDecor(event.params.id)
+    this.startDecor(event.params.id, { place: true })
   }
 
-  // 🎨 もようがえ（2026-11-19 に ayaribon「何色かは 書かずに、じっさいに 色を かえて みせて、これで いいや 決定！」）
-  //   ボタンを おすたびに つぎの 色・がら に なって へや に すぐ 出る。けってい で セーブ、もどす で もとどおり
-  startDecor(id) {
-    const s = this.store.state
-    const item = findFurniture(id)
-    if (!s || !item?.opts?.length || !isShown(s, id)) return
-    const opts = Object.fromEntries(item.opts.map((key) => [key, furnitureOpt(s, id, key)]))
-    this.decor = { id, opts, start: { ...opts } }
-    this.decorNameTarget.textContent = `${item.icon} ${item.name}`
-    const buttons = item.opts.map((key) => {
-      const b = el("button", "dt-decor__next", DECOR_BUTTON[key] || "🎨 いろを かえる")
-      b.type = "button"
-      b.dataset.action = "dettyan-game#decorNext"
-      b.dataset.dettyanGameKeyParam = key
-      return b
-    })
-    this.decorButtonsTarget.replaceChildren(...buttons)
-    // 家具が 下の ほう（ゆかの 手前）に ある ときは、かくさない ように パネルを 上に 出す
-    const place = FURNITURE_PLACES[id] || {}
-    this.decorTarget.classList.toggle("is-top", (place.base ?? (place.top ?? 0) + 13) > 56)
-    this.decorTarget.hidden = false
-    this.rebuildHome()
-  }
-
-  decorNext(event) {
-    const d = this.decor
-    if (!d) return
-    const key = event.params.key
-    d.opts[key] = (d.opts[key] + 1) % FURNITURE_OPTS[key].choices.length
+  decorFromScreen() {
     this.sound.se("tap")
+    this.startDecor(null)
+  }
+
+  // id：さいしょに えらぶ 家具（なければ えらばない）。place：しまって いれば おく
+  startDecor(id, { place = false } = {}) {
+    const s = this.store.state
+    if (!s || !hasHouse(s) || this.battle) return
+    this.decor = { id: null, swap: false }
+    this.element.classList.add("is-decorating")
+    this.decoBarTarget.hidden = false
+    this.hideMenu?.()
+    if (id) {
+      if (place && !isShown(s, id)) this.store.update((st) => { toggleShown(st, id) })
+      this.decor.id = id
+    }
     this.rebuildHome()
+    this.renderDecor()
+    this.layout()
   }
 
-  decorOk() {
-    const d = this.decor
-    if (!d) return
-    this.store.update((s) => { for (const [key, v] of Object.entries(d.opts)) setFurnitureOpt(s, d.id, key, v) })
-    this.sound.se("buy")
-    const item = findFurniture(d.id)
-    this.endDecor()
-    this.toast(`${item.icon} ${item.name}、すてき！`)
-  }
-
-  decorCancel() {
+  decorDone() {
     this.sound.se("tap")
     this.endDecor()
   }
 
   endDecor() {
     this.decor = null
+    this.element.classList.remove("is-decorating")
+    this.decoBarTarget.hidden = true
     this.decorTarget.hidden = true
     this.rebuildHome()
+    this.layout()
   }
 
-  // もようがえ中は、ためしの 色・がら を のせた セーブ（ほんとうの セーブは かえない）
-  decorState(s) {
-    const d = this.decor
-    if (!s || !d) return s
-    const opts = { ...(s.home.opts || {}), [d.id]: { ...(s.home.opts?.[d.id] || {}), ...d.opts } }
-    return { ...s, home: { ...s.home, opts } }
-  }
-
-  toggleFurn(event) {
+  // 下の バー の 家具を タップ
+  decorPick(event) {
     const id = event.params.id
-    let ok = false
-    if (this.decor?.id === id) this.endDecor()
-    this.store.update((s) => { ok = toggleShown(s, id) })
-    if (!ok) return
+    const d = this.decor
+    if (!d) return
+    const s = this.store.state
+    // 🔁 いれかえ中：えらんだ 家具 と おき場所を いれかえる
+    if (d.swap) {
+      let ok = false
+      if (id !== d.id) this.store.update((st) => { ok = swapPlaces(st, d.id, id) })
+      d.swap = false
+      if (ok) { this.sound.se("buy"); this.toast("🔁 いれかえたよ") } else this.sound.se("tap")
+    } else if (d.id === id || !isShown(s, id)) {
+      // えらんでいる 家具 を もう1回・しまって いる 家具：おく／おかない
+      this.store.update((st) => { toggleShown(st, id) })
+      d.id = id
+      this.sound.se("tap")
+    } else {
+      d.id = id
+      this.sound.se("tap")
+    }
+    this.rebuildHome()
+    this.renderDecor()
+  }
+
+  decorOpt(event) {
+    const d = this.decor
+    if (!d?.id) return
+    const { key, value } = event.params
+    this.store.update((st) => { setFurnitureOpt(st, d.id, key, Number(value)) })
     this.sound.se("tap")
     this.rebuildHome()
-    this.renderSheet()
+    this.renderDecor()
   }
+
+  decorToggle() {
+    const d = this.decor
+    if (!d?.id) return
+    this.store.update((st) => { toggleShown(st, d.id) })
+    d.swap = false
+    this.sound.se("tap")
+    this.rebuildHome()
+    this.renderDecor()
+  }
+
+  decorSwap() {
+    const d = this.decor
+    if (!d?.id) return
+    d.swap = !d.swap
+    this.sound.se("tap")
+    this.renderDecor()
+  }
+
+  // もようがえ に つかえる 家具（もっている Sprout の 家具・絵の 素材が ある もの）
+  decorItems(s) {
+    const hasArt = (k) => !!this.sprout?.[k]
+    return FURNITURE.filter((item) => item.sprout && hasFurniture(s, item.id) && (item.art || []).every(hasArt))
+  }
+
+  renderDecor() {
+    const d = this.decor
+    const s = this.store.state
+    if (!d || !s) return
+    const items = this.decorItems(s)
+    const sel = d.id && findFurniture(d.id)
+    // 下の バー
+    this.decoListTarget.replaceChildren(...items.map((item) => {
+      const b = el("button", "dt-decobar__item")
+      b.type = "button"
+      b.dataset.action = "dettyan-game#decorPick"
+      b.dataset.dettyanGameIdParam = item.id
+      b.classList.toggle("is-off", !isShown(s, item.id))
+      b.classList.toggle("is-sel", item.id === d.id)
+      b.classList.toggle("is-target", d.swap && item.spot === "floor" && item.id !== d.id)
+      b.disabled = d.swap && !(item.spot === "floor" && item.id !== d.id)
+      b.setAttribute("aria-pressed", String(item.id === d.id))
+      const icon = furnitureIcon(this.sprout, s, item.id)
+      if (icon) { icon.className = "dt-decobar__icon"; b.append(icon) } else b.append(el("span", "dt-decobar__emoji", item.icon))
+      b.append(el("span", "dt-decobar__name", item.name))
+      return b
+    }))
+    if (!items.length) this.decoListTarget.append(el("div", "dt-decobar__none", "ショップで 家具を 買うと ここに ならぶよ"))
+    // へや の 上の パネル
+    if (!sel) { this.decorTarget.hidden = true; return }
+    const shown = isShown(s, sel.id)
+    this.decorNameTarget.textContent = d.swap ? `🔁 ${sel.name} と いれかえる 家具を 下から えらんでね` : `${sel.icon} ${sel.name}`
+    const body = []
+    if (!d.swap && shown) {
+      for (const key of sel.opts || []) {
+        const row = el("div", "dt-decor__swatches")
+        const cur = furnitureOpt(s, sel.id, key)
+        FURNITURE_OPTS[key].choices.forEach((_, i) => {
+          const b = el("button", "dt-decor__swatch" + (i === cur ? " is-on" : ""))
+          b.type = "button"
+          b.setAttribute("aria-label", `${i + 1}ばんめ`)
+          b.setAttribute("aria-pressed", String(i === cur))
+          b.dataset.action = "dettyan-game#decorOpt"
+          b.dataset.dettyanGameKeyParam = key
+          b.dataset.dettyanGameValueParam = String(i)
+          const icon = furnitureIcon(this.sprout, s, sel.id, { [key]: i })
+          if (icon) b.append(icon)
+          row.append(b)
+        })
+        body.push(row)
+      }
+    }
+    const btns = el("div", "dt-decor__btns")
+    if (!d.swap) {
+      const t = el("button", "dt-decor__btn" + (shown ? "" : " is-main"), shown ? "📦 おかない" : "🏠 おく")
+      t.type = "button"
+      t.dataset.action = "dettyan-game#decorToggle"
+      btns.append(t)
+    }
+    if (sel.spot === "floor" && shown && this.decorItems(s).some((it) => it.spot === "floor" && it.id !== sel.id)) {
+      const w = el("button", "dt-decor__btn" + (d.swap ? " is-main" : ""), d.swap ? "やめる" : "🔁 いれかえる")
+      w.type = "button"
+      w.dataset.action = "dettyan-game#decorSwap"
+      btns.append(w)
+    }
+    body.push(btns)
+    this.decorBodyTarget.replaceChildren(...body)
+    // 家具が 下の ほう（ゆかの 手前）に ある ときは、かくさない ように パネルを 上に 出す
+    const box = furnitureBox(s, sel.id)
+    this.decorTarget.classList.toggle("is-top", !!box && box.y + box.h > 56)
+    this.decorTarget.hidden = !!this.story
+  }
+
+  // えらんで いる 家具の 上に ぴょこぴょこ する ▼
+  drawDecorMark(g, s) {
+    const id = this.decor.id
+    if (!id || !isShown(s, id)) return
+    const box = furnitureBox(s, id)
+    if (!box) return
+    const cx = Math.round(box.x + box.w / 2)
+    const y = Math.round(box.y - 6 - Math.abs(Math.sin(this.t * 4)) * 2)
+    g.fillStyle = "#2a1c12"
+    g.fillRect(cx - 4, y - 1, 9, 1)
+    for (let i = 0; i < 5; i++) { g.fillStyle = "#2a1c12"; g.fillRect(cx - 4 + i, y + i, 9 - i * 2, 1) }
+    g.fillStyle = "#ffb347"
+    for (let i = 0; i < 4; i++) g.fillRect(cx - 3 + i, y + i, 7 - i * 2, 1)
+  }
+
+  // 画面の「🛋️ もようがえ」：家を もっていて、Sprout の 家具が ある とき（テント・ぼうけん・おはなし・もようがえ中 は かくす）
+  updateDecorOpenButton() {
+    if (!this.hasDecorOpenButtonTarget) return
+    const s = this.store.state
+    const show = !!s && hasHouse(s) && !this.decor && !this.battle && !this.story && this.decorItems(s).length > 0
+    if (this.decorOpenButtonTarget.hidden !== !show) this.decorOpenButtonTarget.hidden = !show
+  }
+
 
   buyHome(event) {
     const id = event.params.id
@@ -998,8 +1108,8 @@ export default class extends Controller {
     this.sound.se("buy")
     this.rebuildHome()
     this.toast(id === HOUSE.id ? "🏠 マイホーム を 買った！" : `${r.item.icon} ${r.item.name} を おいたよ`)
-    // 🎨 色・がら を えらべる 家具は、ショップを とじて へや で 見ながら えらぶ
-    if (r.item?.opts?.length) { this.sheetTarget.hidden = true; this.sheetMode = null; this.startDecor(id) }
+    // 🛋️ Sprout の 家具は、ショップを とじて もようがえ（色・おく／おかない・いれかえる）
+    if (r.item?.sprout) { this.sheetTarget.hidden = true; this.sheetMode = null; this.startDecor(id) }
     this.renderHud(this.store.state)
     this.runStoryCheck()
   }
@@ -2099,17 +2209,6 @@ function drawPixels(g, rows, colors, ox, oy) {
 
 function clamp(v) {
   return Math.max(0, Math.min(100, Number(v) || 0))
-}
-
-// 🎨 もようがえ の ボタン（何色か は 書かない。おすと つぎの 色・がら）
-const DECOR_BUTTON = {
-  wood: "🎨 いろを かえる",
-  chestWood: "🎨 いろを かえる",
-  cover: "🛏️ ふとんを かえる",
-  flower: "🌼 はなを かえる",
-  picture: "🖼️ えを かえる",
-  mat: "🎨 いろを かえる",
-  present: "🎁 はこを かえる"
 }
 
 function el(tag, className, text = "") {

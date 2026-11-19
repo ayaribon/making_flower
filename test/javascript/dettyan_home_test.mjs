@@ -208,3 +208,17 @@ test("しまう／だす は Sprout の 家具 だけ（つくえ・パソコン
   assert.equal(home.isShown(s, "sofa"), true)
   assert.equal(home.toggleShown(s, "desk"), false)
 })
+
+test("いれかえる：ゆかの 家具 どうし だけ。2回 いれかえると もとどおり", () => {
+  const s = houseState()
+  for (const id of ["bed", "sofa", "picture"]) home.buyFurniture(s, id)
+  assert.equal(home.placeOf(s, "bed"), "bed")
+  assert.equal(home.swapPlaces(s, "bed", "sofa"), true)
+  assert.equal(home.placeOf(s, "bed"), "sofa")
+  assert.equal(home.placeOf(s, "sofa"), "bed")
+  assert.equal(home.swapPlaces(s, "bed", "picture"), false) // かべの え は いれかえ ない
+  assert.equal(home.swapPlaces(s, "bed", "chest"), false)   // もっていない
+  assert.equal(home.swapPlaces(s, "sofa", "bed"), true)
+  assert.equal(home.placeOf(s, "bed"), "bed")
+  assert.equal(home.placeOf(s, "sofa"), "sofa")
+})

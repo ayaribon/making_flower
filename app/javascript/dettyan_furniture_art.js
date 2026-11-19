@@ -1,9 +1,9 @@
 // 🛋️ Sprout の 家具 を へや（128×96 ドット）に 描く（家具の 表は dettyan_home.js の FURNITURE）
 // - 素材は 買った もの（Sprout Lands・Sprout Sorry pack）。公開リポジトリには 入れない（S3 の game_assets/。GameAsset の キー）
-// - おく場所は きまっている（PLACES）。かべ・ゆかに しく もの は うごかない 絵（createRoom の あとに 1回）、
+// - おく場所は きまっている（PLACES。ゆかの ものは いれかえ できる）。かべ・ゆかに しく もの は うごかない 絵（createRoom の あとに 1回）、
 //   ゆかに おく もの は Dettyan と 前後が 入れかわる ので、足もとの 高さ（base）の 順に 毎コマ 描く
 // - 絵は 時間 t だけで きまる（ツリーの キラキラ・かぼちゃの ゆらぎ）
-import { furnitureOpt } from "dettyan_home"
+import { furnitureOpt, placeOf } from "dettyan_home"
 
 // 素材の 中の 場所（x, y, w, h）
 const WOOD_ROW = 32 // new Wooden Furniture.png は 木の 色 ごとに 32 ドット ずつ 下へ（さくら・しらかば・オーク・くるみ）
@@ -28,11 +28,13 @@ const SNOWMAN = [128, 64, 16, 32]
 const PRESENT = { x: 96, y: 96, w: 16, h: 16 }
 
 // へやの どこに おくか（x：左はし、base：足もと＝絵の 下の はし。かべの もの は top）
+//   ゆかに おく もの（FLOOR）は「おき場所」。ほかの 家具と いれかえ られる（s.home.place。dettyan_home.js の placeOf）
+//   いれかえた ときは、おき場所の まんなかに 足もとを そろえて おく
 export const PLACES = {
   picture: { right: 127, top: 12 },
   flower: { x: 24, base: 30 },  // まどべ
-  dresser: { x: 22, base: 47 }, // まどの 下
   mat: { x: 64, top: 77 },
+  dresser: { x: 22, base: 47 }, // まどの 下
   table: { x: 60, base: 88 },   // いす・テーブル・いす
   bed: { x: 0, base: 92 },
   sofa: { x: 101, base: 91 },
@@ -43,13 +45,34 @@ export const PLACES = {
   present: { x: 22, base: 76 }
 }
 
+// ゆかに おく 家具の 大きさ（はば・たかさ）
+const SIZE = {
+  dresser: [14, 16], table: [33, 14], bed: [14, 22], sofa: [25, 15], chest: [16, 14],
+  pumpkin: [16, 15], snowman: [16, 32], xmas_tree: [39, 53], present: [16, 16]
+}
+
 function blit(g, img, [sx, sy, w, h], dx, dy) {
   if (img) g.drawImage(img, sx, sy, w, h, Math.round(dx), Math.round(dy), w, h)
 }
 
 const woodRect = (rect, wood) => [rect[0], rect[1] + wood * WOOD_ROW, rect[2], rect[3]]
 
-// うごかない もの（かべ・まどべ・ゆかに しく もの）。f：出して いる 家具 { id: true }、home：セーブの s（色・がら）
+// いま どこに あるか（左上 x・y と はば・たかさ）。もようがえ で えらんだ 家具の しるし に つかう
+export function furnitureBox(s, id) {
+  if (SIZE[id]) {
+    const slot = placeOf(s, id)
+    const P = PLACES[slot]
+    const [w, h] = SIZE[id]
+    const x = Math.round(P.x + SIZE[slot][0] / 2 - w / 2)
+    return { x, y: P.base - h, w, h }
+  }
+  if (id === "picture") return { x: PLACES.picture.right - 15, y: PLACES.picture.top, w: 15, h: 8 }
+  if (id === "flower") return { x: PLACES.flower.x, y: PLACES.flower.base - 15, w: 11, h: 15 }
+  if (id === "mat") return { x: PLACES.mat.x, y: PLACES.mat.top, w: 24, h: 13 }
+  return null
+}
+
+// うごかない もの（かべ・ゆかに しく もの）。f：出して いる 家具 { id: true }、s：セーブ（色・がら）
 export function drawFurnitureBack(g, sp, s, f) {
   if (!sp) return
   if (f.mat && sp.furniture) {
@@ -60,66 +83,60 @@ export function drawFurnitureBack(g, sp, s, f) {
     const r = BASIC.picture[furnitureOpt(s, "picture", "picture")]
     blit(g, sp.furniture, r, PLACES.picture.right - r[2], PLACES.picture.top)
   }
-  if (f.dresser && sp.furn_wood) {
-    const r = woodRect(WOOD.dresser, furnitureOpt(s, "dresser", "wood"))
-    blit(g, sp.furn_wood, r, PLACES.dresser.x, PLACES.dresser.base - r[3])
-  }
 }
 
-// ゆかに おく もの：[{ y: 足もと, draw }]（呼んだ 側が Dettyan と いっしょに y の 順に 描く）
-export function furnitureLayers(g, sp, s, f, t) {
-  const out = []
-  if (!sp) return out
-  const at = (id, draw) => out.push({ y: PLACES[id].base, draw })
-  // まどべの 花：まどの 外（空）は 毎コマ 描く ので、その あとに
-  if (f.flower && sp.furniture) at("flower", () => {
-    const r = BASIC.flower[furnitureOpt(s, "flower", "flower")]
-    blit(g, sp.furniture, r, PLACES.flower.x, PLACES.flower.base - r[3])
-  })
-  if (f.bed && sp.furn_wood) at("bed", () => {
-    const wood = furnitureOpt(s, "bed", "wood")
+// ゆかに おく 家具 を (x, base) に 描く
+const FLOOR_DRAW = {
+  dresser: (g, sp, s, x, base) => sp.furn_wood && blit(g, sp.furn_wood, woodRect(WOOD.dresser, furnitureOpt(s, "dresser", "wood")), x, base - 16),
+  bed: (g, sp, s, x, base) => {
+    if (!sp.furn_wood) return
     const cover = furnitureOpt(s, "bed", "cover")
-    const r = woodRect([WOOD.bed[0] + cover * 16, WOOD.bed[1], WOOD.bed[2], WOOD.bed[3]], wood)
-    blit(g, sp.furn_wood, r, PLACES.bed.x, PLACES.bed.base - r[3])
-  })
-  if (f.table && sp.furn_wood) at("table", () => {
+    const r = woodRect([WOOD.bed[0] + cover * 16, WOOD.bed[1], WOOD.bed[2], WOOD.bed[3]], furnitureOpt(s, "bed", "wood"))
+    blit(g, sp.furn_wood, r, x, base - r[3])
+  },
+  table: (g, sp, s, x, base) => {
+    if (!sp.furn_wood) return
     const wood = furnitureOpt(s, "table", "wood")
-    const { x, base } = PLACES.table
     const cr = woodRect(WOOD.chairR, wood)
     const tb = woodRect(WOOD.table, wood)
     const cl = woodRect(WOOD.chairL, wood)
     blit(g, sp.furn_wood, cr, x, base - cr[3])
     blit(g, sp.furn_wood, cl, x + cr[2] + tb[2] - 1, base - cl[3])
     blit(g, sp.furn_wood, tb, x + cr[2] - 1, base - tb[3])
-  })
-  if (f.sofa && sp.furn_wood) at("sofa", () => {
-    const r = woodRect(WOOD.sofa, furnitureOpt(s, "sofa", "wood"))
-    blit(g, sp.furn_wood, r, PLACES.sofa.x, PLACES.sofa.base - r[3])
-  })
-  if (f.chest) {
+  },
+  sofa: (g, sp, s, x, base) => sp.furn_wood && blit(g, sp.furn_wood, woodRect(WOOD.sofa, furnitureOpt(s, "sofa", "wood")), x, base - 15),
+  chest: (g, sp, s, x, base) => {
     const img = sp[CHEST_KEYS[furnitureOpt(s, "chest", "chestWood")]] || sp.chest_oak
-    if (img) at("chest", () => blit(g, img, CHEST, PLACES.chest.x, PLACES.chest.base - CHEST[3]))
+    blit(g, img, CHEST, x, base - CHEST[3])
+  },
+  pumpkin: (g, sp, s, x, base, t) => sp.deco_pumpkin && blit(g, sp.deco_pumpkin, [(Math.floor(t * 4) % PUMPKIN.frames) * 16, PUMPKIN.y, PUMPKIN.w, PUMPKIN.h], x, base - PUMPKIN.h),
+  snowman: (g, sp, s, x, base) => sp.deco_winter && blit(g, sp.deco_winter, SNOWMAN, x, base - SNOWMAN[3]),
+  xmas_tree: (g, sp, s, x, base, t) => sp.deco_tree && blit(g, sp.deco_tree, [TREE.x + (Math.floor(t * 5) % TREE.frames) * TREE.step, TREE.y, TREE.w, TREE.h], x, base - TREE.h),
+  present: (g, sp, s, x, base) => sp.deco_winter && blit(g, sp.deco_winter, [PRESENT.x + furnitureOpt(s, "present", "present") * 16, PRESENT.y, PRESENT.w, PRESENT.h], x, base - PRESENT.h)
+}
+
+// ゆかに おく もの：[{ y: 足もと, draw }]（呼んだ 側が Dettyan と いっしょに y の 順に 描く）
+export function furnitureLayers(g, sp, s, f, t) {
+  const out = []
+  if (!sp) return out
+  // まどべの 花：まどの 外（空）は 毎コマ 描く ので、その あとに
+  if (f.flower && sp.furniture) out.push({ y: PLACES.flower.base, draw: () => {
+    const r = BASIC.flower[furnitureOpt(s, "flower", "flower")]
+    blit(g, sp.furniture, r, PLACES.flower.x, PLACES.flower.base - r[3])
+  } })
+  for (const id of Object.keys(FLOOR_DRAW)) {
+    if (!f[id]) continue
+    const box = furnitureBox(s, id)
+    out.push({ y: box.y + box.h, draw: () => FLOOR_DRAW[id](g, sp, s, box.x, box.y + box.h, t) })
   }
-  if (f.pumpkin && sp.deco_pumpkin) at("pumpkin", () => {
-    const k = Math.floor(t * 4) % PUMPKIN.frames
-    blit(g, sp.deco_pumpkin, [k * 16, PUMPKIN.y, PUMPKIN.w, PUMPKIN.h], PLACES.pumpkin.x, PLACES.pumpkin.base - PUMPKIN.h)
-  })
-  if (f.snowman && sp.deco_winter) at("snowman", () => blit(g, sp.deco_winter, SNOWMAN, PLACES.snowman.x, PLACES.snowman.base - SNOWMAN[3]))
-  if (f.xmas_tree && sp.deco_tree) at("xmas_tree", () => {
-    const k = Math.floor(t * 5) % TREE.frames
-    blit(g, sp.deco_tree, [TREE.x + k * TREE.step, TREE.y, TREE.w, TREE.h], PLACES.xmas_tree.x, PLACES.xmas_tree.base - TREE.h)
-  })
-  if (f.present && sp.deco_winter) at("present", () => {
-    const v = furnitureOpt(s, "present", "present")
-    blit(g, sp.deco_winter, [PRESENT.x + v * 16, PRESENT.y, PRESENT.w, PRESENT.h], PLACES.present.x, PLACES.present.base - PRESENT.h)
-  })
   return out
 }
 
 // ショップの 小さな 絵（いまの 色・がら で）。なければ null
-export function furnitureIcon(sp, s, id) {
+//   over：ためしの 色・がら（{ wood: 2 } など。もようがえ の 色の ボタン）
+export function furnitureIcon(sp, s, id, over = null) {
   if (!sp) return null
-  const opt = (key) => furnitureOpt(s, id, key)
+  const opt = (key) => over?.[key] ?? furnitureOpt(s, id, key)
   const pick = {
     bed: () => sp.furn_wood && [sp.furn_wood, woodRect([WOOD.bed[0] + opt("cover") * 16, WOOD.bed[1], WOOD.bed[2], WOOD.bed[3]], opt("wood"))],
     dresser: () => sp.furn_wood && [sp.furn_wood, woodRect(WOOD.dresser, opt("wood"))],

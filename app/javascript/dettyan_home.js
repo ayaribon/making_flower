@@ -2,7 +2,7 @@
 // - さいしょは 家がなくて テントで 野宿。お金を ためて マイホーム を買うと、いまの へや に すめる
 // - 家具は 1つずつ買って、へや に おかれる（おく場所は きまっている。絵は dettyan_room.js と dettyan_furniture_art.js）
 // - ここは「セーブの state をどう変えるか」だけを書く。保存は呼んだ側が store.update(...) の中で行う
-// 家具を増やすときは FURNITURE に1つ足して、dettyan_room.js に その絵を足す（id はセーブに入るので、あとから変えない）
+// 家具を増やすときは FURNITURE に1つ足して、dettyan_room.js（Sprout の 家具は dettyan_furniture_art.js）に その絵を足す（id はセーブに入るので、あとから変えない）
 
 export const HOUSE = { id: "house", name: "マイホーム", icon: "🏠", price: 3000, desc: "はじまりのまち の ちいさな いえ。家具を おけるようになる" }
 
@@ -22,20 +22,21 @@ export const FURNITURE = [
   { id: "rec", name: "REC ランプ", icon: "🔴", price: 700, desc: "歌うと つく" },
   { id: "pc", name: "パソコン", icon: "💻", price: 4000, needs: ["desk"], desc: "つくえ と いす で、へんしゅう や 配信が できる" },
   // 🌱 Sprout の 家具（2026-11-19 に ayaribon。絵は dettyan_furniture_art.js、素材は art の キー が そろって いる ときだけ 売る）
-  //   opts：買った あとで えらべる 色・がら（s.home.opts）。sprout：しまう／だす が できる（s.home.hidden）
-  { id: "bed", name: "ベッド", icon: "🛏️", price: 2000, sprout: true, art: ["furn_wood"], opts: ["wood", "cover"], desc: "ふかふか。木の 色 と ふとん を えらべる" },
-  { id: "dresser", name: "たんす", icon: "🗄️", price: 1500, sprout: true, art: ["furn_wood"], opts: ["wood"], desc: "まどの 下に おく" },
-  { id: "table", name: "テーブル と いす", icon: "🍽️", price: 1800, sprout: true, art: ["furn_wood"], opts: ["wood"], desc: "ふたりぶんの いす つき" },
-  { id: "sofa", name: "ソファ", icon: "🛋️", price: 2500, sprout: true, art: ["furn_wood"], opts: ["wood"], desc: "へやの すみに おく" },
-  { id: "chest", name: "たからばこ", icon: "🧰", price: 1200, sprout: true, art: ["chest_oak"], opts: ["chestWood"], desc: "なにが 入って いるかは ないしょ" },
+  //   opts：買った あとで えらべる 色・がら（s.home.opts）。sprout：おく／おかない が できる（s.home.hidden）
+//   spot："floor" は ゆかに おく もの。ほかの floor の 家具と おき場所を いれかえ られる（s.home.place）
+  { id: "bed", spot: "floor", name: "ベッド", icon: "🛏️", price: 2000, sprout: true, art: ["furn_wood"], opts: ["wood", "cover"], desc: "ふかふか。木の 色 と ふとん を えらべる" },
+  { id: "dresser", spot: "floor", name: "たんす", icon: "🗄️", price: 1500, sprout: true, art: ["furn_wood"], opts: ["wood"], desc: "まどの 下に おく" },
+  { id: "table", spot: "floor", name: "テーブル と いす", icon: "🍽️", price: 1800, sprout: true, art: ["furn_wood"], opts: ["wood"], desc: "ふたりぶんの いす つき" },
+  { id: "sofa", spot: "floor", name: "ソファ", icon: "🛋️", price: 2500, sprout: true, art: ["furn_wood"], opts: ["wood"], desc: "へやの すみに おく" },
+  { id: "chest", spot: "floor", name: "たからばこ", icon: "🧰", price: 1200, sprout: true, art: ["chest_oak"], opts: ["chestWood"], desc: "なにが 入って いるかは ないしょ" },
   { id: "flower", name: "はなの はちうえ", icon: "🌼", price: 300, sprout: true, art: ["furniture"], opts: ["flower"], desc: "まどべに かざる" },
   { id: "picture", name: "かべの え", icon: "🖼️", price: 500, sprout: true, art: ["furniture"], opts: ["picture"], desc: "かべに かける" },
   { id: "mat", name: "しきもの", icon: "🟩", price: 600, sprout: true, art: ["furniture"], opts: ["mat"], desc: "テーブルの 下に しく" },
   // 🎃🎄 きせつ げんてい：その きかん だけ 買える。買った ものは ずっと もっていられる（しまう／だす も できる）
-  { id: "pumpkin", name: "かぼちゃ ランタン", icon: "🎃", price: 800, sprout: true, season: "halloween", art: ["deco_pumpkin"], desc: "ハロウィンの かざり。ゆらゆら ひかる" },
-  { id: "xmas_tree", name: "クリスマスツリー", icon: "🎄", price: 2500, sprout: true, season: "xmas", art: ["deco_tree"], desc: "キラキラ ひかる" },
-  { id: "present", name: "プレゼントの はこ", icon: "🎁", price: 500, sprout: true, season: "xmas", art: ["deco_winter"], opts: ["present"], desc: "ツリーの そばに おく" },
-  { id: "snowman", name: "ゆきだるま", icon: "⛄", price: 1000, sprout: true, season: "winter", art: ["deco_winter"], desc: "へやの 中でも とけない" }
+  { id: "pumpkin", spot: "floor", name: "かぼちゃ ランタン", icon: "🎃", price: 800, sprout: true, season: "halloween", art: ["deco_pumpkin"], desc: "ハロウィンの かざり。ゆらゆら ひかる" },
+  { id: "xmas_tree", spot: "floor", name: "クリスマスツリー", icon: "🎄", price: 2500, sprout: true, season: "xmas", art: ["deco_tree"], desc: "キラキラ ひかる" },
+  { id: "present", spot: "floor", name: "プレゼントの はこ", icon: "🎁", price: 500, sprout: true, season: "xmas", art: ["deco_winter"], opts: ["present"], desc: "ツリーの そばに おく" },
+  { id: "snowman", spot: "floor", name: "ゆきだるま", icon: "⛄", price: 1000, sprout: true, season: "winter", art: ["deco_winter"], desc: "へやの 中でも とけない" }
 ]
 
 // 🎨 えらべる 色・がら（いちばん 前が 買った ときの もの）
@@ -114,6 +115,23 @@ export function toggleShown(s, id) {
   s.home.hidden = { ...(s.home.hidden || {}) }
   if (s.home.hidden[id]) delete s.home.hidden[id]
   else s.home.hidden[id] = true
+  return true
+}
+
+// 🔁 おき場所（ゆかの 家具）：いれかえて いなければ じぶんの 場所（id）
+export function placeOf(s, id) {
+  const p = s.home?.place?.[id]
+  return typeof p === "string" && findFurniture(p)?.spot === "floor" ? p : id
+}
+
+// a と b の おき場所を いれかえる（どちらも 持っている ゆかの 家具）
+export function swapPlaces(s, a, b) {
+  const A = findFurniture(a)
+  const B = findFurniture(b)
+  if (a === b || A?.spot !== "floor" || B?.spot !== "floor" || !hasFurniture(s, a) || !hasFurniture(s, b)) return false
+  const pa = placeOf(s, a)
+  const pb = placeOf(s, b)
+  s.home.place = { ...(s.home.place || {}), [a]: pb, [b]: pa }
   return true
 }
 

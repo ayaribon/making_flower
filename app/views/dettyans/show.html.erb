@@ -29,15 +29,12 @@
       <canvas class="dt-room" data-dettyan-game-target="canvas" data-action="pointerdown->dettyan-game#tap" role="img" aria-label="事務所の部屋を歩く Dettyan"></canvas>
       <div class="dt-bubble" data-dettyan-game-target="bubble" hidden></div>
       <div class="dt-toast" data-dettyan-game-target="toast" role="status" hidden></div>
-      <%# 🎨 もようがえ：家具の 色・がら を へや で 見ながら かえて「これで けってい！」（dettyan_game_controller.js の startDecor） %>
+      <%# 🛋️ もようがえ（dettyan_game_controller.js の startDecor）：えらんだ 家具の 色・おく／おかない・いれかえる %>
       <div class="dt-decor" data-dettyan-game-target="decor" hidden>
         <div class="dt-decor__name" data-dettyan-game-target="decorName"></div>
-        <div class="dt-decor__buttons" data-dettyan-game-target="decorButtons"></div>
-        <div class="dt-decor__end">
-          <button type="button" class="dt-decor__cancel" data-action="dettyan-game#decorCancel">もどす</button>
-          <button type="button" class="dt-decor__ok" data-action="dettyan-game#decorOk">これで けってい！</button>
-        </div>
+        <div class="dt-decor__body" data-dettyan-game-target="decorBody"></div>
       </div>
+      <button type="button" class="dt-decor-open" data-dettyan-game-target="decorOpenButton" data-action="dettyan-game#decorFromScreen" hidden>🛋️<span>もようがえ</span></button>
 
       <%# おせわのメニュー（Dettyan をタップすると出る） %>
       <div class="dt-care" data-dettyan-game-target="menu" hidden>
@@ -79,6 +76,12 @@
     <div class="dt-cmd" data-dettyan-game-target="cmd" hidden>
       <div class="dt-cmd__status" data-dettyan-game-target="cmdStatus" role="status"></div>
       <div class="dt-cmd__buttons" data-dettyan-game-target="cmdButtons"></div>
+    </div>
+
+    <%# 🛋️ もようがえ中は、下の ボタンの 代わりに 家具の ならび（タップで えらぶ・もう1回で おく／おかない） %>
+    <div class="dt-decobar" data-dettyan-game-target="decoBar" hidden>
+      <div class="dt-decobar__list" data-dettyan-game-target="decoList"></div>
+      <button type="button" class="dt-decobar__done" data-action="dettyan-game#decorDone">✅<span>おわる</span></button>
     </div>
 
     <div class="dt-actions">
