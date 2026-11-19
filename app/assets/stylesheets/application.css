@@ -1243,6 +1243,9 @@ button.studio-size-badge {
   font-weight: bold;
 }
 .studio-colorkey-ai { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.studio-colorkey-ai.is-three { grid-template-columns: 1fr 1fr 1fr; }
+.studio-colorkey-shape { display: grid; gap: 6px; }
+.studio-colorkey-shape[hidden] { display: none; }
 .studio-colorkey-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
 .studio-colorkey-done { font-weight: bold; }
 
@@ -2217,3 +2220,10 @@ ul.auth-alert { padding-left: 28px; }
 /* テンプレのカードの右上に × を出す（マイ素材の × と同じ見た目） */
 .studio-template-card { position: relative; }
 .studio-template-card .studio-my-delete { z-index: 1; }
+
+/* ⭐ マイテンプレに保存：PC（広い画面）では ことばを ぜんぶ、タブレットくらいでは みじかく（スマホは ⭐ だけ） */
+.studio-history-button .studio-label-short { display: none; }
+@media (min-width: 481px) and (max-width: 1000px) {
+  .studio-history-button .studio-label-long { display: none; }
+  .studio-history-button .studio-label-short { display: inline; }
+}

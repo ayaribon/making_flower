@@ -62,7 +62,7 @@
     </div>
     <div class="studio-header-actions">
       <button type="button" class="studio-history-button" title="マイテンプレに保存"
-        data-action="click->canvas-editor#openMySaveDialog">⭐<span>マイ保存</span></button>
+        data-action="click->canvas-editor#openMySaveDialog">⭐<span class="studio-label-long">マイテンプレに保存</span><span class="studio-label-short">マイ保存</span></button>
       <button type="button" class="studio-history-button" title="元に戻す（Ctrl+Z）"
         data-canvas-editor-target="undoButton"
         data-action="click->canvas-editor#undo" disabled>↩️<span>戻す</span></button>
@@ -496,6 +496,8 @@
               data-action="click->canvas-editor#chooseColorKeyTool">🛡 守る</button>
             <button type="button" data-tool="all" data-canvas-editor-target="colorKeyToolButton"
               data-action="click->canvas-editor#chooseColorKeyTool">🌈 色で消す</button>
+            <button type="button" data-tool="shape" data-canvas-editor-target="colorKeyToolButton"
+              data-action="click->canvas-editor#chooseColorKeyTool">✂️ かこむ</button>
           </div>
             <button type="button" class="studio-colorkey-fold"
               data-canvas-editor-target="colorKeyFoldButton"
@@ -507,6 +509,25 @@
               data-action="click->canvas-editor#chooseAiSign">＋ 足す</button>
             <button type="button" data-sign="minus" data-canvas-editor-target="colorKeyAiSign"
               data-action="click->canvas-editor#chooseAiSign">− 外す</button>
+          </div>
+          <!-- ✂️ かこむ：かたち（しかく・まる・てん）と、なか／そと の どちらを消すか -->
+          <div class="studio-colorkey-shape" data-canvas-editor-target="colorKeyShapeRow" hidden>
+            <div class="studio-colorkey-ai is-three">
+              <button type="button" data-shape="rect" data-canvas-editor-target="colorKeyShapeButton"
+                data-action="click->canvas-editor#chooseColorKeyShape">⬜ しかく</button>
+              <button type="button" data-shape="ellipse" data-canvas-editor-target="colorKeyShapeButton"
+                data-action="click->canvas-editor#chooseColorKeyShape">⚪ まる</button>
+              <button type="button" data-shape="poly" data-canvas-editor-target="colorKeyShapeButton"
+                data-action="click->canvas-editor#chooseColorKeyShape">📍 てん</button>
+            </div>
+            <div class="studio-colorkey-ai">
+              <button type="button" data-side="in" data-canvas-editor-target="colorKeySideButton"
+                data-action="click->canvas-editor#chooseColorKeySide">なかを 消す</button>
+              <button type="button" data-side="out" data-canvas-editor-target="colorKeySideButton"
+                data-action="click->canvas-editor#chooseColorKeySide">そとを 消す</button>
+            </div>
+            <button type="button" class="studio-panel-close" data-canvas-editor-target="colorKeyPolyClose" hidden
+              data-action="click->canvas-editor#closeColorKeyPoly">✓ ここで かこむ</button>
           </div>
           <!-- ▾でしまえるところ：説明とスライダー -->
           <div class="studio-colorkey-details" data-canvas-editor-target="colorKeyDetails">

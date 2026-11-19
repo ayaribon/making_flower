@@ -11,6 +11,9 @@ config.configure({ enableGLFiltering: false })
 //   { act: "all", x, y }                           🌈 タップした所と似た色を、画像の中から全部消す
 //   { act: "protect", r, pts: [...] }              🛡 なぞった所は、🌈で消えないようにする（順番は関係なし）
 //   { act: "ai", src }                             ✨ AI が選んだ形（PNG）を残す（最初の1回で、ほかは全部消える）
+//   { act: "shape", shape, out, pts }              ✂️ 図形で かこむ。shape：rect（しかく）・ellipse（まる）は pts = [x0, y0, x1, y1]（かど と かど）、
+//                                                     poly（てん で かこむ）は pts = [x0, y0, x1, y1, …]（3つ以上）。
+//                                                     out：false なら かこんだ なかを 消す、true なら そとを 消す
 // r：ブラシの半径（画像の長い辺に対する割合）
 // strength：🌈で、どこまで似た色を同じとみなすか（1〜80。RGB それぞれの差が strength × 2.55 まで）
 // preview：true の間は、消える所をうっすら見せる（編集中だけ。defaults に入れないので保存されない）
@@ -84,6 +87,14 @@ export class ColorKey extends filters.BaseFilter {
         ctx.drawImage(this.sharpenMask(mask, w, h), 0, 0, w, h)
         continue
       }
+      if (act === "shape") {
+        if (!this.shapePath(ctx, op, w, h)) continue
+        // なかを消す：かこんだ所を ぬく／そとを消す：かこんだ所 だけ のこす
+        ctx.globalCompositeOperation = op.out ? "destination-in" : "destination-out"
+        ctx.fill()
+        ctx.globalCompositeOperation = "source-over"
+        continue
+      }
       if (!Array.isArray(op.pts) || op.pts.length < 2) continue
       // 🖌 残す：最初の1回で、なぞっていない所を全部消す
       if (act === "keep" && !kept) {
@@ -121,6 +132,30 @@ export class ColorKey extends filters.BaseFilter {
         data[j + 2] = Math.round(data[j + 2] * 0.7 + 219 * 0.3)
       }
     }
+  }
+
+  // ✂️ 図形の 形を ctx の パス に する（描けないときは false）
+  shapePath(ctx, op, w, h) {
+    const p = op.pts
+    if (!Array.isArray(p)) return false
+    ctx.beginPath()
+    if (op.shape === "rect" || op.shape === "ellipse") {
+      if (p.length < 4) return false
+      const x0 = Math.min(p[0], p[2]) * w, x1 = Math.max(p[0], p[2]) * w
+      const y0 = Math.min(p[1], p[3]) * h, y1 = Math.max(p[1], p[3]) * h
+      if (x1 - x0 < 1 || y1 - y0 < 1) return false
+      if (op.shape === "rect") ctx.rect(x0, y0, x1 - x0, y1 - y0)
+      else ctx.ellipse((x0 + x1) / 2, (y0 + y1) / 2, (x1 - x0) / 2, (y1 - y0) / 2, 0, 0, Math.PI * 2)
+      return true
+    }
+    if (op.shape === "poly") {
+      if (p.length < 6) return false
+      ctx.moveTo(p[0] * w, p[1] * h)
+      for (let k = 2; k < p.length; k += 2) ctx.lineTo(p[k] * w, p[k + 1] * h)
+      ctx.closePath()
+      return true
+    }
+    return false
   }
 
   // なぞった線を型紙に描く（1点だけのときは丸を描く）
