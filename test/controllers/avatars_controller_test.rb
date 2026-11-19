@@ -191,6 +191,13 @@ class AvatarsControllerTest < ActionDispatch::IntegrationTest
     assert_equal %w[dress none glasses], user.reload.avatar.values_at("costume", "hat", "accessory")
   end
 
+  test "まち：キャラが ある人の ボタンは「きがえる」" do
+    user = login_as("avkigae")
+    user.update!(avatar: { "hs" => "manbun" })
+    get root_path
+    assert_select "a.hm-avatar-link", text: /きがえる/
+  end
+
   test "😊 顔の パーツ（め・まゆげ・くち・ほっぺ・ひげ）を 保存できる" do
     user = login_as("avface")
     patch avatar_path, params: { avatar: { eye_style: "smile", brows: "normal", mouth: "small", cheeks: "pink", beard: "chin" } }, as: :json

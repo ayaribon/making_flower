@@ -59,7 +59,7 @@
           <p class="hm-hello"><%= current_user.display_label %> さん、うぇるかむ ✨</p>
         </div>
         <div class="hm-hud__right">
-          <a class="hm-hud__btn hm-avatar-link" href="<%= avatar_path %>" data-turbo="false">👤 キャラを <%= current_user.avatar ? "かえる" : "つくる" %></a>
+          <a class="hm-hud__btn hm-avatar-link" href="<%= avatar_path %>" data-turbo="false"><%= current_user.avatar ? "👕 きがえる" : "👤 キャラを つくる" %></a>
           <button type="button" class="hm-hud__btn hm-town__guide-btn" data-action="town#startGuide">❓ あんない</button>
           <%= button_to "📋 かんたんメニュー", home_mode_path(mode: "simple"), method: :patch, class: "hm-hud__btn", form: { class: "hm-hud__form", data: { turbo: false } } %>
           <details class="hm-hud__more">
