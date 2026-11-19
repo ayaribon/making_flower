@@ -196,6 +196,34 @@
 .dt-sheet__wide { display: block; width: 100%; margin: 6px 0 4px; }
 
 /* そうび：いまの すがた と つよさ */
+/* 👀 ショップの そうび：ためしに 身につけた すがた（上に くっつく パネル。dettyan_game_controller.js の tryOnPanel） */
+.dt-try {
+  position: sticky; top: 44px; z-index: 1; display: flex; align-items: center; gap: 8px;
+  margin: 2px 0 6px; padding: 8px; border-radius: 12px; background: #3a2817; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+}
+.dt-try__fig { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: none; }
+.dt-try__me {
+  width: 72px; height: 74px; border-radius: 10px; border: 2px solid transparent;
+  background: radial-gradient(circle at 50% 70%, #f6ecd8 0%, #d9c3a0 100%);
+  image-rendering: crisp-edges; image-rendering: pixelated;
+}
+.dt-try__fig.is-main .dt-try__me { width: 104px; height: 107px; border-color: #ffb347; }
+.dt-try__label { font-size: 0.72rem; font-weight: 700; opacity: 0.85; }
+.dt-try__arrow { font-size: 1.1rem; opacity: 0.7; }
+.dt-try__hint { font-size: 0.8rem; opacity: 0.85; }
+.dt-try__info { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.dt-try__name { font-weight: 800; font-size: 0.85rem; }
+.dt-try__diffs { display: flex; flex-wrap: wrap; gap: 4px; }
+.dt-try__diff { font-size: 0.75rem; font-weight: 700; padding: 1px 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); }
+.dt-try__diff.is-up { background: rgba(110, 210, 120, 0.25); color: #b9f5bf; }
+.dt-try__diff.is-down { background: rgba(240, 110, 110, 0.25); color: #ffc2c2; }
+.dt-try__close { min-height: 30px; padding: 2px 12px; border: 0; border-radius: 999px; cursor: pointer; background: rgba(255, 255, 255, 0.16); color: #fff; font: inherit; font-size: 0.75rem; font-weight: 700; }
+.dt-item__buttons { flex: none; display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+.dt-item__try {
+  min-height: 32px; padding: 2px 10px; border: 0; border-radius: 999px; cursor: pointer; touch-action: manipulation;
+  background: rgba(255, 255, 255, 0.14); color: #fff; font: inherit; font-size: 0.78rem; font-weight: 700;
+}
+.dt-item__try.is-on { background: #ffe1b0; color: #2a1c12; }
 .dt-gear-top { display: flex; align-items: center; gap: 14px; padding: 8px 4px 4px; }
 .dt-gear-top__me {
   width: 90px; height: 93px; flex: none; border-radius: 12px;

@@ -790,6 +790,7 @@ export default class extends Controller {
     this.sound.se("tap")
     this.hideMenu()
     this.sheetMode = "shop"
+    this.tryGearId = null // 👀 ためす は ひらく たびに もどす
     this.renderSheet()
     this.sheetTarget.hidden = false
   }
@@ -822,6 +823,7 @@ export default class extends Controller {
 
   // いしょう：パーツごとに。持っているものは「そうびする」
   renderWearShop(list, s) {
+    list.append(this.tryOnPanel(s))
     for (const slot of SLOTS) {
       const items = shopGear().filter((g) => g.slot === slot.id)
       if (!items.length) continue
@@ -842,9 +844,71 @@ export default class extends Controller {
         }
         button.type = "button"
         button.dataset.dettyanGameIdParam = gear.id
-        list.append(gearRow(gear, sub, button))
+        // 👀 ためす：身につけた すがた を 上の パネルで 見る（買う まえに。2026-11-19 に ayaribon）
+        const trying = this.tryGearId === gear.id
+        const look = el("button", "dt-item__try" + (trying ? " is-on" : ""), trying ? "👀 みてる" : "👀 ためす")
+        look.type = "button"
+        look.setAttribute("aria-pressed", String(trying))
+        look.dataset.action = "dettyan-game#tryWear"
+        look.dataset.dettyanGameIdParam = gear.id
+        const buttons = el("div", "dt-item__buttons")
+        buttons.append(look, button)
+        list.append(gearRow(gear, sub, buttons))
       }
     }
+  }
+
+  // 👀 ためしに 身につけた すがた（いま ⇄ ためす）と、つよさ が どう かわるか
+  tryOnPanel(s) {
+    const panel = el("div", "dt-try")
+    const gear = this.tryGearId && findGear(this.tryGearId)
+    const figure = (label, set, main) => {
+      const box = el("div", "dt-try__fig" + (main ? " is-main" : ""))
+      const c = document.createElement("canvas")
+      c.className = "dt-try__me"
+      c.width = 30
+      c.height = 31
+      drawDressed(c.getContext("2d"), 5, 5, set)
+      box.append(c, el("div", "dt-try__label", label))
+      return box
+    }
+    const now = equipped(s)
+    if (!gear) {
+      panel.append(figure("いま", now, false), el("div", "dt-try__hint", "👀 ためす を おすと、身につけた すがた が ここに 出るよ"))
+      return panel
+    }
+    const tryState = { ...s, gear: { ...s.gear, [gear.slot]: gear.id } }
+    const after = equipped(tryState)
+    const arrow = el("div", "dt-try__arrow", "→")
+    const info = el("div", "dt-try__info")
+    info.append(el("div", "dt-try__name", `${gear.name}（${slotName(gear.slot)}）`))
+    const before = gearBonus(s)
+    const next = gearBonus(tryState)
+    const diffs = STATS.filter((st) => (next[st.id] || 0) !== (before[st.id] || 0)).map((st) => {
+      const d = (next[st.id] || 0) - (before[st.id] || 0)
+      return el("span", "dt-try__diff " + (d > 0 ? "is-up" : "is-down"), `${st.name} ${d > 0 ? "+" : ""}${d}`)
+    })
+    const line = el("div", "dt-try__diffs")
+    if (diffs.length) line.append(...diffs)
+    else line.append(el("span", "dt-try__diff", s.gear[gear.slot] === gear.id ? "いま そうび中" : "つよさ は かわらない"))
+    info.append(line)
+    const close = el("button", "dt-try__close", "もどす")
+    close.type = "button"
+    close.dataset.action = "dettyan-game#tryWear"
+    close.dataset.dettyanGameIdParam = gear.id
+    info.append(close)
+    panel.append(figure("いま", now, false), arrow, figure("ためす", after, true), info)
+    return panel
+  }
+
+  tryWear(event) {
+    const id = event.params.id
+    this.tryGearId = this.tryGearId === id ? null : id
+    this.sound.se("tap")
+    const list = this.sheetListTarget
+    const y = list.scrollTop
+    this.renderSheet()
+    list.scrollTop = y // パネルは 上に くっついて いる ので、ならびの 場所は そのまま
   }
 
   // 🏠 いえ・かぐ：さいしょは マイホーム だけ買える。家を買ったら 家具（買うと すぐ へや に おかれる）
