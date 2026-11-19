@@ -1,0 +1,22 @@
+<%# 📋 かんたんメニュー（カードだけの 画面）。町の 演出が いらない 人むけ。「🏘️ まちの 画面に もどる」で もどれる（えらんだ ほうは この ブラウザに おぼえる） %>
+<div class="hm" data-controller="main-menu">
+  <div class="hm-inner">
+    <header class="hm-header">
+      <p class="hm-eyebrow">KotoBouquet</p>
+      <h1 class="hm-title">メインメニュー</h1>
+      <p class="hm-hello"><%= current_user.display_label %> さん、うぇるかむ ✨</p>
+      <%= button_to "🏘️ まちの 画面に もどる", home_mode_path(mode: "town"), method: :patch, class: "hm-avatar-link hm-mode-back", form: { class: "hm-mode-form", data: { turbo: false } } %>
+    </header>
+
+    <%= render "menu_cards" %>
+
+    <footer class="hm-footer">
+      <% if current_user&.admin? %>
+        <%= link_to "🛠 管理画面", admin_users_path, class: "hm-link" %>
+      <% end %>
+      <%= link_to "🙏 クレジット", credits_path, class: "hm-link", data: { turbo: false } %>
+      <%= button_to "ログアウト", logout_path, method: :delete, class: "hm-link hm-link--button", form: { class: "hm-logout" } %>
+    </footer>
+  </div>
+  <%= render "splash" %>
+</div>

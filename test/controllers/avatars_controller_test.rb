@@ -121,6 +121,31 @@ class AvatarsControllerTest < ActionDispatch::IntegrationTest
     assert_nil user.reload.display_name, "display_name を 送らなければ かわらない"
   end
 
+  test "🏠 トップ：はじめは 画面いっぱいの まち。📋 かんたんメニュー に 切りかえると おぼえて、もどせる" do
+    login_as("avmode")
+    get root_path
+    assert_select ".hm--town [data-controller=town][data-town-full-value=true]"
+    assert_select "form[action='#{home_mode_path(mode: "simple")}']"
+
+    patch home_mode_path(mode: "simple")
+    assert_redirected_to root_path
+    get root_path
+    assert_response :success
+    assert_select "[data-controller=town]", 0
+    assert_select "nav.hm-menu:not([hidden])"
+    assert_select "[data-town-place]", 4
+    assert_select "form[action='#{home_mode_path(mode: "town")}']"
+    get root_path
+    assert_select "[data-controller=town]", 0, "つぎに 開いても かんたんメニュー の まま"
+
+    patch home_mode_path(mode: "town")
+    get root_path
+    assert_select "[data-controller=town]"
+    patch home_mode_path(mode: "<script>")
+    get root_path
+    assert_select "[data-controller=town]", 1, "へんな 値は まち"
+  end
+
   test "🙏 クレジット：ログインしなくても 見られる・トップから リンク" do
     get credits_path
     assert_response :success

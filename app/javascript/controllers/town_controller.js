@@ -43,7 +43,8 @@ export default class extends Controller {
     "sayForm", "sayInput", "sayButton", "sayStatus"
   ]
   // name：表示名（まちに 出る）。account：ログインの 呼び名（あんない を 見たか の しるし。表示名を かえても かわらない）
-  static values = { me: Object, name: String, account: String, others: Array, owner: Boolean, avatarUrl: String, sprites: Object }
+  // full：画面いっぱい（トップ）。画面の 形に あわせて 見せる はば を きめて、町を ぴったり おさめる
+  static values = { me: Object, name: String, account: String, others: Array, owner: Boolean, avatarUrl: String, sprites: Object, full: Boolean }
 
   connect() {
     const c = this.canvasTarget
@@ -117,12 +118,31 @@ export default class extends Controller {
 
   // 画面の はば に あわせて、見せる はば を きめる（広い画面は 町ぜんぶ）
   fitView() {
+    if (this.fullValue) return this.fitFull()
     const wide = this.element.clientWidth >= WIDE_PX
     const viewW = wide ? TOWN_W : VIEW_NARROW
     if (viewW === this.viewW) return
     this.viewW = viewW
     this.canvasTarget.width = viewW
     this.canvasTarget.style.aspectRatio = `${viewW} / ${TOWN_H}`
+    if (this.me) this.camX = this.cameraTarget()
+  }
+
+  // 画面いっぱい：画面の 横長さ に あわせて 見せる はば（120〜256）を きめ、町を 画面に ぴったり おさめる
+  fitFull() {
+    const W = this.element.clientWidth || 1
+    const H = this.element.clientHeight || 1
+    const viewW = Math.max(120, Math.min(TOWN_W, Math.round((TOWN_H * W) / H)))
+    const scale = Math.min(W / viewW, H / TOWN_H)
+    const section = this.canvasTarget.parentElement
+    section.style.width = `${Math.round(viewW * scale)}px`
+    section.style.height = `${Math.round(TOWN_H * scale)}px`
+    this.canvasTarget.style.height = "100%"
+    if (viewW === this.viewW) return
+    this.viewW = viewW
+    this.canvasTarget.width = viewW
+    this.canvasTarget.style.aspectRatio = `${viewW} / ${TOWN_H}`
+    this.lastCam = null
     if (this.me) this.camX = this.cameraTarget()
   }
 

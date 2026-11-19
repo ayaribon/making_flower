@@ -7,11 +7,22 @@ class HomesController < ApplicationController
   # Dettyan 本人は、キャラを つくるまでは 町の Dettyan（ドット絵）が かわり
   TOWN_OTHERS = 20
 
+  # 📋 かんたんメニュー か 🏘️ まち か（この ブラウザに おぼえる。cookie。DB は 使わない）
+  MODE_COOKIE = :home_mode
+
   def show
+    return render(:simple) if cookies[MODE_COOKIE] == "simple"
+
     @town_sprites = sprout_sprites
     @town_others = User.where.not(id: current_user.id).where.not(avatar: nil)
                        .order(updated_at: :desc).limit(TOWN_OTHERS)
                        .map { |u| { name: u.display_label, avatar: u.avatar } }
+  end
+
+  # PATCH /home/mode?mode=simple|town  えらんだ 画面を おぼえて トップに もどる
+  def mode
+    cookies.permanent[MODE_COOKIE] = { value: params[:mode] == "simple" ? "simple" : "town", same_site: :lax }
+    redirect_to root_path
   end
 
   private

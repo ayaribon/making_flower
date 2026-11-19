@@ -6,6 +6,8 @@ Rails.application.routes.draw do
   # 👤 キャラメイク（はじまりのまち の アバター）
   get   "avatar", to: "avatars#edit", as: :avatar
   patch "avatar", to: "avatars#update"
+  # 🏠 トップの 表示（🏘️ まち ／ 📋 かんたんメニュー）を 切りかえて おぼえる
+  patch "home/mode", to: "homes#mode", as: :home_mode
   # 🙏 クレジット（使っている 素材の 作者）
   get "credits", to: "credits#show", as: :credits
   # 🌱 買った 素材の 画像（Sprout Lands。本番は S3 から。ログインした人だけ）
