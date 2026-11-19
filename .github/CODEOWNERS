@@ -5,6 +5,7 @@
 * @ayaribon
 
 # 🧪 /lab の 区画の 中（lab/名前/ の 下）は「持ち主なし」＝ レビュー なしで いい（docs/lab/README.md）
+#   「いらない」だけで、ayaribon が レビュー・コメント する ことは いつでも できる
 #   持ち主を 書かない 行は、上の * を 打ち消して「持ち主なし」に する
 /app/controllers/lab/*/
 /app/models/lab/
