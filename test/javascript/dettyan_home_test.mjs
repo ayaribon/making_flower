@@ -151,3 +151,74 @@ test("マイホームは 💰3000。前の セーブ（version 5）の お金は
   assert.equal(migrate(s).money, 920) // 2回読んでも ふえない
   assert.equal(s.settings.battleSpeed, 1)
 })
+
+// 🛋️ Sprout の 家具・🎃🎄 きせつ げんてい（2026-11-19）
+const jst = (ymd) => new Date(`${ymd}T12:00:00+09:00`).getTime()
+const houseState = () => { const s = defaultState(); s.money = 99999; home.buyHouse(s); return s }
+
+test("きせつ：ハロウィンは 10月、クリスマスは 12/1〜12/25、ふゆ は 年を またぐ", () => {
+  assert.equal(home.inSeason("halloween", jst("2026-10-01")), true)
+  assert.equal(home.inSeason("halloween", jst("2026-11-01")), false)
+  assert.equal(home.inSeason("xmas", jst("2026-12-25")), true)
+  assert.equal(home.inSeason("xmas", jst("2026-12-26")), false)
+  assert.equal(home.inSeason("winter", jst("2027-01-15")), true)
+  assert.equal(home.inSeason("winter", jst("2026-03-01")), false)
+  // 日本の 日づけ で きまる（UTC では まだ 11/30 でも、日本は 12/1）
+  assert.equal(home.inSeason("xmas", new Date("2026-11-30T16:00:00Z").getTime()), true)
+})
+
+test("きせつ げんてい は きかん中 だけ 買える。買った ものは きかんの あとも もっている", () => {
+  const s = houseState()
+  assert.equal(home.buyFurniture(s, "pumpkin", jst("2026-11-19")).reason, "season")
+  const pumpkin = home.findFurniture("pumpkin")
+  assert.equal(home.shopVisible(s, pumpkin, jst("2026-11-19")), false)
+  assert.equal(home.buyFurniture(s, "pumpkin", jst("2026-10-20")).ok, true)
+  assert.equal(home.shopVisible(s, pumpkin, jst("2026-11-19")), true)
+  assert.equal(home.isShown(s, "pumpkin"), true)
+})
+
+test("素材が ない 家具は ショップに 出さない", () => {
+  const s = houseState()
+  const bed = home.findFurniture("bed")
+  assert.equal(home.shopVisible(s, bed, jst("2026-11-19"), (k) => k !== "furn_wood"), false)
+  assert.equal(home.shopVisible(s, bed, jst("2026-11-19"), () => true), true)
+})
+
+test("色・がら は 買った あとで えらべる。はんいの 外 や 持っていない 家具は かえない", () => {
+  const s = houseState()
+  assert.equal(home.furnitureOpt(s, "bed", "wood"), home.FURNITURE_OPTS.wood.start)
+  assert.equal(home.setFurnitureOpt(s, "bed", "wood", 3), false) // まだ 持っていない
+  home.buyFurniture(s, "bed")
+  assert.equal(home.setFurnitureOpt(s, "bed", "wood", 3), true)
+  assert.equal(home.setFurnitureOpt(s, "bed", "cover", 5), true)
+  assert.equal(home.setFurnitureOpt(s, "bed", "wood", 9), false)
+  assert.equal(home.setFurnitureOpt(s, "bed", "mat", 1), false) // ベッド に ない えらびかた
+  assert.equal(home.furnitureOpt(s, "bed", "wood"), 3)
+  assert.equal(home.furnitureOpt(s, "bed", "cover"), 5)
+})
+
+test("しまう／だす は Sprout の 家具 だけ（つくえ・パソコン は しまえない）", () => {
+  const s = houseState()
+  home.buyFurniture(s, "sofa")
+  home.buyFurniture(s, "desk")
+  assert.equal(home.toggleShown(s, "sofa"), true)
+  assert.equal(home.isShown(s, "sofa"), false)
+  assert.deepEqual(home.shownFurniture(s), { desk: true })
+  assert.equal(home.toggleShown(s, "sofa"), true)
+  assert.equal(home.isShown(s, "sofa"), true)
+  assert.equal(home.toggleShown(s, "desk"), false)
+})
+
+test("いれかえる：ゆかの 家具 どうし だけ。2回 いれかえると もとどおり", () => {
+  const s = houseState()
+  for (const id of ["bed", "sofa", "picture"]) home.buyFurniture(s, id)
+  assert.equal(home.placeOf(s, "bed"), "bed")
+  assert.equal(home.swapPlaces(s, "bed", "sofa"), true)
+  assert.equal(home.placeOf(s, "bed"), "sofa")
+  assert.equal(home.placeOf(s, "sofa"), "bed")
+  assert.equal(home.swapPlaces(s, "bed", "picture"), false) // かべの え は いれかえ ない
+  assert.equal(home.swapPlaces(s, "bed", "chest"), false)   // もっていない
+  assert.equal(home.swapPlaces(s, "sofa", "bed"), true)
+  assert.equal(home.placeOf(s, "bed"), "bed")
+  assert.equal(home.placeOf(s, "sofa"), "sofa")
+})

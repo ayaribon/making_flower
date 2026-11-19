@@ -13,7 +13,7 @@
          data-town-avatar-url-value="<%= avatar_path %>"
          data-town-sprites-value="<%= (@town_sprites || {}).to_json %>">
       <section class="hm-town" aria-label="はじまりのまち">
-        <canvas class="hm-town__canvas" data-town-target="canvas" data-action="pointerdown->town#tap" role="img" aria-label="自分の キャラが いる まち"></canvas>
+        <canvas class="hm-town__canvas" data-town-target="canvas" data-action="click->town#tap" role="img" aria-label="自分の キャラが いる まち"></canvas>
         <%# 建物（場所は town_world.js の BUILDINGS。town_controller.js が カメラに あわせて 動かす）。名前の下に 何が できるか %>
         <% [["sing", "🎤 スタジオ", "歌ってみたを つくる", "録音・ミックス・ハモリ・MV まで できるよ"],
             ["art", "🎨 アトリエ", "サムネ・背景を つくる", "文字・部品・背景で サムネや画像を つくれるよ"],
@@ -74,8 +74,8 @@
       </header>
       <%# 🔍 拡大・縮小（スマホは 2本指でも。PC は ホイールでも） %>
       <div class="hm-zoom" role="group" aria-label="まちの 大きさ">
-        <%# 👁 みわたす：町 ぜんぶ を 1画面に。建物を タップすると 歩かずに すぐ 入る %>
-        <button type="button" class="hm-zoom__btn hm-zoom__btn--eye" data-town-target="overviewBtn" data-action="town#toggleOverview" aria-pressed="false" aria-label="まち ぜんぶ を みわたす" title="みわたす">👁</button>
+        <%# 👀 ドラッグ・スクロール で みわたした あと、じぶんの キャラの ところ に もどる %>
+        <button type="button" class="hm-zoom__btn hm-zoom__btn--eye" data-town-target="homeBtn" data-action="town#recenter" aria-label="じぶんの ところ に もどる" title="じぶんの ところ に もどる">👀</button>
         <button type="button" class="hm-zoom__btn" data-town-target="zoomIn" data-action="town#zoomInBtn" aria-label="大きく する">＋</button>
         <button type="button" class="hm-zoom__btn" data-town-target="zoomOut" data-action="town#zoomOutBtn" aria-label="小さく する">−</button>
       </div>
@@ -92,7 +92,7 @@
           </form>
           <p class="hm-say__status" data-town-target="sayStatus" role="status" aria-live="polite"></p>
         <% end %>
-        <p class="hm-town__help">建物を タップすると 入れるよ（もう1回 おすと すぐ 入る）。👁 で まち ぜんぶ を みわたせるよ。</p>
+        <p class="hm-town__help">建物を タップで 入れるよ（2回 で すぐ）。ドラッグで みわたして 👀 で もどる。</p>
       </div>
     </div>
 

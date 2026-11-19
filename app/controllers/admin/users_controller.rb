@@ -1,5 +1,5 @@
 class Admin::UsersController < Admin::BaseController
-  before_action :set_user, only: [:reissue, :destroy]
+  before_action :set_user, only: [:reissue, :destroy, :plaza]
 
   def index
     @users = User.order(admin: :desc, name: :asc)
@@ -28,6 +28,12 @@ class Admin::UsersController < Admin::BaseController
     @login_code = @user.issue_login_code!
     @message = "#{@user.name} さんのログインIDを作り直しました。前のIDはもう使えません"
     render_issued
+  end
+
+  # 🏘️ まちの ひろば に 出す／出さない を きりかえる（ゲスト用の アカウント などを かくす）
+  def plaza
+    @user.update!(show_in_plaza: !@user.show_in_plaza)
+    redirect_to admin_users_path, notice: "#{@user.name} さんを ひろばに #{@user.show_in_plaza ? '出す' : '出さない'} ように しました"
   end
 
   def destroy

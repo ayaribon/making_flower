@@ -43,4 +43,22 @@ class AdminUsersControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_nil User.find_by(name: "だめ")
   end
+
+  test "🏘️ ひろばに 出す／出さない を きりかえると、まちの ひろば から きえる・もどる" do
+    guest = User.create!(name: "guest1", login_digest: "pending-guest1", avatar: { "hs" => "manbun" })
+    get admin_users_path
+    assert_select "form[action=?] button", plaza_admin_user_path(guest), text: /ひろばに 出さない/
+    patch plaza_admin_user_path(guest)
+    assert_redirected_to admin_users_path
+    assert_not guest.reload.show_in_plaza
+    get root_path
+    others = JSON.parse(css_select("[data-controller=town]").first["data-town-others-value"])
+    assert_not others.any? { |o| o["name"] == "guest1" }, "出さない に した人は ひろばに 出ない"
+    patch plaza_admin_user_path(guest)
+    assert guest.reload.show_in_plaza
+    get root_path
+    others = JSON.parse(css_select("[data-controller=town]").first["data-town-others-value"])
+    assert others.any? { |o| o["name"] == "guest1" }
+  end
+
 end

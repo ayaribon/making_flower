@@ -27,6 +27,7 @@ Rails.application.routes.draw do
   namespace :admin do
     resources :users, only: [:index, :new, :create, :destroy] do
       post :reissue, on: :member
+      patch :plaza, on: :member # 🏘️ ひろばに 出す／出さない
     end
     resources :materials, except: [:show] do
       patch :toggle, on: :member

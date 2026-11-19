@@ -123,6 +123,66 @@
 .dt-item__button--on { background: rgba(255, 255, 255, 0.22); color: #fff; }
 .dt-item--locked { opacity: 0.5; }
 .dt-item__icon--emoji { display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
+/* 🛋️ Sprout の 家具：色・がら と しまう／だす（dettyan_game_controller.js の furnitureOptsRow） */
+.dt-item__icon--art { padding: 3px; box-sizing: border-box; object-fit: contain; }
+.dt-furnopts { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 4px 10px 54px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.dt-furnopts__chip {
+  min-height: 32px; padding: 2px 10px; border: 0; border-radius: 999px; cursor: pointer; touch-action: manipulation;
+  background: rgba(255, 255, 255, 0.12); color: #fff; font: inherit; font-size: 0.78rem; font-weight: 700;
+}
+/* 🛋️ もようがえ（dettyan_game_controller.js の startDecor）
+   へや の 上の パネル：えらんだ 家具の 色・がら（小さな 絵）・おく／おかない・いれかえる */
+.dt-decor {
+  position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--dt-bottom, 0px) + 8px); z-index: 8;
+  width: max-content; max-width: 94%; box-sizing: border-box; padding: 8px 10px; border-radius: 14px;
+  background: rgba(42, 28, 18, 0.9); color: #fff; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;
+}
+.dt-decor[hidden] { display: none; }
+.dt-decor.is-top { bottom: auto; top: calc(var(--dt-top, 0px) + 6px); }
+.dt-decor__name { font-size: 0.85rem; font-weight: 800; }
+.dt-decor__body { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.dt-decor__swatches { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
+.dt-decor__swatch {
+  width: 40px; height: 40px; padding: 3px; border: 2px solid transparent; border-radius: 10px; cursor: pointer; touch-action: manipulation;
+  background: #f6ecd8; box-sizing: border-box;
+}
+.dt-decor__swatch canvas { width: 100%; height: 100%; display: block; image-rendering: crisp-edges; image-rendering: pixelated; }
+.dt-decor__swatch.is-on { border-color: #ffb347; box-shadow: 0 0 0 2px #ffb347; }
+.dt-decor__btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.dt-decor__btn {
+  min-height: 36px; padding: 2px 14px; border: 0; border-radius: 999px; cursor: pointer; touch-action: manipulation;
+  background: rgba(255, 255, 255, 0.16); color: #fff; font: inherit; font-size: 0.85rem; font-weight: 800;
+}
+.dt-decor__btn.is-main { background: #ffb347; color: #2a1c12; }
+/* 画面の「🛋️ もようがえ」（へや の 右下） */
+.dt-decor-open {
+  position: absolute; right: max(10px, env(safe-area-inset-right)); bottom: calc(var(--dt-bottom, 0px) + 10px); z-index: 6;
+  display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 10px; border: 0; border-radius: 14px; cursor: pointer;
+  background: rgba(42, 28, 18, 0.78); color: #fff; font: inherit; font-size: 1.2rem; touch-action: manipulation;
+}
+.dt-decor-open span { font-size: 0.7rem; font-weight: 800; }
+.dt-decor-open[hidden] { display: none; }
+/* 下の バー：もっている 家具の ならび */
+.dt.is-decorating .dt-actions { display: none; }
+.dt-decobar { display: flex; align-items: stretch; gap: 6px; margin-top: 12px; }
+.dt-decobar[hidden] { display: none; }
+.dt-decobar__list { flex: 1; min-width: 0; display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 2px; }
+.dt-decobar__item, .dt-decobar__done {
+  flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-width: 60px; padding: 4px 6px; border: 2px solid transparent; border-radius: 12px; cursor: pointer; touch-action: manipulation;
+  background: rgba(255, 255, 255, 0.14); color: #fff; font: inherit;
+}
+.dt-decobar__icon { width: 30px; height: 30px; image-rendering: crisp-edges; image-rendering: pixelated; }
+.dt-decobar__emoji { font-size: 1.4rem; line-height: 30px; }
+.dt-decobar__name { font-size: 0.68rem; font-weight: 700; white-space: nowrap; }
+.dt-decobar__item.is-off { opacity: 0.45; }
+.dt-decobar__item.is-sel { border-color: #ffb347; background: rgba(255, 179, 71, 0.25); }
+.dt-decobar__item.is-target { border-color: #8fd3ff; }
+.dt-decobar__item:disabled { opacity: 0.25; }
+.dt-decobar__done { background: #ffb347; color: #2a1c12; font-size: 1.2rem; }
+.dt-decobar__done span { font-size: 0.75rem; font-weight: 800; }
+.dt-decobar__none { align-self: center; font-size: 0.8rem; opacity: 0.8; padding: 0 6px; }
 .dt-sheet__section { margin: 12px 4px 2px; font-size: 0.85rem; font-weight: 700; opacity: 0.85; }
 .dt-sheet__note { padding: 4px 4px 6px; font-size: 0.78rem; opacity: 0.8; }
 /* ショップのタブ（たべもの・いしょう） */
@@ -281,7 +341,7 @@
 /* おはなし：ことばの 箱は 下の ボタンの 上、スキップは 上の 表示の 下 */
 .dt-story__box { max-width: 720px; margin-left: auto; margin-right: auto; bottom: calc(var(--dt-bottom) + 6px); }
 .dt-story__skip { top: calc(var(--dt-top) + 4px); }
-.dt-actions, .dt-cmd { margin-top: 0; }
+.dt-actions, .dt-cmd, .dt-decobar { margin-top: 0; }
 .dt-hud { margin-bottom: 4px; }
 .dt-goal { margin: 0; }
 .dt-bar { margin-bottom: 6px; }

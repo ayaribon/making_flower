@@ -15,7 +15,8 @@ class HomesController < ApplicationController
 
     @town_sprites = sprout_sprites
     owner = User.dettyan_owner
-    @town_others = User.where.not(id: [current_user.id, owner&.id].compact).where.not(avatar: nil)
+    # 管理画面で「ひろばに 出さない」に した人（ゲスト用 など）は 出さない
+    @town_others = User.where.not(id: [current_user.id, owner&.id].compact).where.not(avatar: nil).where(show_in_plaza: true)
                        .order(updated_at: :desc).limit(TOWN_OTHERS)
                        .map { |u| { name: u.display_label, avatar: u.avatar } }
     # 🧑‍💼 ひろばの Dettyan：本人の 表示名・キャラ（まだ なければ いつもの 見た目）

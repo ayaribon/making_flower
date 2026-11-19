@@ -12,8 +12,12 @@
           <% if user.display_name.present? %><span class="admin-row-sub">（<%= user.display_name %>）</span><% end %>
           <% if user.admin? %><span class="admin-badge">管理者</span><% end %>
           <% if user == current_user %><span class="admin-badge is-me">あなた</span><% end %>
+          <% if !user.show_in_plaza %><span class="admin-badge is-off">ひろばに 出さない</span>
+          <% elsif user.avatar.blank? %><span class="admin-row-sub">（キャラを つくると ひろばに 出る）</span><% end %>
         </div>
         <div class="admin-row-actions">
+          <%= button_to user.show_in_plaza ? "🙈 ひろばに 出さない" : "🏘️ ひろばに 出す", plaza_admin_user_path(user), method: :patch,
+                form_class: "admin-inline", class: "admin-button" %>
           <%= button_to "🔁 IDを作り直す", reissue_admin_user_path(user), method: :post,
                 form_class: "admin-inline", class: "admin-button",
                 data: { turbo_confirm: "#{user.name} さんのIDを作り直しますか？\n今のIDは使えなくなります" } %>
@@ -28,4 +32,5 @@
   </ul>
 
   <p class="auth-note">ログインIDは、作ったときと作り直したときにしか表示されません。</p>
+  <p class="auth-note">🏘️ まちの ひろば には、キャラを つくった人が 出ます。ゲスト用の アカウント などは「ひろばに 出さない」に できます（ひろばの Dettyan は べつ）。</p>
 </section>
