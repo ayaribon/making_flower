@@ -292,11 +292,12 @@ export function drawTownLive(g, t) {
 
 // 夜：すこし くらく、まど と 街灯 に あかり
 // windows：夜に あかりを つける まど [x, y, w, h]（Sprout Lands 版は town_sprout.js の sproutWindows）
-export function drawTownNight(g, now, windows = null, lamps = LAMPS) {
+// area：くらく する ところ（画面いっぱいの とき、町の 上下の 森も）
+export function drawTownNight(g, now, windows = null, lamps = LAMPS, area = [0, 0, TOWN_W, TOWN_H]) {
   const tod = timeOfDay(now)
   if (tod !== "night" && tod !== "evening") return
   g.fillStyle = tod === "night" ? "rgba(14, 18, 50, 0.32)" : "rgba(60, 20, 50, 0.10)"
-  g.fillRect(0, 0, TOWN_W, TOWN_H)
+  g.fillRect(...area)
   if (tod !== "night") return
   if (windows) for (const [wx, wy, ww, wh] of windows) px(g, "#ffd86a", wx, wy, ww, wh)
   else for (const b of BUILDINGS) {

@@ -71,6 +71,11 @@
           </details>
         </div>
       </header>
+      <%# 🔍 拡大・縮小（スマホは 2本指でも。PC は ホイールでも） %>
+      <div class="hm-zoom" role="group" aria-label="まちの 大きさ">
+        <button type="button" class="hm-zoom__btn" data-town-target="zoomIn" data-action="town#zoomInBtn" aria-label="大きく する">＋</button>
+        <button type="button" class="hm-zoom__btn" data-town-target="zoomOut" data-action="town#zoomOutBtn" aria-label="小さく する">−</button>
+      </div>
       <%# ⬇️ 下：ひとこと（町の 上に 重ねる） %>
       <div class="hm-hud hm-hud--bottom">
         <%# 💬 ひとこと：まちで 自分の キャラが ときどき 言う（ほかの人にも 見える）。キャラを つくった人だけ %>

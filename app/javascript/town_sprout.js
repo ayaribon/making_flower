@@ -184,6 +184,57 @@ export function drawSproutBase(g, s) {
   for (const lx of SPROUT_LAMPS) drawLamp(g, lx, 64)
 }
 
+// ---- 町の 上と 下の 森（画面いっぱい で たて長の とき・ひいて 見たとき に 見える） ----
+// g は 町の 座標（y が 0 より 上 と TOWN_H より 下 に margin ドットずつ）。町の 中には 描かない
+export function drawSproutForest(g, s, margin) {
+  const rand = seeded(1119)
+  g.imageSmoothingEnabled = false
+  g.save()
+  g.beginPath()
+  g.rect(0, -margin, TOWN_W, margin)
+  g.rect(0, TOWN_H, TOWN_W, margin)
+  g.clip()
+  // くさ
+  const rows = []
+  for (let y = -T; y > -margin - T; y -= T) rows.push(y)
+  for (let y = TOWN_H; y < TOWN_H + margin; y += T) rows.push(y)
+  for (const y of rows) {
+    for (let x = 0; x < TOWN_W; x += T) {
+      const r = rand()
+      if (r < 0.85) tile(g, s.grass, 1, 1, x, y)
+      else tile(g, s.grass, Math.floor(rand() * 6), 5 + Math.floor(rand() * 2), x, y)
+    }
+  }
+  const roundTree = (x, y) => part(g, s.trees, 16, 0, 32, 32, x, y)
+  const appleTree = (x, y) => part(g, s.trees, 48, 0, 32, 32, x, y)
+  const thinTree = (x, y) => part(g, s.trees, 0, 0, 16, 32, x, y)
+  const bigTree = (x, y) => part(g, s.trees, 144, 48, 48, 48, x, y)
+  const bush = (x, y, kind = 0) => part(g, s.trees, kind * T, 48, T, T, x, y)
+  const tree = (x, y) => {
+    const r = rand()
+    if (r < 0.2) bigTree(x - 8, y - 16)
+    else if (r < 0.3) appleTree(x, y)
+    else if (r < 0.45) { thinTree(x, y); thinTree(x + 14, y + 2) }
+    else roundTree(x, y)
+  }
+  // 上：おく から 手前（町に ちかい ほう）へ。木の 根もとが 町の 上の はし（y=0）まで
+  for (let y = -margin - 24; y <= -30; y += 18) {
+    const shift = Math.floor(rand() * 20) - 10
+    for (let x = -20 + shift; x < TOWN_W; x += 24 + Math.floor(rand() * 6)) tree(x, y + Math.floor(rand() * 5))
+  }
+  for (let x = -4; x < TOWN_W; x += 13) bush(x, -14 + Math.floor(rand() * 3), rand() < 0.7 ? 0 : 1 + Math.floor(rand() * 3))
+  // 下：町に ちかい ほうは しげみ と 花、その 先は 森
+  for (let x = -4; x < TOWN_W; x += 12) {
+    if (rand() < 0.55) bush(x, TOWN_H + 2 + Math.floor(rand() * 4), rand() < 0.7 ? 0 : 1 + Math.floor(rand() * 3))
+    else flower(g, s, x, TOWN_H + 4 + Math.floor(rand() * 4), rand)
+  }
+  for (let y = TOWN_H + 14; y < TOWN_H + margin; y += 18) {
+    const shift = Math.floor(rand() * 20) - 10
+    for (let x = -20 + shift; x < TOWN_W; x += 24 + Math.floor(rand() * 6)) tree(x, y + Math.floor(rand() * 5))
+  }
+  g.restore()
+}
+
 // 花（Mushrooms, Flowers, Stones の 4〜5だん目から えらぶ）
 function flower(g, s, x, y, rand) {
   const col = Math.floor(rand() * 11)

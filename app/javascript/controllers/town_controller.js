@@ -3,7 +3,7 @@ import { normalizeAvatar, avatarFromName, cleanMsg } from "avatar_sprite"
 import { drawChibi, CHIBI_W as AV_W, CHIBI_H as AV_H } from "avatar_chibi"
 import { drawDettyan, SPRITE_W, SPRITE_H } from "dettyan_sprite"
 import { TOWN_W, TOWN_H, VIEW_NARROW, BUILDINGS, BUILDING_W, WALK, doorOf, clampWalk, drawTownBase, drawTownSky, drawTownLive, drawTownNight } from "town_world"
-import { loadSprout, drawSproutBase, drawSproutLive, sproutWindows, SPROUT_LAMPS, hairPartsOf } from "town_sprout"
+import { loadSprout, drawSproutBase, drawSproutLive, drawSproutForest, sproutWindows, SPROUT_LAMPS, hairPartsOf } from "town_sprout"
 import { drawTeemo, facing, DETTYAN_TEEMO, TEEMO_W, TEEMO_H } from "avatar_teemo"
 import { drawHuman, facing8, avatarLayersOf, HUMAN_W, HUMAN_H } from "avatar_human"
 // 🧑 町の Dettyan（人の テンプレート）：黒い 髪・マンバン・茶色の ジャケット
@@ -36,11 +36,19 @@ const USE_TEEMO = false
 const SOFT_LINE = "#4e3448"
 const SOFT_DETTYAN = { K: SOFT_LINE, E: SOFT_LINE }
 
+// 🔍 画面いっぱい の とき
+const FOREST = 64 // 町の 上と 下に 描く 森の 高さ（ドット）
+const ZOOM_MAX = 2.5 // ふつうの 大きさ の 何倍 まで 大きく できるか
+const ZOOM_STEP = 1.25
+const ZOOM_KEY = "town:zoom"
+const BUILDING_TOP = TOWN_H * 0.15 // 建物の ボタン（home.css の .hm-town__building と おなじ）
+const BUILDING_H = TOWN_H * 0.37
+
 export default class extends Controller {
   static targets = [
     "canvas", "layer", "intro", "building", "edgeLeft", "edgeRight",
     "guide", "guideSiva", "guideFace", "guideTitle", "guideText", "guideCount", "guideSkip", "guideMake", "guideNext",
-    "sayForm", "sayInput", "sayButton", "sayStatus"
+    "sayForm", "sayInput", "sayButton", "sayStatus", "zoomIn", "zoomOut"
   ]
   // name：表示名（まちに 出る）。account：ログインの 呼び名（あんない を 見たか の しるし。表示名を かえても かわらない）
   // full：画面いっぱい（トップ）。画面の 形に あわせて 見せる はば を きめて、町を ぴったり おさめる
@@ -51,7 +59,11 @@ export default class extends Controller {
     c.height = TOWN_H
     this.g = c.getContext("2d")
     this.camX = 0
+    this.camY = 0
+    this.viewH = TOWN_H
+    this.zoom = this.savedZoom()
     this.fitView()
+    if (this.fullValue) this.listenPinch()
     this.resizeObserver = new ResizeObserver(() => this.fitView())
     this.resizeObserver.observe(this.element)
     this.base = document.createElement("canvas")
@@ -66,6 +78,7 @@ export default class extends Controller {
         this.hairParts = hairPartsOf(sheets)
         this.avatarLayers = avatarLayersOf(sheets)
         drawSproutBase(this.base.getContext("2d"), sheets)
+        this.drawForest((g) => drawSproutForest(g, sheets, FOREST))
       }).catch(() => {
         drawTownBase(this.base.getContext("2d"))
       }).finally(() => { this.baseReady = true })
@@ -114,6 +127,7 @@ export default class extends Controller {
     cancelAnimationFrame(this.raf)
     clearTimeout(this.enterTimer)
     this.resizeObserver?.disconnect()
+    this.unlistenPinch?.()
   }
 
   // 画面の はば に あわせて、見せる はば を きめる（広い画面は 町ぜんぶ）
@@ -128,22 +142,120 @@ export default class extends Controller {
     if (this.me) this.camX = this.cameraTarget()
   }
 
-  // 画面いっぱい：画面の 横長さ に あわせて 見せる はば（120〜256）を きめ、町を 画面に ぴったり おさめる
+  // 画面いっぱい：すきまが できない 大きさで 町を 見せる。たて長なら 町の 上下に 森（FOREST ドットまで）
+  //   ふつうの 大きさ（zoom 1）：町の 高さ が 画面に おさまる（せまい 画面は 120 はば まで）
+  //   🔍 ＋ − ・ピンチ・ホイール で 大きく（ZOOM_MAX まで）／ちいさく（町の はば か 森の はし まで）
   fitFull() {
     const W = this.element.clientWidth || 1
     const H = this.element.clientHeight || 1
-    const viewW = Math.max(120, Math.min(TOWN_W, Math.round((TOWN_H * W) / H)))
-    const scale = Math.min(W / viewW, H / TOWN_H)
+    const minScale = Math.max(W / TOWN_W, H / (TOWN_H + FOREST * 2))
+    const base = Math.max(minScale, Math.min(H / TOWN_H, W / 120))
+    this.zoomMin = minScale / base
+    this.zoom = Math.max(this.zoomMin, Math.min(ZOOM_MAX, this.zoom))
+    const scale = base * this.zoom
+    const viewW = Math.min(TOWN_W, Math.ceil(W / scale - 0.01))
+    const viewH = Math.min(TOWN_H + FOREST * 2, Math.ceil(H / scale - 0.01))
     const section = this.canvasTarget.parentElement
     section.style.width = `${Math.round(viewW * scale)}px`
-    section.style.height = `${Math.round(TOWN_H * scale)}px`
-    this.canvasTarget.style.height = "100%"
-    if (viewW === this.viewW) return
+    section.style.height = `${Math.round(viewH * scale)}px`
+    if (this.hasZoomInTarget) this.zoomInTarget.disabled = this.zoom >= ZOOM_MAX - 0.001
+    if (this.hasZoomOutTarget) this.zoomOutTarget.disabled = this.zoom <= this.zoomMin + 0.001
+    if (viewW === this.viewW && viewH === this.viewH) return
     this.viewW = viewW
+    this.viewH = viewH
     this.canvasTarget.width = viewW
-    this.canvasTarget.style.aspectRatio = `${viewW} / ${TOWN_H}`
+    this.canvasTarget.height = viewH
+    this.canvasTarget.style.aspectRatio = `${viewW} / ${viewH}`
     this.lastCam = null
-    if (this.me) this.camX = this.cameraTarget()
+    if (this.me) {
+      this.camX = this.cameraTarget()
+      this.camY = this.cameraTargetY()
+    }
+  }
+
+  // ---- 🔍 拡大・縮小（えらんだ 大きさは この 端末に おぼえる） ----
+  zoomInBtn() { this.setZoom(this.zoom * ZOOM_STEP) }
+  zoomOutBtn() { this.setZoom(this.zoom / ZOOM_STEP) }
+
+  setZoom(z) {
+    if (!this.fullValue) return
+    this.zoom = Math.max(this.zoomMin ?? 0.5, Math.min(ZOOM_MAX, z))
+    this.fitFull()
+    try { window.localStorage.setItem(ZOOM_KEY, String(Math.round(this.zoom * 100) / 100)) } catch (e) { /* おぼえられなくても よい */ }
+  }
+
+  savedZoom() {
+    try {
+      const z = parseFloat(window.localStorage.getItem(ZOOM_KEY))
+      return Number.isFinite(z) && z > 0 ? z : 1
+    } catch (e) { return 1 }
+  }
+
+  // 2本指で ひろげる・つまむ（スマホ）、ホイール（PC）。ページ ごとの 拡大は しない
+  listenPinch() {
+    const el = this.element
+    this.pointers = new Map()
+    const dist = () => {
+      const [a, b] = [...this.pointers.values()]
+      return Math.hypot(a.x - b.x, a.y - b.y) || 1
+    }
+    const down = (e) => {
+      if (e.pointerType !== "touch") return
+      this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      if (this.pointers.size === 2) {
+        this.pinch = { d: dist(), z: this.zoom }
+        // 1本目で 歩きはじめて いたら 止める
+        if (this.me && !this.entering) { this.me.walking = false; this.me.plan = null; this.me.tx = this.me.x; this.me.ty = this.me.y }
+      }
+    }
+    const move = (e) => {
+      if (!this.pointers.has(e.pointerId)) return
+      this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      if (this.pinch && this.pointers.size >= 2) this.setZoom(this.pinch.z * (dist() / this.pinch.d))
+    }
+    const up = (e) => {
+      this.pointers.delete(e.pointerId)
+      if (this.pointers.size < 2) this.pinch = null
+    }
+    const wheel = (e) => {
+      if (e.target.closest(".hm-hud__menu")) return
+      e.preventDefault()
+      this.setZoom(this.zoom * Math.exp(-Math.max(-60, Math.min(60, e.deltaY)) * 0.004))
+    }
+    const gesture = (e) => e.preventDefault() // iPhone Safari の ページ拡大
+    el.addEventListener("pointerdown", down, true)
+    el.addEventListener("pointermove", move, true)
+    el.addEventListener("pointerup", up, true)
+    el.addEventListener("pointercancel", up, true)
+    el.addEventListener("wheel", wheel, { passive: false })
+    document.addEventListener("gesturestart", gesture)
+    this.unlistenPinch = () => {
+      el.removeEventListener("pointerdown", down, true)
+      el.removeEventListener("pointermove", move, true)
+      el.removeEventListener("pointerup", up, true)
+      el.removeEventListener("pointercancel", up, true)
+      el.removeEventListener("wheel", wheel)
+      document.removeEventListener("gesturestart", gesture)
+    }
+  }
+
+  // 町の 上下の 森（画面いっぱい の ときだけ 使う。1回だけ 描く）
+  drawForest(paint) {
+    if (!this.fullValue) return
+    const c = document.createElement("canvas")
+    c.width = TOWN_W
+    c.height = TOWN_H + FOREST * 2
+    const g = c.getContext("2d")
+    g.translate(0, FOREST)
+    paint(g)
+    this.forest = c
+  }
+
+  // たての カメラ：町が ぜんぶ 入るときは まんなか。大きく したら 自分の キャラに ついて 動く
+  cameraTargetY() {
+    if (this.viewH >= TOWN_H) return -Math.round((this.viewH - TOWN_H) / 2)
+    const y = this.focusY ?? (this.me.y - 12)
+    return Math.max(0, Math.min(TOWN_H - this.viewH, Math.round(y - this.viewH / 2)))
   }
 
   // カメラ：自分の キャラが まんなか（町の はし では 止まる）。あんない の あいだは その 建物
@@ -170,6 +282,9 @@ export default class extends Controller {
     const target = this.cameraTarget()
     this.camX += (target - this.camX) * Math.min(1, dt * 4)
     if (Math.abs(target - this.camX) < 0.3) this.camX = target
+    const targetY = this.cameraTargetY()
+    this.camY += (targetY - this.camY) * Math.min(1, dt * 4)
+    if (Math.abs(targetY - this.camY) < 0.3) this.camY = targetY
     for (const a of [this.me, ...this.others]) {
       a.nextBlink -= dt
       if (a.blink > 0) a.blink -= dt
@@ -235,10 +350,10 @@ export default class extends Controller {
 
   // ---- タップ ----
   tap(event) {
-    if (this.entering || this.guiding) return
+    if (this.entering || this.guiding || this.pinch || this.pointers?.size > 1) return
     const rect = this.canvasTarget.getBoundingClientRect()
     const x = this.camX + ((event.clientX - rect.left) / rect.width) * this.viewW
-    const y = ((event.clientY - rect.top) / rect.height) * TOWN_H
+    const y = Math.round(this.camY) + ((event.clientY - rect.top) / rect.height) * this.viewH
     // ほかの人・Dettyan を タップしたら あいさつ
     const hit = (a, w, h) => x >= a.x - w / 2 - 2 && x <= a.x + w / 2 + 2 && y >= a.y - h - 2 && y <= a.y + 2
     const [w, h] = this.sprout?.human ? [HUMAN_W, HUMAN_H] : USE_TEEMO && this.sprout?.chara ? [TEEMO_W, TEEMO_H] : [AV_W, AV_H]
@@ -318,8 +433,17 @@ export default class extends Controller {
     const g = this.g
     const now = Date.now()
     const cam = Math.round(this.camX)
+    const camY = Math.round(this.camY)
+    const outside = camY < 0 || camY + this.viewH > TOWN_H
     g.save()
-    g.translate(-cam, 0)
+    g.translate(-cam, -camY)
+    if (outside) {
+      if (this.forest) g.drawImage(this.forest, 0, -FOREST)
+      else {
+        g.fillStyle = "#4f8a3c"
+        g.fillRect(0, -FOREST, TOWN_W, TOWN_H + FOREST * 2)
+      }
+    }
     if (!this.baseReady) {
       g.fillStyle = "#c0d470"
       g.fillRect(0, 0, TOWN_W, TOWN_H)
@@ -355,10 +479,11 @@ export default class extends Controller {
         g.globalAlpha = 1
       }
     }
-    if (this.sprout) drawTownNight(g, now, sproutWindows(), SPROUT_LAMPS)
-    else drawTownNight(g, now)
+    const area = outside ? [0, -FOREST, TOWN_W, TOWN_H + FOREST * 2] : undefined
+    if (this.sprout) drawTownNight(g, now, sproutWindows(), SPROUT_LAMPS, area)
+    else drawTownNight(g, now, null, undefined, area)
     g.restore()
-    this.placeBuildings(cam)
+    this.placeBuildings(cam, camY)
     // 名前・ふきだし（画面の ことば）
     this.place(this.nameTag, this.me.x, this.me.y + 1)
     for (const a of [this.me, ...this.others, this.dettyan]) if (a.bubble && !a.bubble.hidden) this.placeBubble(a.bubble, a.x, a.y - (this.sprout?.human ? HUMAN_H + 1 : USE_TEEMO && this.sprout?.chara ? TEEMO_H + 4 : AV_H) - 2)
@@ -370,21 +495,27 @@ export default class extends Controller {
     const half = el.offsetWidth / 2
     const x = ((wx - Math.round(this.camX)) / this.viewW) * W
     const left = `${Math.round(Math.max(half + 2, Math.min(W - half - 2, x)))}px`
-    const top = `${(y / TOWN_H) * 100}%`
+    const top = `${((y - Math.round(this.camY)) / this.viewH) * 100}%`
     if (el.style.left !== left) el.style.left = left
     if (el.style.top !== top) el.style.top = top
   }
 
   // 建物の ボタン を カメラに あわせて うごかす。見えていない 側に 建物があれば ◀ ▶
-  placeBuildings(cam) {
-    if (cam === this.lastCam && this.viewW === this.lastViewW) return
+  placeBuildings(cam, camY = 0) {
+    if (cam === this.lastCam && camY === this.lastCamY && this.viewW === this.lastViewW && this.viewH === this.lastViewH) return
     this.lastCam = cam
+    this.lastCamY = camY
     this.lastViewW = this.viewW
+    this.lastViewH = this.viewH
+    const tall = this.viewH !== TOWN_H || camY !== 0
     this.buildingTargets.forEach((btn) => {
       const b = BUILDINGS.find((x) => x.id === btn.dataset.townPlaceParam)
       if (!b) return
       btn.style.left = `${((b.x - 3 - cam) / this.viewW) * 100}%`
       btn.style.width = `${((BUILDING_W + 6) / this.viewW) * 100}%`
+      // たても カメラに あわせる（ふだんは CSS の 15%・37%）
+      btn.style.top = tall ? `${((BUILDING_TOP - camY) / this.viewH) * 100}%` : ""
+      btn.style.height = tall ? `${(BUILDING_H / this.viewH) * 100}%` : ""
     })
     if (this.hasEdgeLeftTarget) this.edgeLeftTarget.hidden = cam <= 0
     if (this.hasEdgeRightTarget) this.edgeRightTarget.hidden = cam >= TOWN_W - this.viewW
@@ -406,7 +537,7 @@ export default class extends Controller {
   place(el, wx, y) {
     const x = wx - Math.round(this.camX)
     const left = `${(x / this.viewW) * 100}%`
-    const top = `${(y / TOWN_H) * 100}%`
+    const top = `${((y - Math.round(this.camY)) / this.viewH) * 100}%`
     if (el.style.left !== left) el.style.left = left
     if (el.style.top !== top) el.style.top = top
   }
@@ -502,6 +633,7 @@ export default class extends Controller {
     const reachedEnd = this.guideAt >= this.guideList.length - 1
     this.guiding = false
     this.focusX = null
+    this.focusY = null
     this.guideTarget.hidden = true
     this.buildingTargets.forEach((b) => b.classList.remove("is-guide"))
     if (this.hasSayFormTarget) this.sayFormTarget.classList.remove("is-guide")
@@ -527,6 +659,7 @@ export default class extends Controller {
     this.guideNextTarget.textContent = last ? (st.make ? "あとで" : "はじめる！") : "つぎへ ▶"
     // その 建物 を 光らせて、スマホでは カメラを そっちへ
     this.focusX = st.place ? doorOf(st.place).x : st.focus === "npc" ? this.dettyan.x : null
+    this.focusY = st.place ? BUILDING_TOP + BUILDING_H / 2 : st.focus === "npc" ? this.dettyan.y - 12 : null
     this.buildingTargets.forEach((b) => b.classList.toggle("is-guide", b.dataset.townPlaceParam === st.place))
     if (this.hasSayFormTarget) this.sayFormTarget.classList.toggle("is-guide", !!st.say)
   }
