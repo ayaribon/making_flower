@@ -1,0 +1,15 @@
+<%# 🧪 /lab/dettyan：ようこそ ページ（サンプル。すきに かえて いい） %>
+<% content_for :title, "dettyan" %>
+<main class="lab-dettyan-main" data-controller="lab--dettyan--hello">
+  <h1 class="lab-dettyan-title">ようこそ、dettyan の 区画へ 🧪</h1>
+  <p>ここは dettyan さんの 練習・試作の 場所です。</p>
+  <p class="lab-dettyan-hello" data-lab--dettyan--hello-target="output">（JS が うごくと ここが かわります）</p>
+  <ul>
+    <li>コントローラー：<code>app/controllers/lab/dettyan/</code></li>
+    <li>画面：<code>app/views/lab/dettyan/</code></li>
+    <li>ルート：<code>config/routes/lab/dettyan.rb</code></li>
+    <li>CSS：<code>app/assets/stylesheets/lab/dettyan/</code>（クラスは <code>.lab-dettyan-</code> から）</li>
+    <li>JS：<code>app/javascript/lab/dettyan/</code>・<code>app/javascript/controllers/lab/dettyan/</code></li>
+  </ul>
+  <p><%= link_to "🧪 lab の 一覧へ", lab_root_path %></p>
+</main>

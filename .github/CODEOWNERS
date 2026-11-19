@@ -1,0 +1,22 @@
+# 👀 だれの レビューが いるか（GitHub の ブランチ保護で「Require review from Code Owners」を オンに した とき 効く）
+# 下に 書いた ほうが 強い（あとの 行が 先の 行を 上書きする）。
+
+# 基本は ぜんぶ ayaribon の レビューが いる
+* @ayaribon
+
+# 🧪 /lab の 区画の 中（lab/名前/ の 下）は「持ち主なし」＝ レビュー なしで いい（docs/lab/README.md）
+#   持ち主を 書かない 行は、上の * を 打ち消して「持ち主なし」に する
+/app/controllers/lab/*/
+/app/models/lab/
+/app/views/lab/
+/app/views/layouts/lab/
+/app/javascript/lab/
+/app/javascript/controllers/lab/
+/app/assets/stylesheets/lab/*/
+/config/routes/lab/
+/test/lab/
+/docs/lab/*/
+/db/migrate/*_lab_*.rb
+
+# 🧪 lab の 共通の ところ（区画の 外）は ayaribon（上の 行より あとに 書いて、もう一度 持ち主を つける）
+/app/views/lab/home/ @ayaribon

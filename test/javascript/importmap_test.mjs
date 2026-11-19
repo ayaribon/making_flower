@@ -9,6 +9,9 @@ import path from "node:path"
 const ROOT = path.resolve(import.meta.dirname, "../..")
 const importmap = fs.readFileSync(path.join(ROOT, "config/importmap.rb"), "utf8")
 const pins = new Set([...importmap.matchAll(/^pin\s+"([^"]+)"/gm)].map((m) => m[1]))
+// pin_all_from "フォルダ", under: "なまえ" で まとめて のせた もの（例：🧪 lab/名前/〇〇）。その フォルダに ファイルが あれば よい
+const pinDirs = [...importmap.matchAll(/^pin_all_from\s+"([^"]+)",\s*under:\s*"([^"]+)"/gm)].map((m) => ({ dir: m[1], under: m[2] }))
+const pinnedByDir = (name) => pinDirs.some(({ dir, under }) => name.startsWith(`${under}/`) && fs.existsSync(path.join(ROOT, dir, `${name.slice(under.length + 1)}.js`)))
 
 function jsFiles(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((d) => {
@@ -25,7 +28,7 @@ test("import している名前は、ぜんぶ importmap に pin されている
     for (const m of src.matchAll(/(?:^|\n)\s*(?:import|export)\s[^;]*?\sfrom\s+"([^"]+)"/g)) {
       const name = m[1]
       if (name.startsWith(".") || name.startsWith("/") || name.startsWith("controllers/")) continue
-      if (!pins.has(name)) missing.push(`${path.relative(ROOT, file)} → "${name}"`)
+      if (!pins.has(name) && !pinnedByDir(name)) missing.push(`${path.relative(ROOT, file)} → "${name}"`)
     }
   }
   assert.deepEqual(missing, [], `config/importmap.rb に pin がない：\n${missing.join("\n")}`)

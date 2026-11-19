@@ -1,0 +1,5 @@
+/* 🧪 区画「dettyan」の 見た目。クラスは かならず .lab-dettyan- から（ほかの 区画・本体と ぶつからない ように）
+   lab の 画面 だけで 読まれる（lab/lab.css が まとめる）。本体の 画面には 入らない */
+.lab-dettyan-main { max-width: 720px; margin: 0 auto; padding: 24px 16px; }
+.lab-dettyan-title { font-size: 1.4rem; }
+.lab-dettyan-hello { padding: 10px 14px; border-radius: 10px; background: #eef0ff; }

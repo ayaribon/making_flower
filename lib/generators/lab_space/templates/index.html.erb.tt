@@ -1,0 +1,15 @@
+<%%# 🧪 /lab/<%= space_name %>：ようこそ ページ（サンプル。すきに かえて いい） %>
+<%% content_for :title, "<%= space_name %>" %>
+<main class="lab-<%= space_name %>-main" data-controller="lab--<%= space_name %>--hello">
+  <h1 class="lab-<%= space_name %>-title">ようこそ、<%= space_name %> の 区画へ 🧪</h1>
+  <p>ここは <%= space_name %> さんの 練習・試作の 場所です。</p>
+  <p class="lab-<%= space_name %>-hello" data-lab--<%= space_name %>--hello-target="output">（JS が うごくと ここが かわります）</p>
+  <ul>
+    <li>コントローラー：<code>app/controllers/lab/<%= space_name %>/</code></li>
+    <li>画面：<code>app/views/lab/<%= space_name %>/</code></li>
+    <li>ルート：<code>config/routes/lab/<%= space_name %>.rb</code></li>
+    <li>CSS：<code>app/assets/stylesheets/lab/<%= space_name %>/</code>（クラスは <code>.lab-<%= space_name %>-</code> から）</li>
+    <li>JS：<code>app/javascript/lab/<%= space_name %>/</code>・<code>app/javascript/controllers/lab/<%= space_name %>/</code></li>
+  </ul>
+  <p><%%= link_to "🧪 lab の 一覧へ", lab_root_path %></p>
+</main>

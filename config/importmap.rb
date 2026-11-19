@@ -6,6 +6,7 @@ pin "@hotwired/turbo-rails", to: "turbo.min.js"
 pin "@hotwired/stimulus", to: "stimulus.min.js"
 pin "@hotwired/stimulus-loading", to: "stimulus-loading.js"
 pin_all_from "app/javascript/controllers", under: "controllers", preload: false
+pin_all_from "app/javascript/lab", under: "lab", preload: false # 🧪 /lab の 区画の JS（import "lab/名前/〇〇"。docs/lab/README.md）
 pin "fabric", preload: false # @7.4.0
 pin "text_styles", preload: false
 pin "image_store", preload: false

@@ -1,0 +1,5 @@
+# 🧪 区画「<%= space_name %>」の ルート（config/routes/lab.rb が 自動で 読む。ほかの ファイルに 足さなくて いい）
+#   /lab/<%= space_name %>/... → Lab::<%= module_name %>::〇〇Controller
+namespace :<%= space_name %> do
+  root "home#index"
+end

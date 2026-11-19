@@ -1,0 +1,5 @@
+# 🧪 区画「<%= space_name %>」の 共通の 親（docs/lab/<%= space_name %>/README.md）
+# 自分用の 枠を 使いたい ときは app/views/layouts/lab/<%= space_name %>/ に 置いて、下の layout を かえる
+#   layout "lab/<%= space_name %>/application"
+class Lab::<%= module_name %>::BaseController < Lab::BaseController
+end
