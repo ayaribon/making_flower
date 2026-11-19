@@ -5,7 +5,7 @@
 // - Sprout Sorry pack は 非商用 ライセンス。この アプリは 非商用 と ayaribon が 判断（2026-11-18）。クレジット：Cup Nooble
 // Assets - From: Sprout Lands - By: Cup Nooble
 
-import { normalizeAvatar, HUMAN_HAIRSTYLES, DEFAULT_HAIRSTYLE, AVATAR_EQUIP, AVATAR_DRAW_ORDER, AVATAR_SAVE_SLOTS, avatarAssetKey } from "avatar_sprite"
+import { normalizeAvatar, HUMAN_HAIRSTYLES, DEFAULT_HAIRSTYLE, AVATAR_EQUIP, AVATAR_DRAW_ORDER, AVATAR_SAVE_KEYS, avatarAssetKey } from "avatar_sprite"
 import { CHIBI_SKINS, CHIBI_HAIRS, CHIBI_CLOTHS } from "avatar_chibi"
 import { drawAccessory } from "avatar_teemo"
 
@@ -287,7 +287,7 @@ const HAIR_LAYER_ROLE = { "#705f5b": "line", "#7b6762": "hairDark", "#8c7369": "
 
 // 🧑‍💼 Dettyan（町・育成ゲーム）：黒髪 マンバン・いつもの服（costume_dettyan）。そうびは equip（枠 → id）で かさねる
 //   brows：まゆげ（2026-11-19 に ayaribon が「Dettyan は まゆげ つけといて」。髪の 画像に なくても 描く）
-export const DETTYAN_LOOK = { skin: "#f7e0cf", hair: "#3a3242", top: "#8a5a33", bottom: "#3a3a4a", shoes: "#4a3a32", acc: "manbun", hs: "manbun", brows: true, equip: { costume: "dettyan" } }
+export const DETTYAN_LOOK = { skin: "#f7e0cf", hair: "#3a3242", top: "#8a5a33", bottom: "#3a3a4a", shoes: "#4a3a32", acc: "manbun", hs: "manbun", brows: true, equip: { costume: "dettyan", brows: "normal" } }
 
 // まゆげの 場所（向き の 列 → 立ちの コマ での 場所。hair_manbun.png の まゆげ と 同じ）。歩く コマは 目の 高さに あわせて ずらす
 const BROWS = { 2: [[10, 18]], 3: [[7, 17], [8, 17]], 4: [[4, 18], [5, 18], [9, 18], [10, 18]], 5: [[6, 17], [7, 17]], 6: [[4, 18]] }
@@ -353,6 +353,7 @@ export function avatarLayersOf(images) {
   for (const [slot, s] of Object.entries(AVATAR_EQUIP)) {
     items[slot] = {}
     for (const it of s.items) {
+      if (!it.file) continue
       const img = images[avatarAssetKey(it.file)]
       if (img) items[slot][it.id] = img
     }
@@ -370,7 +371,7 @@ function drawSlots(g, layers, a, look, spec, pal, dir, sx, sy, left, top) {
   const colorKey = JSON.stringify(spec)
   // その 枠の アイテム：Dettyan などは look.equip、町の キャラは 保存の キー（costume・hat・accessory）
   const pick = (slot) => {
-    const id = look?.equip?.[slot] ?? look?.[slot] ?? (AVATAR_SAVE_SLOTS.includes(slot) ? a[slot] : undefined) ?? AVATAR_EQUIP[slot]?.def
+    const id = look?.equip?.[slot] ?? (AVATAR_SAVE_KEYS[slot] ? a[AVATAR_SAVE_KEYS[slot]] : undefined) ?? AVATAR_EQUIP[slot]?.def
     return layers.items[slot]?.[id] ? id : AVATAR_EQUIP[slot]?.def // 画像が ない ものは 初めの もの
   }
   const hidden = new Set()
@@ -386,15 +387,22 @@ function drawSlots(g, layers, a, look, spec, pal, dir, sx, sy, left, top) {
       const hs = look?.hs || a.hs || DEFAULT_HAIRSTYLE
       const img = layers.hairs[hs] || (hs === "bald" ? null : layers.hairs[DEFAULT_HAIRSTYLE])
       if (img) put(recolorLayer(img, HAIR_LAYER_ROLE, pal, `hair|${hs}|${spec.hair}`))
-      if (look?.brows) drawBrows(g, layers, sx / FW, sy / FH, left, top, pal.eye)
+      // まゆげの 画像（brows_normal）が まだ ないときは コードで 描く（Dettyan）
+      if (look?.brows && !layers.items.brows?.normal) drawBrows(g, layers, sx / FW, sy / FH, left, top, pal.eye)
     } else if (slot === "costume") {
       // ふだん着 だけ 色が かわる（ほかは 色が きまった 画像）
       const id = pick("costume")
       const img = layers.items.costume[id]
       put(id === "default" ? recolorLayer(img, BASE_ROLE, pal, `costume|${colorKey}`) : img)
     } else {
-      const img = layers.items[slot]?.[pick(slot)]
-      if (img) put(img)
+      const id = pick(slot)
+      const img = layers.items[slot]?.[id]
+      if (!img) continue
+      // 顔の パーツ：はだ・目（base）や 髪（hair）の 色に あわせる
+      const rc = AVATAR_EQUIP[slot]?.recolor
+      if (rc === "base") put(recolorLayer(img, BASE_ROLE, pal, `${slot}|${id}|${colorKey}`))
+      else if (rc === "hair") put(recolorLayer(img, HAIR_LAYER_ROLE, pal, `${slot}|${id}|${spec.hair}`))
+      else put(img)
     }
   }
 }

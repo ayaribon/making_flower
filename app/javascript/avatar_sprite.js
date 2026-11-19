@@ -45,7 +45,8 @@ export const ACCESSORIES = ["none", "cap", "headphones", "ribbon", "nekomimi", "
 export const DEFAULT_AVATAR = {
   v: 1, hs: "original", skin: 0, hair: "short", hairColor: 0, eyes: "dot",
   top: "jacket", topColor: 6, bottom: "pants", bottomColor: 9, shoes: 9, acc: "none",
-  costume: "default", hat: "none", accessory: "none"
+  costume: "default", hat: "none", accessory: "none",
+  eye_style: "default", brows: "none", mouth: "none", cheeks: "none", beard: "none"
 }
 
 const idsOf = (list) => list.map((x) => x.id)
@@ -53,14 +54,14 @@ const idsOf = (list) => list.map((x) => x.id)
 // id は 保存されるので あとから 変えない。file が null は 髪なし
 export const HUMAN_HAIRSTYLES = [
   { id: "original", name: "ツンツン", file: "hair_original.png" },
-  { id: "manbun", name: "マンバン", file: "hair_manbun.png" },
+  { id: "manbun", name: "マンバン", file: "hair_manbun.png", showsBrows: true },
   { id: "wolf_long", name: "ウルフロング", file: "hair_wolf_long.png" },
   { id: "pattsun_bob", name: "ぱっつんボブ", file: "hair_pattsun_bob.png" },
   { id: "pattsun_long", name: "ぱっつんロング", file: "hair_pattsun_long.png" },
-  { id: "short_perm", name: "短髪パーマ", file: "hair_short_perm.png" },
+  { id: "short_perm", name: "短髪パーマ", file: "hair_short_perm.png", showsBrows: true },
   { id: "fluffy_bob", name: "ふわふわボブ", file: "hair_fluffy_bob.png" },
   { id: "odango", name: "おだんご", file: "hair_odango.png" },
-  { id: "bald", name: "ハゲ", file: null }
+  { id: "bald", name: "ハゲ", file: null, showsBrows: true }
 ]
 export const DEFAULT_HAIRSTYLE = "original"
 
@@ -70,9 +71,27 @@ export const DEFAULT_HAIRSTYLE = "original"
 //   hides：これを つけると 描かない 枠（ヘルメットで 髪・きぐるみで 髪と あたま）
 //   いろが かわるのは ふだん着（costume default）と ふつうの靴（shoes default）だけ（ほかは 色が きまった 画像）
 //   足・手（盾）の 枠は まだ 中身が ない
-// 町の キャラの 保存の キー（枠の id と 同じ。"none" は なし）。のこりの 枠は Dettyan の そうび から（look.equip）
-export const AVATAR_SAVE_SLOTS = ["costume", "hat", "accessory"]
+// 町の キャラの 保存の キー（枠 → キー。"none" は なし）。のこりの 枠は Dettyan の そうび から（look.equip）
+//   目は 前から ある eyes（2頭身の 目）と かぶるので eye_style
+export const AVATAR_SAVE_KEYS = { costume: "costume", hat: "hat", accessory: "accessory", eyes: "eye_style", brows: "brows", mouth: "mouth", cheeks: "cheeks", beard: "beard" }
+export const AVATAR_SAVE_SLOTS = Object.keys(AVATAR_SAVE_KEYS)
+// 😊 顔の パーツ（2026-11-19 の ハンドオフ。体の すぐ上・髪より下に 重ねる）。recolor：base＝はだ・目の 色、hair＝髪の 色
+//   まゆげは 前髪で かくれる 髪型が ある（HUMAN_HAIRSTYLES の showsBrows が ない 髪型では えらべない）
+export const AVATAR_FACE_SLOTS = ["eyes", "brows", "mouth", "cheeks", "beard"]
 export const AVATAR_EQUIP = {
+  eyes: {
+    name: "め", def: "default", recolor: "base",
+    items: [
+      { id: "default", name: "ふつう", file: null, maker: true },
+      { id: "smile", name: "にっこり", file: "eyes_smile.png", maker: true },
+      { id: "sleepy", name: "ねむそう", file: "eyes_sleepy.png", maker: true },
+      { id: "lash", name: "まつげ", file: "eyes_lash.png", maker: true }
+    ]
+  },
+  brows: { name: "まゆげ", def: "none", recolor: "base", items: [{ id: "normal", name: "まゆげ", file: "brows_normal.png", maker: true }] },
+  mouth: { name: "くち", def: "none", items: [{ id: "small", name: "ちいさい くち", file: "mouth_small.png", maker: true }] },
+  cheeks: { name: "ほっぺ", def: "none", items: [{ id: "pink", name: "ピンク", file: "cheeks_pink.png", maker: true }] },
+  beard: { name: "ひげ", def: "none", recolor: "hair", items: [{ id: "chin", name: "あごひげ", file: "beard_chin.png", maker: true }] },
   costume: {
     name: "いしょう", def: "default",
     items: [
@@ -154,8 +173,8 @@ export const AVATAR_EQUIP = {
 }
 // 重ねる じゅん（うしろ向きの 3方向は せなか・手 の 前後が 入れかわる）。legs・hand_*・back は まだ 画像が ない
 export const AVATAR_DRAW_ORDER = {
-  default: ["back", "body", "legs", "shoes", "costume", "hair", "accessory", "hat", "hand_off", "hand_main"],
-  facingAway: ["hand_main", "hand_off", "body", "legs", "shoes", "costume", "hair", "accessory", "hat", "back"]
+  default: ["back", "body", "cheeks", "mouth", "beard", "eyes", "brows", "legs", "shoes", "costume", "hair", "accessory", "hat", "hand_off", "hand_main"],
+  facingAway: ["hand_main", "hand_off", "body", "cheeks", "mouth", "beard", "eyes", "brows", "legs", "shoes", "costume", "hair", "accessory", "hat", "back"]
 }
 // 画像の キー（town_sprout.js・GameAsset）："avatar_" ＋ ファイル名（.png なし）
 export const avatarAssetKey = (file) => `avatar_${file.replace(/\.png$/, "")}`
@@ -164,7 +183,7 @@ const CHOICES = {
   hair: idsOf(HAIRS), eyes: idsOf(EYES), top: idsOf(TOPS), bottom: idsOf(BOTTOMS), acc: ACCESSORIES, hs: idsOf(HUMAN_HAIRSTYLES),
   ...Object.fromEntries(AVATAR_SAVE_SLOTS.map((slot) => {
     const s = AVATAR_EQUIP[slot]
-    return [slot, [...(s.def === "none" ? ["none"] : []), ...idsOf(s.items.filter((it) => it.maker))]]
+    return [AVATAR_SAVE_KEYS[slot], [...(s.def === "none" ? ["none"] : []), ...idsOf(s.items.filter((it) => it.maker))]]
   }))
 }
 const RANGES = { skin: SKINS.length, hairColor: HAIR_COLORS.length, topColor: CLOTH_COLORS.length, bottomColor: CLOTH_COLORS.length, shoes: CLOTH_COLORS.length }

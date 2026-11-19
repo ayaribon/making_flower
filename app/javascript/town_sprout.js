@@ -30,7 +30,7 @@ export const AVATAR_LAYER_KEYS = [
   "avatar_base", ...["original", "manbun", "wolf_long", "pattsun_bob", "pattsun_long", "short_perm", "fluffy_bob", "odango"].map((id) => `avatar_hair_${id}`),
   // 👕 装備の 枠（avatar_sprite.js の AVATAR_EQUIP）
   "avatar_body_base",
-  ...Object.values(AVATAR_EQUIP).flatMap((s) => s.items.map((it) => avatarAssetKey(it.file)))
+  ...Object.values(AVATAR_EQUIP).flatMap((s) => s.items.filter((it) => it.file).map((it) => avatarAssetKey(it.file)))
 ]
 SPROUT_FILES.avatar_base = "../sprout_avatar/base_bald.png"
 for (const k of AVATAR_LAYER_KEYS.slice(1)) SPROUT_FILES[k] = `../sprout_avatar/${k.replace("avatar_", "")}.png`

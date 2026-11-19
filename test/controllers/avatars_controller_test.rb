@@ -173,6 +173,15 @@ class AvatarsControllerTest < ActionDispatch::IntegrationTest
     assert_equal %w[dress none glasses], user.reload.avatar.values_at("costume", "hat", "accessory")
   end
 
+  test "😊 顔の パーツ（め・まゆげ・くち・ほっぺ・ひげ）を 保存できる" do
+    user = login_as("avface")
+    patch avatar_path, params: { avatar: { eye_style: "smile", brows: "normal", mouth: "small", cheeks: "pink", beard: "chin" } }, as: :json
+    assert_response :success
+    assert_equal %w[smile normal small pink chin], user.reload.avatar.values_at("eye_style", "brows", "mouth", "cheeks", "beard")
+    patch avatar_path, params: { avatar: { beard: "none" } }, as: :json
+    assert_equal "none", user.reload.avatar["beard"]
+  end
+
   test "👕 装備の 画像の キーが ある（S3 の game_assets/sprout_avatar/）" do
     %w[avatar_body_base avatar_shoes_default avatar_costume_robe avatar_hat_wizard avatar_accessory_glasses].each do |key|
       assert_includes GameAsset::AVATAR_LAYER_KEYS, key

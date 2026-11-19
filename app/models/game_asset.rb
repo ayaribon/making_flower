@@ -49,6 +49,7 @@ class GameAsset
     # 👕 装備の 枠（体・いしょう・くつ・あたま・アクセサリー・て・せなか。avatar_sprite.js の AVATAR_EQUIP と そろえる。
     #   test/javascript/avatar_equip_test.mjs で 同じか 確かめる）
     %w[body_base
+       eyes_smile eyes_sleepy eyes_lash brows_normal mouth_small cheeks_pink beard_chin
        costume_default costume_longsleeve costume_border costume_overalls costume_dress costume_robe
        costume_dettyan costume_jersey costume_suit costume_stage costume_kira costume_parka costume_sailor costume_kuma costume_yukata costume_ouji
        hat_ribbon hat_beanie hat_straw hat_wizard hat_cap hat_headphones hat_helmet hat_crown hat_nekomimi hat_usamimi hat_hanakanmuri

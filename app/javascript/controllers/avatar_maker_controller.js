@@ -3,7 +3,7 @@ import {
   normalizeAvatar, randomAvatar, cleanMsg, DEFAULT_AVATAR, HAIRS, EYES, TOPS, BOTTOMS, ACCESSORIES
 } from "avatar_sprite"
 import { drawHuman, avatarLayersOf, USE_HAIR_VARIANTS, USE_ACCESSORIES } from "avatar_human"
-import { HUMAN_HAIRSTYLES, AVATAR_EQUIP, AVATAR_SAVE_SLOTS } from "avatar_sprite"
+import { HUMAN_HAIRSTYLES, AVATAR_EQUIP, AVATAR_SAVE_KEYS, AVATAR_FACE_SLOTS } from "avatar_sprite"
 import { drawChibi as drawAvatar, CHIBI_SKINS as SKINS, CHIBI_HAIRS as HAIR_COLORS, CHIBI_CLOTHS as CLOTH_COLORS } from "avatar_chibi"
 import { findGear } from "dettyan_gear"
 
@@ -133,16 +133,25 @@ export default class extends Controller {
       else if (USE_HAIR_VARIANTS) this.group(box, "かみがた", this.choices("hair", HAIRS.map((h) => ({ id: h.id, label: h.name, preview: { ...a, hair: h.id } }))))
       this.group(box, "かみの いろ", this.swatches("hairColor", HAIR_COLORS))
       // 👕 装備の 枠（画像が ある ものだけ）。ふくの いろ・ズボンの いろ は ふだん着 の ときだけ
-      const slots = this.layers?.body ? AVATAR_SAVE_SLOTS.map((slot) => [slot, AVATAR_EQUIP[slot]]) : []
+      // 😊 顔の パーツ → 👕 いしょう・あたま・アクセサリー（画像が ある ものだけ）
+      const order = [...AVATAR_FACE_SLOTS, "costume", "hat", "accessory"]
+      const slots = this.layers?.body ? order.map((slot) => [slot, AVATAR_EQUIP[slot]]) : []
       const costume = slots.length && this.layers.items.costume[a.costume] ? a.costume : "default"
+      const browsShow = HUMAN_HAIRSTYLES.find((h) => h.id === a.hs)?.showsBrows
       for (const [slot, s] of slots) {
-        const have = s.items.filter((it) => it.maker && this.layers.items[slot][it.id])
-        if (!have.length) continue
+        const key = AVATAR_SAVE_KEYS[slot]
+        const face = AVATAR_FACE_SLOTS.includes(slot)
+        // 画像が ある もの（目の「ふつう」は 素体の 目なので 画像なし）
+        const have = s.items.filter((it) => it.maker && (!it.file || this.layers.items[slot][it.id]))
+        if (!have.some((it) => it.file)) continue
+        if (slot === "brows" && !browsShow) continue // 前髪で かくれる 髪型
+        // 顔の 見本は めがね・ぼうし を はずして 見せる
+        const base = face ? { ...a, hat: "none", accessory: "none" } : a
         const items = [
-          ...(s.def === "none" ? [{ id: "none", label: "なし", preview: { ...a, [slot]: "none" } }] : []),
-          ...have.map((it) => ({ id: it.id, label: it.name, preview: { ...a, [slot]: it.id } }))
+          ...(s.def === "none" ? [{ id: "none", label: "なし", preview: { ...base, [key]: "none" }, zoom: face }] : []),
+          ...have.map((it) => ({ id: it.id, label: it.name, preview: { ...base, [key]: it.id }, zoom: face }))
         ]
-        this.group(box, s.name, this.choices(slot, items))
+        this.group(box, s.name, this.choices(key, items))
         if (slot === "costume" && costume === "default") {
           this.group(box, "ふくの いろ", this.swatches("topColor", CLOTH_COLORS))
           this.group(box, "ズボンの いろ", this.swatches("bottomColor", CLOTH_COLORS))
@@ -210,7 +219,14 @@ export default class extends Controller {
       c.width = item.face ? 14 : 22
       c.height = item.face ? 7 : 26
       const g = c.getContext("2d")
-      if (this.human) {
+      if (this.human && item.zoom) {
+        // 顔の パーツは 顔の まわり だけ 大きく
+        c.width = 14
+        c.height = 11
+        c.style.width = "56px"
+        c.style.height = "44px"
+        drawHuman(c.getContext("2d"), this.human, 7, 15, item.preview, { dir: "down", parts: this.hairParts, layers: this.layers })
+      } else if (this.human) {
         c.width = 22
         c.height = 34
         c.style.width = "53px"
