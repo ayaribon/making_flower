@@ -7,6 +7,7 @@
 // Assets - From: Sprout Lands - By: Cup Nooble（https://cupnooble.itch.io/sprout-lands-asset-pack）
 
 import { TOWN_W, TOWN_H, GROUND, BUILDINGS, FOUNTAIN, drawSign } from "town_world"
+import { AVATAR_EQUIP, avatarAssetKey } from "avatar_sprite"
 
 // 使う 素材（キー → 素材パックの 中の 場所）。サーバー（GameAsset::SPROUT）と そろえる。URL は キーごとに サーバーが わたす
 export const SPROUT_FILES = {
@@ -25,7 +26,12 @@ export const SPROUT_FILES = {
 export const HAIR_PART_STEMS = ["short_bob", "blunt_bob", "long_straight", "twin_tails", "ponytail", "braids", "wolf_cut"]
 for (const stem of HAIR_PART_STEMS) for (const side of ["back", "front"]) SPROUT_FILES[`hair_${stem}_${side}`] = `../sprout_hair/${stem}_${side}.png`
 // 💇 素体＋髪レイヤー（avatar_human.js の avatarLayersOf）
-export const AVATAR_LAYER_KEYS = ["avatar_base", ...["original", "manbun", "wolf_long", "pattsun_bob", "pattsun_long", "short_perm", "fluffy_bob", "odango"].map((id) => `avatar_hair_${id}`)]
+export const AVATAR_LAYER_KEYS = [
+  "avatar_base", ...["original", "manbun", "wolf_long", "pattsun_bob", "pattsun_long", "short_perm", "fluffy_bob", "odango"].map((id) => `avatar_hair_${id}`),
+  // 👕 装備の 枠（avatar_sprite.js の AVATAR_EQUIP）
+  "avatar_body_base", "avatar_shoes_default",
+  ...Object.values(AVATAR_EQUIP).flatMap((s) => s.items.map((it) => avatarAssetKey(it.file)))
+]
 SPROUT_FILES.avatar_base = "../sprout_avatar/base_bald.png"
 for (const k of AVATAR_LAYER_KEYS.slice(1)) SPROUT_FILES[k] = `../sprout_avatar/${k.replace("avatar_", "")}.png`
 // なくても 町を 出せる もの

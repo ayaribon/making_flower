@@ -111,7 +111,7 @@ export default class extends Controller {
     this.t = 0
     this.last = performance.now()
     this.loop = (now) => {
-      const dt = Math.min(0.1, (now - this.last) / 1000)
+      const dt = Math.max(0, Math.min(0.1, (now - this.last) / 1000))
       this.last = now
       if (!document.hidden) {
         this.t += dt

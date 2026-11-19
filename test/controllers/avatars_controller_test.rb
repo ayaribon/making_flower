@@ -163,4 +163,21 @@ class AvatarsControllerTest < ActionDispatch::IntegrationTest
     patch avatar_path, params: { avatar: { hs: "_bad", acc: "Crown" } }, as: :json
     assert_equal "pattsun_long", user.reload.avatar["hs"], "へんな 値は すてる（前の まま）"
   end
+
+  test "👕 装備の 枠（いしょう・あたま・アクセサリー）を 保存できる。なし は none" do
+    user = login_as("aveq")
+    patch avatar_path, params: { avatar: { costume: "dress", hat: "straw", accessory: "glasses" } }, as: :json
+    assert_response :success
+    assert_equal %w[dress straw glasses], user.reload.avatar.values_at("costume", "hat", "accessory")
+    patch avatar_path, params: { avatar: { hat: "none", costume: "<b>" } }, as: :json
+    assert_equal %w[dress none glasses], user.reload.avatar.values_at("costume", "hat", "accessory")
+  end
+
+  test "👕 装備の 画像の キーが ある（S3 の game_assets/sprout_avatar/）" do
+    %w[avatar_body_base avatar_shoes_default avatar_costume_robe avatar_hat_wizard avatar_accessory_glasses].each do |key|
+      assert_includes GameAsset::AVATAR_LAYER_KEYS, key
+      assert_includes GameAsset::OPTIONAL, key, "なくても 町は 出る"
+    end
+    assert_equal "sprout_avatar/costume_robe.png", GameAsset::SPROUT["avatar_costume_robe"]
+  end
 end

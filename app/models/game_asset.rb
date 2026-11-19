@@ -29,7 +29,11 @@ class GameAsset
   ).merge(
     # 💇 素体＋髪レイヤー（Sorry pack の 人の テンプレートを 改変した もの。非商用。S3 の game_assets/sprout_avatar/）
     { "avatar_base" => "sprout_avatar/base_bald.png" },
-    %w[original manbun wolf_long pattsun_bob pattsun_long short_perm fluffy_bob odango].to_h { |id| ["avatar_hair_#{id}", "sprout_avatar/hair_#{id}.png"] }
+    %w[original manbun wolf_long pattsun_bob pattsun_long short_perm fluffy_bob odango].to_h { |id| ["avatar_hair_#{id}", "sprout_avatar/hair_#{id}.png"] },
+    # 👕 装備の 枠（体・くつ・いしょう・あたま・アクセサリー。avatar_sprite.js の AVATAR_EQUIP と そろえる）
+    %w[body_base shoes_default
+       costume_default costume_longsleeve costume_border costume_overalls costume_dress costume_robe
+       hat_ribbon hat_beanie hat_straw hat_wizard accessory_glasses].to_h { |stem| ["avatar_#{stem}", "sprout_avatar/#{stem}.png"] }
   ).freeze
   HAIR_KEYS = SPROUT.keys.grep(/\Ahair_/).freeze
   AVATAR_LAYER_KEYS = SPROUT.keys.grep(/\Aavatar_/).freeze

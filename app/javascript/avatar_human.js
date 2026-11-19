@@ -5,7 +5,7 @@
 // - Sprout Sorry pack は 非商用 ライセンス。この アプリは 非商用 と ayaribon が 判断（2026-11-18）。クレジット：Cup Nooble
 // Assets - From: Sprout Lands - By: Cup Nooble
 
-import { normalizeAvatar, HUMAN_HAIRSTYLES, DEFAULT_HAIRSTYLE } from "avatar_sprite"
+import { normalizeAvatar, HUMAN_HAIRSTYLES, DEFAULT_HAIRSTYLE, AVATAR_EQUIP, AVATAR_DRAW_ORDER, avatarAssetKey } from "avatar_sprite"
 import { CHIBI_SKINS, CHIBI_HAIRS, CHIBI_CLOTHS } from "avatar_chibi"
 import { drawAccessory } from "avatar_teemo"
 
@@ -305,12 +305,48 @@ function recolorLayer(img, roles, pal, key) {
   return c
 }
 
-// 読みこんだ 画像 { avatar_base, avatar_hair_<id> } → { base, hairs: { id: 画像 } }
+// 読みこんだ 画像 → { base, hairs: { id: 画像 }, body, shoes, items: { 枠: { id: 画像 } } }
+//   body（体だけ）と ふだん着 が あれば 装備の 枠ごとに 重ねる。なければ base（体＋服＋くつ）に 髪だけ
 export function avatarLayersOf(images) {
-  if (!images?.avatar_base) return null
+  if (!images?.avatar_base && !images?.avatar_body_base) return null
   const hairs = {}
   for (const h of HUMAN_HAIRSTYLES) if (h.file && images[`avatar_hair_${h.id}`]) hairs[h.id] = images[`avatar_hair_${h.id}`]
-  return { base: images.avatar_base, hairs }
+  const items = {}
+  for (const [slot, s] of Object.entries(AVATAR_EQUIP)) {
+    items[slot] = {}
+    for (const it of s.items) {
+      const img = images[avatarAssetKey(it.file)]
+      if (img) items[slot][it.id] = img
+    }
+  }
+  const slots = images.avatar_body_base && items.costume.default && images.avatar_shoes_default
+  return { base: images.avatar_base || null, hairs, body: slots ? images.avatar_body_base : null, shoes: images.avatar_shoes_default || null, items }
+}
+
+const FACING_AWAY = new Set(["up", "upright", "upleft"])
+
+// 装備の 枠の じゅんに 重ねる（ない 枠・知らない id・画像が ない ものは 描かない）
+function drawSlots(g, layers, a, look, spec, pal, dir, sx, sy, left, top) {
+  const colorKey = JSON.stringify(spec)
+  const pick = (slot) => look?.[slot] ?? a[slot] ?? AVATAR_EQUIP[slot]?.def
+  const put = (img) => g.drawImage(img, sx, sy, FW, FH, left, top, FW, FH)
+  for (const slot of AVATAR_DRAW_ORDER[FACING_AWAY.has(dir) ? "facingAway" : "default"]) {
+    if (slot === "body") put(recolorLayer(layers.body, BASE_ROLE, pal, `body|${colorKey}`))
+    else if (slot === "shoes") put(recolorLayer(layers.shoes, BASE_ROLE, pal, `shoes|${colorKey}`))
+    else if (slot === "hair") {
+      const hs = look?.hs || a.hs || DEFAULT_HAIRSTYLE
+      const img = layers.hairs[hs] || (hs === "bald" ? null : layers.hairs[DEFAULT_HAIRSTYLE])
+      if (img) put(recolorLayer(img, HAIR_LAYER_ROLE, pal, `hair|${hs}|${spec.hair}`))
+    } else if (slot === "costume") {
+      // ふだん着 だけ 色が かわる（ほかは 色が きまった 画像）
+      const id = layers.items.costume[pick("costume")] ? pick("costume") : "default"
+      const img = layers.items.costume[id]
+      put(id === "default" ? recolorLayer(img, BASE_ROLE, pal, `costume|${colorKey}`) : img)
+    } else {
+      const img = layers.items[slot]?.[pick(slot)]
+      if (img) put(img)
+    }
+  }
 }
 
 // parts：{ ファイル名: { back: 画像, front: 画像 } }（髪の パーツ。なければ 足した 髪）
@@ -326,11 +362,12 @@ export function drawHuman(g, sheet, x, y, raw, { dir = "down", walking = false, 
   const left = Math.round(x - ANCHOR_X)
   const top = Math.round(y - ANCHOR_Y)
   const pal = paletteFor(spec)
-  if (layers?.base) {
+  if (layers?.base || layers?.body) {
     // 💇 素体 → 髪レイヤー（髪型は hs。Dettyan は look.hs）
     const hs = look?.hs || a.hs || DEFAULT_HAIRSTYLE
     const colorKey = JSON.stringify(spec)
     pal.topMid = mix(rgb(spec.top), WHITE, 0.15)
+    if (layers.body) return drawSlots(g, layers, a, look, spec, pal, dir, col * FW, row * FH, left, top)
     const base = recolorLayer(layers.base, BASE_ROLE, pal, `base|${colorKey}`)
     g.drawImage(base, col * FW, row * FH, FW, FH, left, top, FW, FH)
     const hairImg = layers.hairs[hs] || (hs === "bald" ? null : layers.hairs[DEFAULT_HAIRSTYLE])

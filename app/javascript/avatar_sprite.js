@@ -44,7 +44,8 @@ export const ACCESSORIES = ["none", "cap", "headphones", "ribbon", "nekomimi", "
 
 export const DEFAULT_AVATAR = {
   v: 1, hs: "original", skin: 0, hair: "short", hairColor: 0, eyes: "dot",
-  top: "jacket", topColor: 6, bottom: "pants", bottomColor: 9, shoes: 9, acc: "none"
+  top: "jacket", topColor: 6, bottom: "pants", bottomColor: 9, shoes: 9, acc: "none",
+  costume: "default", hat: "none", accessory: "none"
 }
 
 const idsOf = (list) => list.map((x) => x.id)
@@ -63,8 +64,48 @@ export const HUMAN_HAIRSTYLES = [
 ]
 export const DEFAULT_HAIRSTYLE = "original"
 
+// 👕 装備の 枠（2026-11-19 の ハンドオフ layers/avatar_catalog.json）。画像は S3 の game_assets/sprout_avatar/
+//   保存の キーは 枠の id（costume・hat・accessory）。"none" は なにも つけない
+//   アイテムを 足す ときは 画像1まい（128×96。素体と 同じ 並び）を 置いて、ここに 1行（app/models/game_asset.rb にも ファイル名）
+//   ふくの いろ・ズボンの いろ が かわるのは ふだん着（default）だけ（ほかは 色が きまった 画像）
+//   足・手（剣・盾）・せなか の 枠は まだ 中身が ない（素材が できたら 足す）
+export const AVATAR_EQUIP = {
+  costume: {
+    name: "いしょう", def: "default",
+    items: [
+      { id: "default", name: "ふだん着", file: "costume_default.png" },
+      { id: "longsleeve", name: "長そでシャツ", file: "costume_longsleeve.png" },
+      { id: "border", name: "ボーダー", file: "costume_border.png" },
+      { id: "overalls", name: "オーバーオール", file: "costume_overalls.png" },
+      { id: "dress", name: "ワンピース", file: "costume_dress.png" },
+      { id: "robe", name: "ローブ", file: "costume_robe.png" }
+    ]
+  },
+  hat: {
+    name: "あたま", def: "none",
+    items: [
+      { id: "ribbon", name: "リボン", file: "hat_ribbon.png" },
+      { id: "beanie", name: "ニット帽", file: "hat_beanie.png" },
+      { id: "straw", name: "むぎわら帽子", file: "hat_straw.png" },
+      { id: "wizard", name: "とんがり帽子", file: "hat_wizard.png" }
+    ]
+  },
+  accessory: {
+    name: "アクセサリー", def: "none",
+    items: [{ id: "glasses", name: "まるめがね", file: "accessory_glasses.png" }]
+  }
+}
+// 重ねる じゅん（うしろ向きの 3方向は せなか・手 の 前後が 入れかわる）。legs・hand_*・back は まだ 画像が ない
+export const AVATAR_DRAW_ORDER = {
+  default: ["back", "body", "legs", "shoes", "costume", "hair", "accessory", "hat", "hand_off", "hand_main"],
+  facingAway: ["hand_main", "hand_off", "body", "legs", "shoes", "costume", "hair", "accessory", "hat", "back"]
+}
+// 画像の キー（town_sprout.js・GameAsset）："avatar_" ＋ ファイル名（.png なし）
+export const avatarAssetKey = (file) => `avatar_${file.replace(/\.png$/, "")}`
+
 const CHOICES = {
-  hair: idsOf(HAIRS), eyes: idsOf(EYES), top: idsOf(TOPS), bottom: idsOf(BOTTOMS), acc: ACCESSORIES, hs: idsOf(HUMAN_HAIRSTYLES)
+  hair: idsOf(HAIRS), eyes: idsOf(EYES), top: idsOf(TOPS), bottom: idsOf(BOTTOMS), acc: ACCESSORIES, hs: idsOf(HUMAN_HAIRSTYLES),
+  ...Object.fromEntries(Object.entries(AVATAR_EQUIP).map(([slot, s]) => [slot, [...(s.def === "none" ? ["none"] : []), ...idsOf(s.items)]]))
 }
 const RANGES = { skin: SKINS.length, hairColor: HAIR_COLORS.length, topColor: CLOTH_COLORS.length, bottomColor: CLOTH_COLORS.length, shoes: CLOTH_COLORS.length }
 

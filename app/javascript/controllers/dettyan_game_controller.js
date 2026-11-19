@@ -108,13 +108,16 @@ export default class extends Controller {
     this.battle = null  // モンスター退治の再生中
 
     this.last = performance.now()
+    // dt は 0 より 小さく しない（さいしょの コマは now が this.last より 前の ことが あり、t が マイナスに なると
+    // たき火の 絵が えらべず 止まって Dettyan が 消えていた。2026-11-19）
+    // 次の コマを 先に たのむ：1コマ 描けなくても 止まらない
     this.loop = (now) => {
-      const dt = Math.min(0.1, (now - this.last) / 1000)
+      this.raf = requestAnimationFrame(this.loop)
+      const dt = Math.max(0, Math.min(0.1, (now - this.last) / 1000))
       this.last = now
       this.t += dt
       this.tick(dt)
       this.draw()
-      this.raf = requestAnimationFrame(this.loop)
     }
     this.raf = requestAnimationFrame(this.loop)
 

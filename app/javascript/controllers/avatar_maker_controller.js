@@ -3,7 +3,7 @@ import {
   normalizeAvatar, randomAvatar, cleanMsg, DEFAULT_AVATAR, HAIRS, EYES, TOPS, BOTTOMS, ACCESSORIES
 } from "avatar_sprite"
 import { drawHuman, avatarLayersOf, USE_HAIR_VARIANTS, USE_ACCESSORIES } from "avatar_human"
-import { HUMAN_HAIRSTYLES } from "avatar_sprite"
+import { HUMAN_HAIRSTYLES, AVATAR_EQUIP } from "avatar_sprite"
 import { drawChibi as drawAvatar, CHIBI_SKINS as SKINS, CHIBI_HAIRS as HAIR_COLORS, CHIBI_CLOTHS as CLOTH_COLORS } from "avatar_chibi"
 import { findGear } from "dettyan_gear"
 
@@ -132,8 +132,26 @@ export default class extends Controller {
       if (this.layers) this.group(box, "かみがた", this.choices("hs", HUMAN_HAIRSTYLES.filter((h) => !h.file || this.layers.hairs[h.id]).map((h) => ({ id: h.id, label: h.name, preview: { ...a, hs: h.id } }))))
       else if (USE_HAIR_VARIANTS) this.group(box, "かみがた", this.choices("hair", HAIRS.map((h) => ({ id: h.id, label: h.name, preview: { ...a, hair: h.id } }))))
       this.group(box, "かみの いろ", this.swatches("hairColor", HAIR_COLORS))
-      this.group(box, "ふくの いろ", this.swatches("topColor", CLOTH_COLORS))
-      this.group(box, "ズボンの いろ", this.swatches("bottomColor", CLOTH_COLORS))
+      // 👕 装備の 枠（画像が ある ものだけ）。ふくの いろ・ズボンの いろ は ふだん着 の ときだけ
+      const slots = this.layers?.body ? Object.entries(AVATAR_EQUIP) : []
+      const costume = slots.length && this.layers.items.costume[a.costume] ? a.costume : "default"
+      for (const [slot, s] of slots) {
+        const have = s.items.filter((it) => this.layers.items[slot][it.id])
+        if (!have.length) continue
+        const items = [
+          ...(s.def === "none" ? [{ id: "none", label: "なし", preview: { ...a, [slot]: "none" } }] : []),
+          ...have.map((it) => ({ id: it.id, label: it.name, preview: { ...a, [slot]: it.id } }))
+        ]
+        this.group(box, s.name, this.choices(slot, items))
+        if (slot === "costume" && costume === "default") {
+          this.group(box, "ふくの いろ", this.swatches("topColor", CLOTH_COLORS))
+          this.group(box, "ズボンの いろ", this.swatches("bottomColor", CLOTH_COLORS))
+        }
+      }
+      if (!slots.length) {
+        this.group(box, "ふくの いろ", this.swatches("topColor", CLOTH_COLORS))
+        this.group(box, "ズボンの いろ", this.swatches("bottomColor", CLOTH_COLORS))
+      }
       this.group(box, "くつ", this.swatches("shoes", CLOTH_COLORS))
       if (USE_ACCESSORIES) this.group(box, "こもの", this.choices("acc", ACCESSORIES.map((id) => ({ id, label: id === "none" ? "なし" : findGear(id)?.name || ACC_NAMES[id] || id, preview: { ...a, acc: id } }))))
       return
