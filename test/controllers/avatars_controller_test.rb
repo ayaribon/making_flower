@@ -58,6 +58,24 @@ class AvatarsControllerTest < ActionDispatch::IntegrationTest
     assert_select "form.hm-say", 0, "キャラが ない人には ひとこと の 入力は 出さない"
   end
 
+  test "まち：ひろばの Dettyan は 本人の キャラ・表示名。ほかの人 には 出さない。本人が 見ているときは ひろばに 出さない" do
+    owner = User.create!(name: "dettyan", login_digest: "pending-dettyan-owner", display_name: "でっちゃん", avatar: { "hs" => "manbun", "msg" => "あそびにきてね" })
+    login_as("avplaza")
+    get root_path
+    town = css_select("[data-controller=town]").first
+    plaza = JSON.parse(town["data-town-dettyan-value"])
+    assert_equal "でっちゃん", plaza["name"]
+    assert_equal "あそびにきてね", plaza.dig("avatar", "msg")
+    others = JSON.parse(town["data-town-others-value"])
+    assert_not others.any? { |o| o["name"] == "でっちゃん" }, "ほかの人 に Dettyan は 出ない（ひろばの Dettyan が 本人）"
+    assert_equal "false", town["data-town-owner-value"]
+
+    delete logout_path
+    post login_path, params: { login_code: owner.issue_login_code! }
+    get root_path
+    assert_equal "true", css_select("[data-controller=town]").first["data-town-owner-value"], "本人は 歩いている 自分が Dettyan"
+  end
+
   test "まち：建物に 何が できるか の 説明が ある" do
     login_as("avguide")
     get root_path

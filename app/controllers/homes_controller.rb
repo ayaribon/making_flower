@@ -4,7 +4,7 @@
 # 🏘️ はじまりのまち：自分の アバター で 歩いて、建物（スタジオ・アトリエ・事務所・編集室）に 入る。カードの メニューも のこす
 class HomesController < ApplicationController
   # 町に 出す ほかの人の かず。キャラを つくった人だけ（つくったら 出る）。さいきん つくった・かえた じゅん
-  # Dettyan 本人は、キャラを つくるまでは 町の Dettyan（ドット絵）が かわり
+  # Dettyan 本人は ほかの人 には 出さない。ひろばの Dettyan が 本人（キャラを つくったら その 見た目。2026-11-19 に ayaribon）
   TOWN_OTHERS = 20
 
   # 📋 かんたんメニュー か 🏘️ まち か（この ブラウザに おぼえる。cookie。DB は 使わない）
@@ -14,9 +14,12 @@ class HomesController < ApplicationController
     return render(:simple) if cookies[MODE_COOKIE] == "simple"
 
     @town_sprites = sprout_sprites
-    @town_others = User.where.not(id: current_user.id).where.not(avatar: nil)
+    owner = User.dettyan_owner
+    @town_others = User.where.not(id: [current_user.id, owner&.id].compact).where.not(avatar: nil)
                        .order(updated_at: :desc).limit(TOWN_OTHERS)
                        .map { |u| { name: u.display_label, avatar: u.avatar } }
+    # 🧑‍💼 ひろばの Dettyan：本人の 表示名・キャラ（まだ なければ いつもの 見た目）
+    @town_dettyan = owner ? { name: owner.display_label, avatar: owner.avatar } : {}
   end
 
   # PATCH /home/mode?mode=simple|town  えらんだ 画面を おぼえて トップに もどる

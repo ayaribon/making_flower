@@ -9,6 +9,7 @@
          data-town-account-value="<%= current_user&.name %>"
          data-town-others-value="<%= (@town_others || []).to_json %>"
          data-town-owner-value="<%= !!current_user&.dettyan_owner? %>"
+         data-town-dettyan-value="<%= (@town_dettyan || {}).to_json %>"
          data-town-avatar-url-value="<%= avatar_path %>"
          data-town-sprites-value="<%= (@town_sprites || {}).to_json %>">
       <section class="hm-town" aria-label="はじまりのまち">

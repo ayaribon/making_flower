@@ -70,9 +70,17 @@ class User < ApplicationRecord
   # 呼び名（name）で決める。ふだんは dettyan。変えたいときは ENV["DETTYAN_OWNER_NAMES"] にカンマ区切りで書く
   DETTYAN_OWNER_NAMES = "dettyan"
 
+  def self.dettyan_owner_names
+    ENV.fetch("DETTYAN_OWNER_NAMES", DETTYAN_OWNER_NAMES).split(",").map { |n| n.strip.downcase }.reject(&:empty?)
+  end
+
+  # Dettyan 本人の アカウント（なければ nil）。町の ひろばの Dettyan は この人の キャラ
+  def self.dettyan_owner
+    where("LOWER(name) IN (?)", dettyan_owner_names).order(:id).first
+  end
+
   def dettyan_owner?
-    names = ENV.fetch("DETTYAN_OWNER_NAMES", DETTYAN_OWNER_NAMES).split(",").map { |n| n.strip.downcase }.reject(&:empty?)
-    names.include?(name.to_s.downcase)
+    self.class.dettyan_owner_names.include?(name.to_s.downcase)
   end
 
   # いま作業中の切り抜きの依頼（なければ nil）

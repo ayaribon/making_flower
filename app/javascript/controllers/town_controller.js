@@ -28,7 +28,6 @@ const CHAT_FIRST = 1.4 // ひらいてから 最初の ひとこと まで（秒
 const GUIDE_KEY = "town:guide:v1" // あんない を 見たか（+ ":呼び名"）。中身を かえたら v2 に して もう一度 見せる
 const GREETINGS = ["やっほー！", "こんにちは！", "いい天気だね", "歌ってきた！", "サムネ つくってる", "がんばろ〜", "またね！"]
 const DETTYAN_LINES = ["ようこそ、はじまりのまち へ！", "事務所で まってるよ", "じゅんさい たべたいな"]
-const OWNER_LINES = ["俺やん！", "お、俺が 立ってる", "本物の 俺やん"]
 // Sprout Lands の 町では、Dettyan の ふちを 黒ではなく やわらかい 色に する（アバターは avatar_chibi.js が もともと やわらかい）
 // 🐱 Teemo 型（人の 形に した もの）は いったん やめ（2026-11-18 ayaribon）。true に すると 町で 使う
 const USE_TEEMO = false
@@ -51,7 +50,8 @@ export default class extends Controller {
   ]
   // name：表示名（まちに 出る）。account：ログインの 呼び名（あんない を 見たか の しるし。表示名を かえても かわらない）
   // full：画面いっぱい（トップ）。画面の 形に あわせて 見せる はば を きめて、町を ぴったり おさめる
-  static values = { me: Object, name: String, account: String, others: Array, owner: Boolean, avatarUrl: String, sprites: Object, full: Boolean }
+  // dettyan：ひろばの Dettyan（本人の 表示名 name・キャラ avatar。キャラが まだ なければ いつもの 見た目）
+  static values = { me: Object, name: String, account: String, others: Array, owner: Boolean, avatarUrl: String, sprites: Object, full: Boolean, dettyan: Object }
 
   connect() {
     const c = this.canvasTarget
@@ -100,7 +100,10 @@ export default class extends Controller {
     })
     // Dettyan は 事務所の 前の ひろば に 立っている（建物の ボタンと かさならない 高さ）
     const door = doorOf("dettyan")
-    this.dettyan = { x: door.x + 10, y: door.y + 18, blink: 0, nextBlink: 2 }
+    // Dettyan 本人が 見ているときは、歩いている 自分が Dettyan（ひろばには 出さない）
+    const dv = this.dettyanValue || {}
+    const dAvatar = dv.avatar && Object.keys(dv.avatar).length ? normalizeAvatar(dv.avatar) : null
+    this.dettyan = this.ownerValue ? null : { x: door.x + 10, y: door.y + 18, blink: 0, nextBlink: 2, name: dv.name || "Dettyan", avatar: dAvatar, msg: dAvatar?.msg || "" }
     this.chatIn = CHAT_FIRST
     this.drawGuideFace()
     if (!this.guideSeen()) this.startGuide()
@@ -294,9 +297,11 @@ export default class extends Controller {
       if (a.walking) this.walkStep(a, dt, a.self ? SPEED : SPEED * 0.55)
     }
     const d = this.dettyan
-    d.nextBlink -= dt
-    if (d.blink > 0) d.blink -= dt
-    if (d.nextBlink <= 0) { d.blink = 0.14; d.nextBlink = 2.5 + Math.random() * 3 }
+    if (d) {
+      d.nextBlink -= dt
+      if (d.blink > 0) d.blink -= dt
+      if (d.nextBlink <= 0) { d.blink = 0.14; d.nextBlink = 2.5 + Math.random() * 3 }
+    }
     // 💬 ときどき だれかが ひとこと（あんない の あいだは しずかに）
     if (!this.guiding) {
       this.chatIn -= dt
@@ -358,9 +363,13 @@ export default class extends Controller {
     const [w, h] = this.sprout?.human ? [HUMAN_W, HUMAN_H] : USE_TEEMO && this.sprout?.chara ? [TEEMO_W, TEEMO_H] : [AV_W, AV_H]
     const other = this.others.find((o) => hit(o, w, h))
     if (other) return this.say(other, `${other.name}「${this.lineOf(other)}」`)
-    if (hit(this.dettyan, SPRITE_W, SPRITE_H)) {
-      const lines = this.ownerValue ? OWNER_LINES : DETTYAN_LINES
-      return this.say(this.dettyan, `Dettyan「${lines[Math.floor(Math.random() * lines.length)]}」`)
+    if (this.dettyan && hit(this.dettyan, SPRITE_W, SPRITE_H)) {
+      // 案内の ことば → そのあと 本人の ひとこと（書いて いれば）
+      const d = this.dettyan
+      this.say(d, `${d.name}「${DETTYAN_LINES[Math.floor(Math.random() * DETTYAN_LINES.length)]}」`)
+      clearTimeout(this.dettyanMsgTimer)
+      if (d.msg) this.dettyanMsgTimer = setTimeout(() => this.say(d, `${d.name}「${d.msg}」`), BUBBLE_MS * 0.8)
+      return
     }
     if (hit(this.me, w, h)) return this.say(this.me, this.me.msg ? `${this.nameValue}「${this.me.msg}」` : `${this.nameValue}`)
     const p = clampWalk(x, y)
@@ -460,14 +469,16 @@ export default class extends Controller {
       g.drawImage(this.base, 0, 0)
       drawTownLive(g, this.t)
     }
-    const actors = [...this.others, this.me, { ...this.dettyan, npc: true }].sort((a, b) => a.y - b.y)
+    const actors = [...this.others, this.me, ...(this.dettyan ? [{ ...this.dettyan, npc: true }] : [])].sort((a, b) => a.y - b.y)
     for (const a of actors) {
       g.fillStyle = "rgba(0, 0, 0, 0.18)"
       g.fillRect(Math.round(a.x) - 6, Math.round(a.y) - 1, 12, 2)
       if (this.sprout?.human) {
         // 🧑 人の テンプレート（8方向。色・こもの は その人の キャラ）
         g.globalAlpha = a.self && this.entering ? 0.4 : 1
-        drawHuman(g, this.sprout.human, a.x, a.y, a.npc ? null : a.avatar, { dir: a.dir8 || "down", walking: !!a.walking, t: this.t + (a.phase || 0), look: a.npc ? DETTYAN_LOOK : null, parts: this.hairParts, layers: this.avatarLayers })
+        // ひろばの Dettyan は 本人の キャラ（まだ なければ いつもの 見た目）
+        const npcLook = a.npc && !a.avatar ? DETTYAN_LOOK : null
+        drawHuman(g, this.sprout.human, a.x, a.y, a.avatar, { dir: a.dir8 || "down", walking: !!a.walking, t: this.t + (a.phase || 0), look: npcLook, parts: this.hairParts, layers: this.avatarLayers })
         g.globalAlpha = 1
       } else if (USE_TEEMO && this.sprout?.chara) {
         // 🐱 Teemo 型（素材の キャラ画像。毛の 色・首の 色・こもの は その人の キャラ）
@@ -491,7 +502,7 @@ export default class extends Controller {
     this.placeBuildings(cam, camY)
     // 名前・ふきだし（画面の ことば）
     this.place(this.nameTag, this.me.x, this.me.y + 1)
-    for (const a of [this.me, ...this.others, this.dettyan]) if (a.bubble && !a.bubble.hidden) this.placeBubble(a.bubble, a.x, a.y - (this.sprout?.human ? HUMAN_H + 1 : USE_TEEMO && this.sprout?.chara ? TEEMO_H + 4 : AV_H) - 2)
+    for (const a of [this.me, ...this.others, this.dettyan].filter(Boolean)) if (a.bubble && !a.bubble.hidden) this.placeBubble(a.bubble, a.x, a.y - (this.sprout?.human ? HUMAN_H + 1 : USE_TEEMO && this.sprout?.chara ? TEEMO_H + 4 : AV_H) - 2)
   }
 
   // ふきだし は 町の はし で はみ出さないように よせる
@@ -663,8 +674,10 @@ export default class extends Controller {
     this.guideMakeTarget.hidden = !st.make
     this.guideNextTarget.textContent = last ? (st.make ? "あとで" : "はじめる！") : "つぎへ ▶"
     // その 建物 を 光らせて、スマホでは カメラを そっちへ
-    this.focusX = st.place ? doorOf(st.place).x : st.focus === "npc" ? this.dettyan.x : null
-    this.focusY = st.place ? BUILDING_TOP + BUILDING_H / 2 : st.focus === "npc" ? this.dettyan.y - 12 : null
+    // Dettyan 本人が 見ているときは 自分（歩いている キャラ）を うつす
+    const npc = this.dettyan || this.me
+    this.focusX = st.place ? doorOf(st.place).x : st.focus === "npc" ? npc.x : null
+    this.focusY = st.place ? BUILDING_TOP + BUILDING_H / 2 : st.focus === "npc" ? npc.y - 12 : null
     this.buildingTargets.forEach((b) => b.classList.toggle("is-guide", b.dataset.townPlaceParam === st.place))
     if (this.hasSayFormTarget) this.sayFormTarget.classList.toggle("is-guide", !!st.say)
   }
